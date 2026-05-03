@@ -1,39 +1,103 @@
-# banksos
+````md
+# BANKSOS
 
+BANKSOS (Bank Soal Kolaboratif) adalah aplikasi mobile berbasis Flutter dengan pendekatan **offline-first** yang dirancang untuk membantu mahasiswa mengakses, mengerjakan, dan berkontribusi soal latihan akademik secara fleksibel, bahkan tanpa koneksi internet.
+
+Aplikasi ini terinspirasi dari platform latihan seperti picoCTF dan redlimit.hack.id, namun difokuskan untuk kebutuhan akademik mahasiswa Teknik Informatika dan Teknik Komputer.
+
+---
+
+# ✨ Fitur Utama
+
+## 👨‍🎓 Mahasiswa
+- Registrasi & login
+- Browse bank soal berdasarkan mata kuliah
+- Filter tingkat kesulitan
+- Kerjakan soal online & offline
+- Sistem jawaban short-answer (case-insensitive)
+- Placeholder jawaban seperti THM (`____ ____`)
+- Bookmark soal
+- Riwayat pengerjaan
+- Submit soal baru
+- Download soal untuk offline
+
+## 🛡 Reviewer
+- Review soal mahasiswa
+- Approve / reject / revisi soal
+- Atur kategori & tingkat kesulitan
+- Kelola koleksi soal
+
+## ⚙ Admin
+- Kelola user
+- Kelola status soal
+- Arsipkan / nonaktifkan soal
+- Kontrol sistem penuh
+
+---
+
+# 🧠 Konsep Utama
+
+## Offline-First Architecture
+
+BANKSOS menggunakan pendekatan hybrid:
+
+- **Hive (Local Storage)** → penyimpanan offline
+- **MongoDB (Cloud Database)** → sinkronisasi & kolaborasi
+
+Pengguna tetap dapat:
+- membuka soal
+- mengerjakan soal
+- melihat progress
+
+meskipun tidak memiliki koneksi internet.
+
+---
+
+# 🏗 Tech Stack
+
+## Frontend
+- Flutter
+
+## Local Storage
+- Hive
+
+## Backend
+- REST API
+
+## Database
+- MongoDB
+
+## State Management
+- Provider / Riverpod
+
+---
+
+# 📁 Struktur Project
+
+```plaintext
 lib/
 │
 ├── core/
 │   ├── constants/
 │   ├── theme/
 │   ├── utils/
-│   ├── errors/
-│   ├── services/
-│   └── config/
+│   └── services/
 │
 ├── data/
-│   ├── local/
-│   │   ├── hive/
-│   │   └── boxes/
-│   │
-│   ├── remote/
-│   │   └── mongodb/
-│   │
 │   ├── models/
+│   ├── local/
+│   ├── remote/
 │   └── repositories/
 │
 ├── features/
 │   ├── auth/
-│   │   ├── screens/
-│   │   ├── widgets/
-│   │   ├── controllers/
-│   │   └── services/
-│   │
+│   ├── dashboard/
 │   ├── questions/
 │   ├── bookmarks/
-│   ├── review/
-│   ├── sync/
-│   ├── admin/
-│   └── dashboard/
+│   ├── progress/
+│   ├── submit_question/
+│   ├── review_queue/
+│   └── admin/
 │
 ├── shared/
 │   ├── widgets/
@@ -42,92 +106,192 @@ lib/
 │
 ├── routes/
 │
-├── providers/
-│
 └── main.dart
+````
 
-core/
+---
 
-Berisi hal global aplikasi.
+# 🗂 Database Entities
 
-constants/
+## Users
 
-Semua konstanta.
+```json
+{
+  "_id": "ObjectId",
+  "nama_lengkap": "string",
+  "nim": "string",
+  "email": "string",
+  "password_hash": "string",
+  "role": "mahasiswa | reviewer | admin",
+  "status": "active | inactive"
+}
+```
+
+## Questions
+
+```json
+{
+  "_id": "ObjectId",
+  "pertanyaan": "string",
+  "jawaban": "string",
+  "kategori_id": "ObjectId",
+  "tingkat_kesulitan": "easy | medium | hard",
+  "status": "pending | published | rejected | archived",
+  "hints": [],
+  "submitted_by": "ObjectId"
+}
+```
+
+---
+
+# 🔐 Role System
+
+| Role      | Akses                                |
+| --------- | ------------------------------------ |
+| Mahasiswa | Kerjakan soal, bookmark, submit soal |
+| Reviewer  | Review & moderasi soal               |
+| Admin     | Kelola sistem & user                 |
+
+---
+
+# 🧩 Sistem Jawaban
+
+BANKSOS menggunakan sistem jawaban short-answer:
+
+* tidak case-sensitive
+* whitespace trimming
+* placeholder jawaban otomatis
 
 Contoh:
 
-warna
-nama hive box
-role user
-status soal
-theme/
+```txt
+Jawaban asli:
+basis data
 
-Konfigurasi tema.
+Ditampilkan:
+_____ _____
+```
 
-utils/
+---
 
-Helper functions.
+# 🔄 Sinkronisasi Offline
 
-services/
+Saat offline:
 
-Service global.
+* progress disimpan ke Hive
+* data masuk ke SyncQueue
 
-Contoh:
+Saat online kembali:
 
-connectivity service
-session service
-data/
+* SyncManager otomatis sinkronisasi ke server
 
-Semua data handling.
+---
 
-local/
+# 🌙 UI/UX Principles
 
-Semua akses Hive.
+* Modern minimalis
+* Dominan warna biru
+* Dark mode support
+* Mobile-first design
+* Feedback interaktif
 
-remote/
+---
 
-Semua akses MongoDB.
+# 🌿 Git Workflow
 
-models/
+## Branch Strategy
 
-Semua model aplikasi.
+```plaintext
+main
+develop
+feature/*
+fix/*
+```
 
-repositories/
+## Commit Convention
 
-Layer penghubung antara UI dan database.
+```plaintext
+feat: add offline sync manager
+fix: correct answer validation
+docs: update readme
+```
 
-features/
+---
 
-Semua fitur dipisah per domain.
+# 🚀 Setup Project
 
+## 1. Clone Repository
 
+```bash
+git clone <repository-url>
+```
 
+---
 
+## 2. Masuk ke folder project
 
+```bash
+cd BANKSOS
+```
 
+---
 
+## 3. Install dependency
 
+```bash
+flutter pub get
+```
 
+---
 
+## 4. Run project
 
+```bash
+flutter run
+```
 
+---
 
+# 📌 MVP Scope
 
+* Android only
+* Offline-first
+* Short answer system
+* Review moderation
+* Bookmark system
+* Progress tracking
+* Sync manager
 
+---
 
+# 📅 Sprint Planning
 
-A new Flutter project.
+| Sprint   | Fokus               |
+| -------- | ------------------- |
+| Sprint 0 | Setup & arsitektur  |
+| Sprint 1 | Auth & role         |
+| Sprint 2 | Bank soal & offline |
+| Sprint 3 | Hint & bookmark     |
+| Sprint 4 | Submit & review     |
+| Sprint 5 | Sync & admin        |
+| Sprint 6 | Testing & polish    |
 
-## Getting Started
+---
 
-This project is a starting point for a Flutter application.
+# 👥 Tim Pengembang
 
-A few resources to get you started if this is your first Flutter project:
+| Nama                    | Role                          |
+| ----------------------- | ----------------------------- |
+| Seruni Libertina Islami | Project Manager / Flutter Dev |
+| Mohammad Jibril Fathi   | Flutter Dev / Offline-First   |
+| Revaldi Prasetyo        | Feature Dev                   |
+| Adjie Ali Nurfizal      | Backend Dev                   |
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+---
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+# 📄 License
+
+Internal Academic Project — POLBAN
+
+```
+```

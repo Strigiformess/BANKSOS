@@ -1,23 +1,19 @@
-/// Nama-nama HiveBox yang digunakan di seluruh aplikasi BANKSOS.
-/// Selalu gunakan konstanta ini — jangan hardcode nama box di tempat lain.
+// lib/core/constants/hive_boxes.dart
+
 class HiveBoxes {
   HiveBoxes._();
 
-  /// Box untuk menyimpan sesi login pengguna yang sedang aktif.
+  // Auth & session
   static const String session = 'session_box';
 
-  /// Box untuk menyimpan soal yang sudah diunduh untuk akses offline.
+  // Data utama
   static const String questions = 'questions_box';
-
-  /// Box untuk menyimpan daftar kategori mata kuliah.
   static const String categories = 'categories_box';
 
-  /// Box untuk menyimpan riwayat pengerjaan soal.
-  static const String progress = 'progress_box';
-
-  /// Box untuk menyimpan daftar soal yang di-bookmark.
+  // Progress & bookmark
+  static const String userProgress = 'user_progress_box';
   static const String bookmarks = 'bookmarks_box';
 
-  /// Box untuk antrian sinkronisasi data offline ke server.
+  // Antrian sinkronisasi offline
   static const String syncQueue = 'sync_queue_box';
 }
