@@ -1,6 +1,7 @@
-/// Konfigurasi koneksi MongoDB Atlas untuk aplikasi BANKSOS.
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
 class DbConfig {
-  DbConfig._();
+  static String get mongoUri => dotenv.env['MONGO_URI'] ?? '';
 
   /// Nama database di MongoDB Atlas.
   static const String dbName = 'banksos_db';

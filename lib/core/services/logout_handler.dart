@@ -1,8 +1,6 @@
 // lib/core/services/logout_handler.dart
 
 import 'package:flutter/material.dart';
-
-import '../constants/hive_boxes.dart';
 import 'session_service.dart';
 import '../../data/local/hive/hive_service.dart';
 

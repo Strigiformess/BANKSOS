@@ -7,7 +7,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../controllers/auth_controller.dart';
-import '../../../routes/app_routes.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -17,7 +16,6 @@ class RegisterScreen extends ConsumerStatefulWidget {
 }
 
 class _RegisterScreenState extends ConsumerState<RegisterScreen> {
-  final _formKey       = GlobalKey<FormState>();
   final _namaCtrl      = TextEditingController();
   final _nimCtrl       = TextEditingController();
   final _emailCtrl     = TextEditingController();

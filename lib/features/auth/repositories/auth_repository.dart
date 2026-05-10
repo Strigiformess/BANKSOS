@@ -1,7 +1,3 @@
-// lib/features/auth/repositories/auth_repository.dart
-// PIC: Revaldi (RP) — Auth Feature
-// Menghubungkan auth_remote dengan controller (abstraksi clean architecture).
-
 import '../../../data/models/user_model.dart';
 import '../data/auth_remote.dart';
 
