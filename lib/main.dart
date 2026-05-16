@@ -52,7 +52,7 @@ class BanksosApp extends StatelessWidget {
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: ThemeMode.system, // ikuti preferensi sistem Android
-      home: const SplashRouter(),
+      home: const DashboardMahasiswaScreen(),
       routes: {
         AppRoutes.login:              (_) => const LoginScreen(),
         AppRoutes.register:           (_) => const RegisterScreen(),
