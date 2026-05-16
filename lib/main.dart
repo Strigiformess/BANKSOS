@@ -18,9 +18,7 @@ import 'features/auth/screens/register_screen.dart';
 
 // Dashboard
 import 'features/dashboard/screens/dashboard_mahasiswa_screen.dart';
-
-// Bank Soal (Sprint 2 — uncomment setelah Sprint 2 selesai)
-// import 'features/questions/screens/bank_soal_screen.dart';
+import 'features/questions/screens/bank_soal_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -57,9 +55,7 @@ class BanksosApp extends StatelessWidget {
         AppRoutes.login:              (_) => const LoginScreen(),
         AppRoutes.register:           (_) => const RegisterScreen(),
         AppRoutes.dashboardMahasiswa: (_) => const DashboardMahasiswaScreen(),
-        // Sprint 2 ↓ uncomment saat bank soal selesai
-        // AppRoutes.bankSoal:           (_) => const BankSoalScreen(),
-        // Placeholder untuk route lain (Sprint 3+)
+        AppRoutes.bankSoal:           (_) => const BankSoalScreen(),
         AppRoutes.dashboardReviewer:  (_) => const _PlaceholderScreen(title: 'Dashboard Reviewer'),
         AppRoutes.dashboardAdmin:     (_) => const _PlaceholderScreen(title: 'Dashboard Admin'),
         AppRoutes.bookmarks:          (_) => const _PlaceholderScreen(title: 'Bookmark'),
