@@ -8,7 +8,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 
-import '../../../core/theme/app_theme.dart';
+import '../../../core/theme/app_theme.dart'; 
+import '../../../shared/widgets/app_widgets.dart'; 
+
 import '../../../core/services/connectivity_service.dart';
 import '../../../data/models/question_model.dart';
 import '../../../data/models/category_model.dart';
