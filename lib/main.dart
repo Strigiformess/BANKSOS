@@ -18,7 +18,7 @@ import 'features/auth/screens/register_screen.dart';
 
 // Dashboard
 import 'features/dashboard/screens/dashboard_mahasiswa_screen.dart';
-import 'features/questions/screens/bank_soal_screen.dart';
+import 'features/question/screens/bank_soal_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -51,7 +51,7 @@ class BanksosApp extends StatelessWidget {
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: ThemeMode.system, // ikuti preferensi sistem Android
-      home: const SplashRouter(),
+      home: const BankSoalScreen(),
       routes: {
         AppRoutes.login:              (_) => const LoginScreen(),
         AppRoutes.register:           (_) => const RegisterScreen(),

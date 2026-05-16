@@ -1,6 +1,11 @@
 // lib/features/dashboard/screens/dashboard_reviewer_screen.dart
+
 import 'package:flutter/material.dart';
+
+import '../../../core/theme/app_theme.dart';
 import '../../../core/services/session_service.dart';
+import '../../../shared/widgets/app_widgets.dart';
+import '../../../routes/app_routes.dart';
 
 class DashboardReviewerScreen extends StatelessWidget {
   const DashboardReviewerScreen({super.key});
@@ -8,20 +13,64 @@ class DashboardReviewerScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final session = SessionService.instance;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Dashboard Reviewer'),
-        backgroundColor: const Color(0xFF1F5C99),
-        foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            tooltip: 'Logout',
+            onPressed: () async {
+              await session.clearSession();
+              if (context.mounted) {
+                Navigator.pushReplacementNamed(context, AppRoutes.login);
+              }
+            },
+          ),
+        ],
       ),
-      body: Center(
+      body: Padding(
+        padding: AppSpacings.pagePadding,
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Halo, ${session.nama ?? "-"}!',
-                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-            Text('Role: Reviewer | ${session.email}',
-                style: const TextStyle(color: Colors.grey)),
+            // ── Greeting ──────────────────────────────────────────────────
+            Text('Halo, ${session.nama ?? '-'}!', style: AppTextStyles.h1),
+            const SizedBox(height: 4),
+            Text(
+              'Role: Reviewer  •  ${session.email ?? ''}',
+              style: AppTextStyles.body.copyWith(color: AppColors.textGrey),
+            ),
+
+            const SizedBox(height: 32),
+
+            // ── Menu Reviewer ─────────────────────────────────────────────
+            AppMenuCard(
+              icon: Icons.rate_review_outlined,
+              label: 'Antrian Review',
+              subtitle: 'Tinjau soal yang masuk dari mahasiswa',
+              onTap: () =>
+                  Navigator.pushNamed(context, AppRoutes.reviewQueue),
+            ),
+
+            const SizedBox(height: 12),
+
+            AppMenuCard(
+              icon: Icons.check_circle_outline,
+              label: 'Soal Disetujui',
+              subtitle: 'Soal yang sudah kamu approve',
+              onTap: () {}, // TODO: navigasi ke daftar soal approved
+            ),
+
+            const SizedBox(height: 12),
+
+            AppMenuCard(
+              icon: Icons.category_outlined,
+              label: 'Kelola Kategori',
+              subtitle: 'Atur kategori dan tingkat kesulitan',
+              onTap: () {}, // TODO: navigasi ke halaman kategori
+            ),
           ],
         ),
       ),

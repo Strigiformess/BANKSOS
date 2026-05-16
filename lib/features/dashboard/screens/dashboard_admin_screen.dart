@@ -1,6 +1,11 @@
 // lib/features/dashboard/screens/dashboard_admin_screen.dart
+
 import 'package:flutter/material.dart';
+
+import '../../../core/theme/app_theme.dart';
 import '../../../core/services/session_service.dart';
+import '../../../shared/widgets/app_widgets.dart';
+import '../../../routes/app_routes.dart';
 
 class DashboardAdminScreen extends StatelessWidget {
   const DashboardAdminScreen({super.key});
@@ -8,20 +13,63 @@ class DashboardAdminScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final session = SessionService.instance;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Dashboard Admin'),
-        backgroundColor: const Color(0xFF1F5C99),
-        foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            tooltip: 'Logout',
+            onPressed: () async {
+              await session.clearSession();
+              if (context.mounted) {
+                Navigator.pushReplacementNamed(context, AppRoutes.login);
+              }
+            },
+          ),
+        ],
       ),
-      body: Center(
+      body: Padding(
+        padding: AppSpacings.pagePadding,
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Halo, ${session.nama ?? "-"}!',
-                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-            Text('Role: Admin | ${session.email}',
-                style: const TextStyle(color: Colors.grey)),
+            // ── Greeting ──────────────────────────────────────────────────
+            Text('Halo, ${session.nama ?? '-'}!', style: AppTextStyles.h1),
+            const SizedBox(height: 4),
+            Text(
+              'Role: Admin  •  ${session.email ?? ''}',
+              style: AppTextStyles.body.copyWith(color: AppColors.textGrey),
+            ),
+
+            const SizedBox(height: 32),
+
+            // ── Menu Admin ────────────────────────────────────────────────
+            AppMenuCard(
+              icon: Icons.people_outline,
+              label: 'Kelola Pengguna',
+              subtitle: 'Atur role, status, dan akses pengguna',
+              onTap: () {}, // TODO: navigasi ke halaman user management
+            ),
+
+            const SizedBox(height: 12),
+
+            AppMenuCard(
+              icon: Icons.quiz_outlined,
+              label: 'Kelola Soal',
+              subtitle: 'Arsipkan atau nonaktifkan soal',
+              onTap: () {}, // TODO: navigasi ke halaman admin soal
+            ),
+
+            const SizedBox(height: 12),
+
+            AppMenuCard(
+              icon: Icons.settings_outlined,
+              label: 'Pengaturan Sistem',
+              subtitle: 'Kontrol penuh konfigurasi aplikasi',
+              onTap: () {}, // TODO: navigasi ke pengaturan
+            ),
           ],
         ),
       ),
