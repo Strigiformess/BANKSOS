@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../shared/widgets/app_widgets.dart';
 import '../controllers/auth_controller.dart';
 import '../../../routes/app_routes.dart';
 import 'register_screen.dart';
@@ -18,9 +19,9 @@ class LoginScreen extends ConsumerStatefulWidget {
 }
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
-  final _formKey       = GlobalKey<FormState>();
-  final _emailCtrl     = TextEditingController();
-  final _passwordCtrl  = TextEditingController();
+  final _formKey      = GlobalKey<FormState>();
+  final _emailCtrl    = TextEditingController();
+  final _passwordCtrl = TextEditingController();
   bool _obscurePassword = true;
 
   @override
@@ -30,25 +31,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     super.dispose();
   }
 
-  // ─── Submit login ─────────────────────────────────────────────────────────
   Future<void> _onLogin() async {
-    // Validasi form klien-side dulu
     if (!_formKey.currentState!.validate()) return;
-
-    final email    = _emailCtrl.text.trim();
-    final password = _passwordCtrl.text;
 
     final role = await ref
         .read(authControllerProvider.notifier)
-        .login(email, password);
+        .login(_emailCtrl.text.trim(), _passwordCtrl.text);
 
-    if (role != null && mounted) {
-      _navigateByRole(role);
-    }
-    // Jika null, error ditampilkan otomatis oleh ref.listen di bawah
+    if (role != null && mounted) _navigateByRole(role);
   }
 
-  // ─── Routing berdasarkan role setelah login berhasil ─────────────────────
   void _navigateByRole(String role) {
     switch (role) {
       case 'admin':
@@ -57,18 +49,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       case 'reviewer':
         Navigator.pushReplacementNamed(context, AppRoutes.dashboardReviewer);
         break;
-      default: // mahasiswa
+      default:
         Navigator.pushReplacementNamed(context, AppRoutes.dashboardMahasiswa);
     }
   }
 
-  // ─── Build ───────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authControllerProvider);
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.bgWhite,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 32),
@@ -79,14 +70,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               children: [
                 const SizedBox(height: 32),
 
-                // ── Logo & Judul ────────────────────────────────────────────
                 _buildHeader(),
 
                 const SizedBox(height: 40),
 
-                // ── Error umum dari server ──────────────────────────────────
+                // ── Error dari server — pakai AppMessageBanner ──────────────
                 if (authState.errorMessage != null) ...[
-                  _buildErrorBanner(authState.errorMessage!),
+                  AppMessageBanner(
+                    type: BannerType.error,
+                    message: authState.errorMessage!,
+                  ),
                   const SizedBox(height: 16),
                 ],
 
@@ -104,7 +97,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     if (value == null || value.trim().isEmpty) {
                       return 'Email tidak boleh kosong';
                     }
-                    final emailRegex = RegExp(r'^[\w\-.]+@([\w\-]+\.)+[\w\-]{2,}$');
+                    final emailRegex =
+                        RegExp(r'^[\w\-.]+@([\w\-]+\.)+[\w\-]{2,}$');
                     if (!emailRegex.hasMatch(value.trim())) {
                       return 'Format email tidak valid';
                     }
@@ -129,7 +123,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         _obscurePassword
                             ? Icons.visibility_off_outlined
                             : Icons.visibility_outlined,
-                        color: AppTheme.textGrey,
+                        color: AppColors.textGrey,
                       ),
                       onPressed: () =>
                           setState(() => _obscurePassword = !_obscurePassword),
@@ -165,7 +159,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                 const SizedBox(height: 20),
 
-                // ── Link ke Register ────────────────────────────────────────
                 _buildRegisterLink(),
               ],
             ),
@@ -175,17 +168,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     );
   }
 
-  // ─── Widget helper ────────────────────────────────────────────────────────
-
   Widget _buildHeader() {
     return Column(
       children: [
-        // Logo placeholder — ganti dengan Image.asset('assets/logo_banksos.png')
         Container(
           width: 80,
           height: 80,
           decoration: BoxDecoration(
-            color: AppTheme.primaryBlue,
+            color: AppColors.primaryBlue,
             borderRadius: BorderRadius.circular(20),
           ),
           child: const Center(
@@ -206,7 +196,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           style: TextStyle(
             fontSize: 28,
             fontWeight: FontWeight.bold,
-            color: AppTheme.primaryBlue,
+            color: AppColors.primaryBlue,
             letterSpacing: 3,
           ),
         ),
@@ -215,33 +205,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           'Bank Soal Kolaboratif POLBAN',
           style: TextStyle(
             fontSize: 13,
-            color: AppTheme.textGrey.withOpacity(0.8),
+            color: AppColors.textGrey.withOpacity(0.8),
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildErrorBanner(String message) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: AppTheme.errorRed.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppTheme.errorRed.withOpacity(0.4)),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.error_outline, color: AppTheme.errorRed, size: 18),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              message,
-              style: const TextStyle(color: AppTheme.errorRed, fontSize: 13),
-            ),
-          ),
-        ],
-      ),
     );
   }
 
@@ -251,7 +218,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       children: [
         Text(
           'Belum punya akun? ',
-          style: TextStyle(color: AppTheme.textGrey, fontSize: 14),
+          style: TextStyle(color: AppColors.textGrey, fontSize: 14),
         ),
         GestureDetector(
           onTap: () {
@@ -264,7 +231,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           child: const Text(
             'Daftar di sini',
             style: TextStyle(
-              color: AppTheme.primaryBlue,
+              color: AppColors.primaryBlue,
               fontSize: 14,
               fontWeight: FontWeight.w600,
               decoration: TextDecoration.underline,

@@ -1,50 +1,38 @@
 // lib/features/questions/screens/bank_soal_screen.dart
-// PIC: Seruni (SL) — Sprint 2
-// Senin  : Halaman bank soal, sidebar kategori toggle-able, card soal, badge kesulitan
-// Selasa : Chip filter tingkat kesulitan (Semua / Easy / Medium / Hard)
-// Rabu   : Tombol "Unduh untuk Offline" + progress indicator
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 
-import '../../../core/theme/app_theme.dart'; 
-import '../../../shared/widgets/app_widgets.dart'; 
-
+import '../../../core/theme/app_theme.dart';
+import '../../../shared/widgets/app_widgets.dart';
 import '../../../core/services/connectivity_service.dart';
 import '../../../data/models/question_model.dart';
 import '../../../data/models/category_model.dart';
 import '../../../data/local/hive/hive_service.dart';
 import '../../../features/auth/data/category_remote.dart';
 import '../../../features/auth/data/question_remote.dart';
+import '../../question/screens/question_detail_screen.dart';
 
-// ─── Provider: Daftar kategori ────────────────────────────────────────────────
-// Offline-first: coba Hive dulu, jika kosong ambil dari server.
+// ─── Providers ────────────────────────────────────────────────────────────────
+
 final categoryProvider = FutureProvider<List<CategoryModel>>((ref) async {
   final hive = HiveService.instance.categoriesBox;
-
-  // Coba ambil dari Hive dulu
   if (hive.isNotEmpty) {
     return hive.values.where((c) => c.isActive).toList();
   }
 
-  // Jika Hive kosong, ambil dari server
   final isOnline = await ConnectivityService.instance.isOnline;
   if (!isOnline) return [];
 
   final rawList = await CategoryRemote().getActiveCategories();
-  final categories =
-      rawList.map((m) => CategoryModel.fromMap(m)).toList();
-
-  // Simpan ke Hive untuk akses offline berikutnya
+  final categories = rawList.map((m) => CategoryModel.fromMap(m)).toList();
   for (final cat in categories) {
     await hive.put(cat.id, cat);
   }
-
   return categories;
 });
 
-// ─── Provider: Soal berdasarkan kategori yang dipilih ────────────────────────
 final selectedCategoryIdProvider = StateProvider<String?>((ref) => null);
 
 final questionProvider =
@@ -54,14 +42,12 @@ final questionProvider =
 
   List<QuestionModel> all = hive.values.toList();
 
-  // Jika belum ada soal di Hive, coba fetch dari server
   if (all.isEmpty && categoryId != null) {
     final isOnline = await ConnectivityService.instance.isOnline;
     if (isOnline) {
       final rawList = await QuestionRemote()
           .getPublishedQuestionsByCategory(categoryId);
-      final fetched =
-          rawList.map((m) => QuestionModel.fromMap(m)).toList();
+      final fetched = rawList.map((m) => QuestionModel.fromMap(m)).toList();
       for (final q in fetched) {
         await hive.put(q.id, q);
       }
@@ -69,7 +55,6 @@ final questionProvider =
     }
   }
 
-  // Filter berdasarkan kategori yang dipilih
   if (categoryId != null) {
     all = all
         .where((q) =>
@@ -83,13 +68,13 @@ final questionProvider =
   return all;
 });
 
-// ─── Provider: Status online/offline ─────────────────────────────────────────
 final connectivityProvider =
     StreamProvider<List<ConnectivityResult>>((ref) {
   return ConnectivityService.instance.onConnectivityChanged;
 });
 
-// ─── Screen Utama ─────────────────────────────────────────────────────────────
+// ─── Screen ───────────────────────────────────────────────────────────────────
+
 class BankSoalScreen extends ConsumerStatefulWidget {
   const BankSoalScreen({super.key});
 
@@ -98,20 +83,17 @@ class BankSoalScreen extends ConsumerStatefulWidget {
 }
 
 class _BankSoalScreenState extends ConsumerState<BankSoalScreen> {
-  // Sidebar toggle
   bool _isSidebarOpen = true;
 
-  // Filter kesulitan — null = semua
-  DifficultyLevel? _selectedDifficulty;
+  // Filter kesulitan — pakai enum dari app_widgets
+  DifficultyFilter _selectedDifficulty = DifficultyFilter.all;
 
-  // Search
   final _searchCtrl = TextEditingController();
   String _searchQuery = '';
 
-  // State unduh
-  bool _isDownloading = false;
+  bool   _isDownloading    = false;
   double _downloadProgress = 0;
-  String _downloadStatus = '';
+  String _downloadStatus   = '';
 
   @override
   void dispose() {
@@ -119,14 +101,16 @@ class _BankSoalScreenState extends ConsumerState<BankSoalScreen> {
     super.dispose();
   }
 
-  // ─── Proses unduh soal untuk offline ───────────────────────────────────────
-  Future<void> _downloadForOffline(String categoryId, String categoryName) async {
+  // ─── Download untuk offline ───────────────────────────────────────────────
+
+  Future<void> _downloadForOffline(
+      String categoryId, String categoryName) async {
     final isOnline = await ConnectivityService.instance.isOnline;
     if (!isOnline) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Tidak ada koneksi internet. Unduh gagal.'),
-          backgroundColor: AppTheme.errorRed,
+          backgroundColor: AppColors.errorRed,
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -134,23 +118,21 @@ class _BankSoalScreenState extends ConsumerState<BankSoalScreen> {
     }
 
     setState(() {
-      _isDownloading = true;
+      _isDownloading    = true;
       _downloadProgress = 0;
-      _downloadStatus = 'Mengambil soal $categoryName...';
+      _downloadStatus   = 'Mengambil soal $categoryName...';
     });
 
     try {
-      // Step 1: Fetch dari server
       setState(() => _downloadProgress = 0.3);
       final rawList = await QuestionRemote()
           .getPublishedQuestionsByCategory(categoryId);
 
       setState(() {
         _downloadProgress = 0.6;
-        _downloadStatus = 'Menyimpan ${rawList.length} soal...';
+        _downloadStatus   = 'Menyimpan ${rawList.length} soal...';
       });
 
-      // Step 2: Simpan ke Hive
       final hive = HiveService.instance.questionsBox;
       for (final raw in rawList) {
         final question = QuestionModel.fromMap(raw);
@@ -158,16 +140,14 @@ class _BankSoalScreenState extends ConsumerState<BankSoalScreen> {
       }
 
       setState(() => _downloadProgress = 1.0);
-
-      // Refresh tampilan soal
       ref.invalidate(questionProvider);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-                '${rawList.length} soal $categoryName berhasil diunduh untuk offline.'),
-            backgroundColor: AppTheme.successGreen,
+                '${rawList.length} soal $categoryName berhasil diunduh.'),
+            backgroundColor: AppColors.successGreen,
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -177,7 +157,7 @@ class _BankSoalScreenState extends ConsumerState<BankSoalScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Gagal mengunduh: $e'),
-            backgroundColor: AppTheme.errorRed,
+            backgroundColor: AppColors.errorRed,
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -185,21 +165,27 @@ class _BankSoalScreenState extends ConsumerState<BankSoalScreen> {
     } finally {
       if (mounted) {
         setState(() {
-          _isDownloading = false;
+          _isDownloading    = false;
           _downloadProgress = 0;
-          _downloadStatus = '';
+          _downloadStatus   = '';
         });
       }
     }
   }
 
-  // ─── Filter soal berdasarkan kesulitan & search ──────────────────────────
+  // ─── Filter ───────────────────────────────────────────────────────────────
+
   List<QuestionModel> _applyFilters(List<QuestionModel> questions) {
     var filtered = questions;
 
-    if (_selectedDifficulty != null) {
+    if (_selectedDifficulty != DifficultyFilter.all) {
+      final levelMap = {
+        DifficultyFilter.easy:   DifficultyLevel.easy,
+        DifficultyFilter.medium: DifficultyLevel.medium,
+        DifficultyFilter.hard:   DifficultyLevel.hard,
+      };
       filtered = filtered
-          .where((q) => q.tingkatKesulitan == _selectedDifficulty)
+          .where((q) => q.tingkatKesulitan == levelMap[_selectedDifficulty])
           .toList();
     }
 
@@ -214,19 +200,20 @@ class _BankSoalScreenState extends ConsumerState<BankSoalScreen> {
     return filtered;
   }
 
+  // ─── Build ───────────────────────────────────────────────────────────────
+
   @override
   Widget build(BuildContext context) {
-    final categoriesAsync = ref.watch(categoryProvider);
-    final questionsAsync = ref.watch(questionProvider);
-    final connectivityAsync = ref.watch(connectivityProvider);
+    final categoriesAsync    = ref.watch(categoryProvider);
+    final questionsAsync     = ref.watch(questionProvider);
+    final connectivityAsync  = ref.watch(connectivityProvider);
     final selectedCategoryId = ref.watch(selectedCategoryIdProvider);
 
-    // Deteksi offline
     final isOffline = connectivityAsync.when(
       data: (results) =>
           results.contains(ConnectivityResult.none) || results.isEmpty,
       loading: () => false,
-      error: (_, __) => false,
+      error:   (_, __) => false,
     );
 
     return Scaffold(
@@ -238,20 +225,20 @@ class _BankSoalScreenState extends ConsumerState<BankSoalScreen> {
                 ? Icons.menu_open_outlined
                 : Icons.menu_outlined,
           ),
-          tooltip: _isSidebarOpen ? 'Tutup Kategori' : 'Buka Kategori',
+          tooltip:
+              _isSidebarOpen ? 'Tutup Kategori' : 'Buka Kategori',
           onPressed: () =>
               setState(() => _isSidebarOpen = !_isSidebarOpen),
         ),
         actions: [
-          // Tombol Unduh untuk Offline
           if (selectedCategoryId != null)
             categoriesAsync.when(
               data: (categories) {
-                final selected = categories
+                final match = categories
                     .where((c) => c.id == selectedCategoryId)
                     .toList();
                 final categoryName =
-                    selected.isNotEmpty ? selected.first.nama : 'Soal';
+                    match.isNotEmpty ? match.first.nama : 'Soal';
                 return IconButton(
                   icon: _isDownloading
                       ? SizedBox(
@@ -259,7 +246,7 @@ class _BankSoalScreenState extends ConsumerState<BankSoalScreen> {
                           height: 20,
                           child: CircularProgressIndicator(
                             value: _downloadProgress,
-                            color: Colors.white,
+                            color: AppColors.textLight,
                             strokeWidth: 2,
                           ),
                         )
@@ -274,72 +261,45 @@ class _BankSoalScreenState extends ConsumerState<BankSoalScreen> {
                 );
               },
               loading: () => const SizedBox.shrink(),
-              error: (_, __) => const SizedBox.shrink(),
+              error:   (_, __) => const SizedBox.shrink(),
             ),
         ],
       ),
       body: Column(
         children: [
-          // ── Banner Offline ──────────────────────────────────────────────
-          if (isOffline)
-            Container(
-              width: double.infinity,
-              color: AppTheme.warningYellow.withOpacity(0.15),
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Row(
-                children: [
-                  Icon(Icons.wifi_off_outlined,
-                      size: 16, color: AppTheme.warningYellow),
-                  const SizedBox(width: 8),
-                  const Text(
-                    'Mode Offline — Menampilkan soal tersimpan',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: AppTheme.warningYellow,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+          // ── Banner Offline — pakai OfflineBanner dari app_widgets ───────
+          if (isOffline) const OfflineBanner(),
 
-          // ── Progress Bar Unduh ──────────────────────────────────────────
+          // ── Progress Bar Unduh ─────────────────────────────────────────
           if (_isDownloading) ...[
             LinearProgressIndicator(
               value: _downloadProgress,
-              backgroundColor: AppTheme.lightBlue,
-              color: AppTheme.primaryBlue,
+              backgroundColor: AppColors.lightBlue,
+              color: AppColors.primaryBlue,
             ),
             Padding(
               padding:
                   const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
               child: Row(
                 children: [
-                  Text(
-                    _downloadStatus,
-                    style: TextStyle(
-                        fontSize: 12, color: AppTheme.textGrey),
-                  ),
+                  Text(_downloadStatus, style: AppTextStyles.small),
                   const Spacer(),
                   Text(
                     '${(_downloadProgress * 100).toInt()}%',
-                    style: const TextStyle(
-                        fontSize: 12,
-                        color: AppTheme.primaryBlue,
-                        fontWeight: FontWeight.w600),
+                    style: AppTextStyles.smallSemibold
+                        .copyWith(color: AppColors.primaryBlue),
                   ),
                 ],
               ),
             ),
           ],
 
-          // ── Konten Utama: Sidebar + Daftar Soal ────────────────────────
+          // ── Konten Utama: Sidebar + Daftar Soal ───────────────────────
           Expanded(
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // ── Sidebar Kategori (toggle-able) ──────────────────────
+                // ── Sidebar Kategori ───────────────────────────────────
                 AnimatedContainer(
                   duration: const Duration(milliseconds: 250),
                   curve: Curves.easeInOut,
@@ -349,30 +309,33 @@ class _BankSoalScreenState extends ConsumerState<BankSoalScreen> {
                       : const SizedBox.shrink(),
                 ),
 
-                // ── Divider antara sidebar dan konten ───────────────────
                 if (_isSidebarOpen)
                   const VerticalDivider(width: 1, thickness: 1),
 
-                // ── Kolom Kanan: Filter + Daftar Soal ──────────────────
+                // ── Kolom Kanan ────────────────────────────────────────
                 Expanded(
                   child: Column(
                     children: [
                       // Search bar
                       Padding(
-                        padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
+                        padding:
+                            const EdgeInsets.fromLTRB(12, 10, 12, 4),
                         child: TextField(
                           controller: _searchCtrl,
                           decoration: InputDecoration(
                             hintText: 'Cari soal...',
                             isDense: true,
-                            prefixIcon: const Icon(Icons.search_outlined,
+                            prefixIcon: const Icon(
+                                Icons.search_outlined,
                                 size: 20),
                             suffixIcon: _searchQuery.isNotEmpty
                                 ? IconButton(
-                                    icon: const Icon(Icons.clear, size: 18),
+                                    icon: const Icon(Icons.clear,
+                                        size: 18),
                                     onPressed: () {
                                       _searchCtrl.clear();
-                                      setState(() => _searchQuery = '');
+                                      setState(
+                                          () => _searchQuery = '');
                                     },
                                   )
                                 : null,
@@ -382,22 +345,27 @@ class _BankSoalScreenState extends ConsumerState<BankSoalScreen> {
                         ),
                       ),
 
-                      // Filter Chip Kesulitan (TASK SELASA)
-                      _buildFilterChips(),
+                      // Filter Chip — pakai AppDifficultyChips ──────────
+                      AppDifficultyChips(
+                        selected: _selectedDifficulty,
+                        onChanged: (val) =>
+                            setState(() => _selectedDifficulty = val),
+                      ),
 
                       const Divider(height: 1),
 
                       // Daftar Soal
                       Expanded(
                         child: questionsAsync.when(
-                          loading: () => const Center(
-                            child: CircularProgressIndicator(),
-                          ),
+                          loading: () =>
+                              const AppLoadingIndicator(),
                           error: (e, _) => _buildError(e.toString()),
                           data: (questions) {
-                            final filtered = _applyFilters(questions);
+                            final filtered =
+                                _applyFilters(questions);
                             if (filtered.isEmpty) {
-                              return _buildEmpty(selectedCategoryId);
+                              return _buildEmpty(
+                                  selectedCategoryId);
                             }
                             return _buildQuestionList(filtered);
                           },
@@ -415,28 +383,20 @@ class _BankSoalScreenState extends ConsumerState<BankSoalScreen> {
   }
 
   // ─── Sidebar Kategori ─────────────────────────────────────────────────────
+
   Widget _buildSidebar(
     AsyncValue<List<CategoryModel>> categoriesAsync,
     String? selectedCategoryId,
   ) {
     return Container(
-      color: AppTheme.bgLight,
+      color: AppColors.bgLight,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 12, 12, 6),
-            child: Text(
-              'Mata Kuliah',
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: AppTheme.textGrey,
-                letterSpacing: 0.5,
-              ),
-            ),
+            child: Text('Mata Kuliah', style: AppTextStyles.captionBold),
           ),
-          // Item "Semua"
           _buildCategoryItem(
             id: null,
             label: 'Semua',
@@ -444,7 +404,6 @@ class _BankSoalScreenState extends ConsumerState<BankSoalScreen> {
             isSelected: selectedCategoryId == null,
           ),
           const Divider(height: 8, indent: 12, endIndent: 12),
-          // Daftar kategori dari server/hive
           Expanded(
             child: categoriesAsync.when(
               loading: () => const Center(
@@ -455,11 +414,9 @@ class _BankSoalScreenState extends ConsumerState<BankSoalScreen> {
               ),
               error: (e, _) => Padding(
                 padding: const EdgeInsets.all(12),
-                child: Text(
-                  'Gagal memuat kategori',
-                  style: TextStyle(
-                      fontSize: 12, color: AppTheme.errorRed),
-                ),
+                child: Text('Gagal memuat kategori',
+                    style: AppTextStyles.small
+                        .copyWith(color: AppColors.errorRed)),
               ),
               data: (categories) => ListView.builder(
                 padding: EdgeInsets.zero,
@@ -490,9 +447,8 @@ class _BankSoalScreenState extends ConsumerState<BankSoalScreen> {
     return InkWell(
       onTap: () {
         ref.read(selectedCategoryIdProvider.notifier).state = id;
-        // Reset filter saat ganti kategori
         setState(() {
-          _selectedDifficulty = null;
+          _selectedDifficulty = DifficultyFilter.all;
           _searchCtrl.clear();
           _searchQuery = '';
         });
@@ -502,15 +458,12 @@ class _BankSoalScreenState extends ConsumerState<BankSoalScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
           color: isSelected
-              ? AppTheme.primaryBlue.withOpacity(0.08)
+              ? AppColors.primaryBlue.withOpacity(0.08)
               : Colors.transparent,
           border: isSelected
               ? const Border(
                   left: BorderSide(
-                    color: AppTheme.primaryBlue,
-                    width: 3,
-                  ),
-                )
+                      color: AppColors.primaryBlue, width: 3))
               : null,
         ),
         child: Row(
@@ -518,21 +471,21 @@ class _BankSoalScreenState extends ConsumerState<BankSoalScreen> {
             Icon(
               icon,
               size: 16,
-              color:
-                  isSelected ? AppTheme.primaryBlue : AppTheme.textGrey,
+              color: isSelected
+                  ? AppColors.primaryBlue
+                  : AppColors.textGrey,
             ),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
                 label,
-                style: TextStyle(
-                  fontSize: 12,
+                style: AppTextStyles.small.copyWith(
                   fontWeight: isSelected
                       ? FontWeight.w600
                       : FontWeight.normal,
                   color: isSelected
-                      ? AppTheme.primaryBlue
-                      : AppTheme.textDark,
+                      ? AppColors.primaryBlue
+                      : AppColors.textDark,
                 ),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
@@ -544,60 +497,8 @@ class _BankSoalScreenState extends ConsumerState<BankSoalScreen> {
     );
   }
 
-  // ─── Filter Chips Kesulitan (TASK SELASA) ─────────────────────────────────
-  Widget _buildFilterChips() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      child: Row(
-        children: [
-          _buildChip(label: 'Semua', difficulty: null),
-          const SizedBox(width: 6),
-          _buildChip(label: 'Mudah', difficulty: DifficultyLevel.easy),
-          const SizedBox(width: 6),
-          _buildChip(label: 'Sedang', difficulty: DifficultyLevel.medium),
-          const SizedBox(width: 6),
-          _buildChip(label: 'Sulit', difficulty: DifficultyLevel.hard),
-        ],
-      ),
-    );
-  }
+  // ─── Daftar Soal ──────────────────────────────────────────────────────────
 
-  Widget _buildChip({
-    required String label,
-    required DifficultyLevel? difficulty,
-  }) {
-    final isSelected = _selectedDifficulty == difficulty;
-
-    Color chipColor = AppTheme.primaryBlue;
-    if (difficulty == DifficultyLevel.easy) chipColor = AppTheme.easyGreen;
-    if (difficulty == DifficultyLevel.medium) chipColor = AppTheme.mediumYellow;
-    if (difficulty == DifficultyLevel.hard) chipColor = AppTheme.hardRed;
-
-    return FilterChip(
-      label: Text(label),
-      selected: isSelected,
-      onSelected: (_) =>
-          setState(() => _selectedDifficulty = difficulty),
-      selectedColor: chipColor.withOpacity(0.15),
-      checkmarkColor: chipColor,
-      side: BorderSide(
-        color: isSelected ? chipColor : AppTheme.borderGrey,
-        width: isSelected ? 1.5 : 1,
-      ),
-      labelStyle: TextStyle(
-        fontSize: 12,
-        color: isSelected ? chipColor : AppTheme.textGrey,
-        fontWeight:
-            isSelected ? FontWeight.w600 : FontWeight.normal,
-      ),
-      padding:
-          const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
-      visualDensity: VisualDensity.compact,
-    );
-  }
-
-  // ─── Daftar Soal ─────────────────────────────────────────────────────────
   Widget _buildQuestionList(List<QuestionModel> questions) {
     return ListView.separated(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -613,40 +514,32 @@ class _BankSoalScreenState extends ConsumerState<BankSoalScreen> {
   }
 
   // ─── Empty & Error State ──────────────────────────────────────────────────
+
+  /// Pakai AppEmptyState dari app_widgets
   Widget _buildEmpty(String? categoryId) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            categoryId == null
-                ? Icons.menu_book_outlined
-                : Icons.inbox_outlined,
-            size: 56,
-            color: AppTheme.textGrey.withOpacity(0.4),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            _searchQuery.isNotEmpty
-                ? 'Soal tidak ditemukan'
-                : categoryId == null
-                    ? 'Pilih mata kuliah di sidebar'
-                    : 'Belum ada soal.\nCoba unduh terlebih dahulu.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: AppTheme.textGrey, fontSize: 14),
-          ),
-          if (_searchQuery.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            TextButton(
+    return AppEmptyState(
+      icon: categoryId == null
+          ? Icons.menu_book_outlined
+          : Icons.inbox_outlined,
+      title: _searchQuery.isNotEmpty
+          ? 'Soal tidak ditemukan'
+          : categoryId == null
+              ? 'Pilih mata kuliah di sidebar'
+              : 'Belum ada soal',
+      subtitle: _searchQuery.isNotEmpty
+          ? null
+          : categoryId == null
+              ? null
+              : 'Coba unduh soal terlebih dahulu.',
+      action: _searchQuery.isNotEmpty
+          ? TextButton(
               onPressed: () {
                 _searchCtrl.clear();
                 setState(() => _searchQuery = '');
               },
               child: const Text('Hapus pencarian'),
-            ),
-          ],
-        ],
-      ),
+            )
+          : null,
     );
   }
 
@@ -658,11 +551,11 @@ class _BankSoalScreenState extends ConsumerState<BankSoalScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const Icon(Icons.cloud_off_outlined,
-                size: 48, color: AppTheme.errorRed),
+                size: 48, color: AppColors.errorRed),
             const SizedBox(height: 12),
             Text(
               message,
-              style: const TextStyle(color: AppTheme.textGrey, fontSize: 13),
+              style: AppTextStyles.small,
               textAlign: TextAlign.center,
             ),
           ],
@@ -673,33 +566,41 @@ class _BankSoalScreenState extends ConsumerState<BankSoalScreen> {
 }
 
 // ─── Card Soal ────────────────────────────────────────────────────────────────
+
 class _QuestionCard extends StatelessWidget {
   final QuestionModel question;
   final int nomor;
 
   const _QuestionCard({required this.question, required this.nomor});
 
+  String _buildPlaceholder(String answer) {
+    return answer
+        .trim()
+        .split(' ')
+        .map((word) => '_' * word.length)
+        .join(' ');
+  }
+
   @override
   Widget build(BuildContext context) {
     return Card(
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: AppRadius.lgAll,
         onTap: () {
-          // Sprint 2 Kamis — Revaldi yang handle KerjakanSoalScreen
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Fitur kerjakan soal dalam pengerjaan...'),
-              behavior: SnackBarBehavior.floating,
-              duration: Duration(seconds: 1),
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) =>
+                  QuestionDetailScreen(question: question),
             ),
           );
         },
         child: Padding(
-          padding: const EdgeInsets.all(14),
+          padding: AppSpacings.cardPadding,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Baris atas: nomor + badge kesulitan + bookmark
+              // Baris atas: nomor + badge kesulitan + hint count + bookmark
               Row(
                 children: [
                   // Nomor soal
@@ -707,23 +608,20 @@ class _QuestionCard extends StatelessWidget {
                     width: 26,
                     height: 26,
                     decoration: BoxDecoration(
-                      color: AppTheme.lightBlue,
-                      borderRadius: BorderRadius.circular(6),
+                      color: AppColors.lightBlue,
+                      borderRadius: AppRadius.smAll,
                     ),
                     alignment: Alignment.center,
                     child: Text(
                       '$nomor',
-                      style: const TextStyle(
-                        color: AppTheme.primaryBlue,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
+                      style: AppTextStyles.captionBold
+                          .copyWith(color: AppColors.primaryBlue),
                     ),
                   ),
                   const SizedBox(width: 8),
 
-                  // Badge kesulitan (TASK SENIN)
-                  _DifficultyBadge(level: question.tingkatKesulitan),
+                  // Badge kesulitan — pakai AppBadge.difficulty() ─────────
+                  AppBadge.difficulty(question.tingkatKesulitan.name),
 
                   const Spacer(),
 
@@ -733,23 +631,22 @@ class _QuestionCard extends StatelessWidget {
                       padding: const EdgeInsets.only(right: 8),
                       child: Row(
                         children: [
-                          Icon(Icons.lightbulb_outline,
-                              size: 14, color: AppTheme.warningYellow),
+                          const Icon(Icons.lightbulb_outline,
+                              size: 14,
+                              color: AppColors.warningYellow),
                           const SizedBox(width: 2),
                           Text(
                             '${question.hints.length}',
-                            style: TextStyle(
-                                fontSize: 11, color: AppTheme.textGrey),
+                            style: AppTextStyles.caption,
                           ),
                         ],
                       ),
                     ),
 
-                  // Ikon bookmark placeholder (Sprint 3 — Seruni Selasa)
                   Icon(
                     Icons.bookmark_border_outlined,
                     size: 18,
-                    color: AppTheme.textGrey.withOpacity(0.5),
+                    color: AppColors.textGrey.withOpacity(0.5),
                   ),
                 ],
               ),
@@ -757,99 +654,30 @@ class _QuestionCard extends StatelessWidget {
               const SizedBox(height: 10),
 
               // Pertanyaan
-              Text(
-                question.pertanyaan,
-                style: const TextStyle(
-                  fontSize: 14,
-                  height: 1.5,
-                  color: AppTheme.textDark,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
+              Text(question.pertanyaan, style: AppTextStyles.bodySemibold),
 
               const SizedBox(height: 8),
 
-              // Placeholder jawaban: _____ _____
+              // Placeholder jawaban
               Text(
                 _buildPlaceholder(question.jawaban),
-                style: TextStyle(
-                  fontSize: 13,
-                  color: AppTheme.textGrey,
-                  letterSpacing: 1,
-                ),
+                style: AppTextStyles.answerPlaceholder,
               ),
 
               const SizedBox(height: 8),
 
-              // Mata kuliah + kategori
+              // Kategori
               Row(
                 children: [
-                  Icon(Icons.folder_outlined,
-                      size: 13, color: AppTheme.textGrey),
+                  const Icon(Icons.folder_outlined,
+                      size: 13, color: AppColors.textGrey),
                   const SizedBox(width: 4),
-                  Text(
-                    question.kategoriNama,
-                    style: TextStyle(
-                        fontSize: 11, color: AppTheme.textGrey),
-                  ),
+                  Text(question.kategoriNama,
+                      style: AppTextStyles.caption),
                 ],
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  /// Buat placeholder seperti: _____ _____
-  /// Sesuai spesifikasi BANKSOS: panjang underscore = panjang kata jawaban.
-  String _buildPlaceholder(String answer) {
-    return answer
-        .trim()
-        .split(' ')
-        .map((word) => '_' * word.length)
-        .join(' ');
-  }
-}
-
-// ─── Badge Kesulitan ──────────────────────────────────────────────────────────
-class _DifficultyBadge extends StatelessWidget {
-  final DifficultyLevel level;
-  const _DifficultyBadge({required this.level});
-
-  @override
-  Widget build(BuildContext context) {
-    final Color color;
-    final String label;
-
-    switch (level) {
-      case DifficultyLevel.easy:
-        color = AppTheme.easyGreen;
-        label = 'Mudah';
-        break;
-      case DifficultyLevel.medium:
-        color = AppTheme.mediumYellow;
-        label = 'Sedang';
-        break;
-      case DifficultyLevel.hard:
-        color = AppTheme.hardRed;
-        label = 'Sulit';
-        break;
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.12),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(0.5)),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: color,
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
         ),
       ),
     );

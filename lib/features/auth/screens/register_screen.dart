@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../shared/widgets/app_widgets.dart';
 import '../controllers/auth_controller.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
@@ -16,23 +17,21 @@ class RegisterScreen extends ConsumerStatefulWidget {
 }
 
 class _RegisterScreenState extends ConsumerState<RegisterScreen> {
-  final _namaCtrl      = TextEditingController();
-  final _nimCtrl       = TextEditingController();
-  final _emailCtrl     = TextEditingController();
-  final _passwordCtrl  = TextEditingController();
-  final _konfirmasiCtrl= TextEditingController();
+  final _namaCtrl       = TextEditingController();
+  final _nimCtrl        = TextEditingController();
+  final _emailCtrl      = TextEditingController();
+  final _passwordCtrl   = TextEditingController();
+  final _konfirmasiCtrl = TextEditingController();
 
-  bool _obscurePassword     = true;
-  bool _obscureKonfirmasi   = true;
+  bool _obscurePassword   = true;
+  bool _obscureKonfirmasi = true;
 
-  // Untuk real-time validation — tiap field punya error string sendiri
   String? _namaError;
   String? _nimError;
   String? _emailError;
   String? _passwordError;
   String? _konfirmasiError;
 
-  // Tombol Daftar hanya aktif jika semua field sudah valid
   bool get _isFormValid =>
       _namaError == null && _namaCtrl.text.isNotEmpty &&
       _nimError == null && _nimCtrl.text.isNotEmpty &&
@@ -100,7 +99,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       } else {
         _passwordError = null;
       }
-      // Re-validate konfirmasi jika sudah diisi
       if (_konfirmasiCtrl.text.isNotEmpty) {
         _validateKonfirmasi(_konfirmasiCtrl.text);
       }
@@ -119,7 +117,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     });
   }
 
-  // ─── Submit register ──────────────────────────────────────────────────────
+  // ─── Submit ──────────────────────────────────────────────────────────────
+
   Future<void> _onRegister() async {
     if (!_isFormValid) return;
 
@@ -136,25 +135,26 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Pendaftaran berhasil! Silakan login.'),
-          backgroundColor: AppTheme.successGreen,
+          backgroundColor: AppColors.successGreen,
           behavior: SnackBarBehavior.floating,
         ),
       );
-      Navigator.pop(context); // Kembali ke LoginScreen
+      Navigator.pop(context);
     }
   }
 
   // ─── Build ───────────────────────────────────────────────────────────────
+
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authControllerProvider);
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.bgWhite,
       appBar: AppBar(
         title: const Text('Buat Akun Baru'),
-        backgroundColor: Colors.white,
-        foregroundColor: AppTheme.primaryBlue,
+        backgroundColor: AppColors.bgWhite,
+        foregroundColor: AppColors.primaryBlue,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new),
@@ -167,26 +167,24 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Subjudul
               Text(
                 'Isi data diri kamu untuk mulai belajar bersama BANKSOS.',
-                style: TextStyle(
-                  color: AppTheme.textGrey,
-                  fontSize: 14,
-                  height: 1.5,
-                ),
+                style: AppTextStyles.body.copyWith(color: AppColors.textGrey),
                 textAlign: TextAlign.center,
               ),
 
               const SizedBox(height: 24),
 
-              // ── Error dari server ──────────────────────────────────────────
+              // ── Error dari server — pakai AppMessageBanner ──────────────
               if (authState.errorMessage != null) ...[
-                _buildErrorBanner(authState.errorMessage!),
+                AppMessageBanner(
+                  type: BannerType.error,
+                  message: authState.errorMessage!,
+                ),
                 const SizedBox(height: 16),
               ],
 
-              // ── Nama Lengkap ───────────────────────────────────────────────
+              // ── Nama Lengkap ───────────────────────────────────────────
               _buildField(
                 controller: _namaCtrl,
                 label: 'Nama Lengkap',
@@ -199,7 +197,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
               const SizedBox(height: 14),
 
-              // ── NIM ────────────────────────────────────────────────────────
+              // ── NIM ────────────────────────────────────────────────────
               _buildField(
                 controller: _nimCtrl,
                 label: 'NIM',
@@ -213,7 +211,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
               const SizedBox(height: 14),
 
-              // ── Email ──────────────────────────────────────────────────────
+              // ── Email ──────────────────────────────────────────────────
               _buildField(
                 controller: _emailCtrl,
                 label: 'Email',
@@ -227,7 +225,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
               const SizedBox(height: 14),
 
-              // ── Kata Sandi ─────────────────────────────────────────────────
+              // ── Kata Sandi ─────────────────────────────────────────────
               _buildPasswordField(
                 controller: _passwordCtrl,
                 label: 'Kata Sandi',
@@ -242,7 +240,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
               const SizedBox(height: 14),
 
-              // ── Konfirmasi Kata Sandi ──────────────────────────────────────
+              // ── Konfirmasi Kata Sandi ──────────────────────────────────
               _buildPasswordField(
                 controller: _konfirmasiCtrl,
                 label: 'Konfirmasi Kata Sandi',
@@ -258,7 +256,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
               const SizedBox(height: 28),
 
-              // ── Tombol Daftar ──────────────────────────────────────────────
+              // ── Tombol Daftar ──────────────────────────────────────────
               ElevatedButton(
                 onPressed: (!_isFormValid || authState.isLoading)
                     ? null
@@ -277,13 +275,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
               const SizedBox(height: 20),
 
-              // ── Link ke Login ──────────────────────────────────────────────
+              // ── Link ke Login ──────────────────────────────────────────
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
                     'Sudah punya akun? ',
-                    style: TextStyle(color: AppTheme.textGrey, fontSize: 14),
+                    style: AppTextStyles.body.copyWith(
+                        color: AppColors.textGrey),
                   ),
                   GestureDetector(
                     onTap: () {
@@ -293,7 +292,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     child: const Text(
                       'Masuk',
                       style: TextStyle(
-                        color: AppTheme.primaryBlue,
+                        color: AppColors.primaryBlue,
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
                         decoration: TextDecoration.underline,
@@ -323,22 +322,17 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     TextInputType keyboardType = TextInputType.text,
     TextInputAction textInputAction = TextInputAction.next,
   }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        TextFormField(
-          controller: controller,
-          keyboardType: keyboardType,
-          textInputAction: textInputAction,
-          onChanged: onChanged,
-          decoration: InputDecoration(
-            labelText: label,
-            hintText: hint,
-            prefixIcon: Icon(icon),
-            errorText: errorText,
-          ),
-        ),
-      ],
+    return TextFormField(
+      controller: controller,
+      keyboardType: keyboardType,
+      textInputAction: textInputAction,
+      onChanged: onChanged,
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: hint,
+        prefixIcon: Icon(icon),
+        errorText: errorText,
+      ),
     );
   }
 
@@ -366,34 +360,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         errorText: errorText,
         suffixIcon: IconButton(
           icon: Icon(
-            obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-            color: AppTheme.textGrey,
+            obscure
+                ? Icons.visibility_off_outlined
+                : Icons.visibility_outlined,
+            color: AppColors.textGrey,
           ),
           onPressed: onToggleObscure,
         ),
-      ),
-    );
-  }
-
-  Widget _buildErrorBanner(String message) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: AppTheme.errorRed.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppTheme.errorRed.withOpacity(0.4)),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.error_outline, color: AppTheme.errorRed, size: 18),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              message,
-              style: const TextStyle(color: AppTheme.errorRed, fontSize: 13),
-            ),
-          ),
-        ],
       ),
     );
   }

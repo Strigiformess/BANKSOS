@@ -1,13 +1,15 @@
 // lib/features/dashboard/screens/dashboard_mahasiswa_screen.dart
 // PIC: Seruni (SL) — Sprint 1 placeholder, Sprint 3 akan lengkap
 
+// lib/features/dashboard/screens/dashboard_mahasiswa_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/services/session_service.dart';
 import '../../../routes/app_routes.dart';
-// import '../../questions/screens/bank_soal_screen.dart';
+import '../../../shared/widgets/app_widgets.dart';
 
 class DashboardMahasiswaScreen extends ConsumerWidget {
   const DashboardMahasiswaScreen({super.key});
@@ -33,43 +35,34 @@ class DashboardMahasiswaScreen extends ConsumerWidget {
         ],
       ),
       body: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: AppSpacings.pagePadding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Greeting
+            // ── Greeting ──────────────────────────────────────────────────
             Text(
               'Halo, ${session.nama ?? 'Mahasiswa'}! 👋',
-              style: const TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.textDark,
-              ),
+              style: AppTextStyles.h1,
             ),
             const SizedBox(height: 6),
             Text(
               'Siap belajar hari ini?',
-              style: TextStyle(color: AppTheme.textGrey, fontSize: 14),
+              style: AppTextStyles.body.copyWith(color: AppColors.textGrey),
             ),
 
             const SizedBox(height: 32),
 
-            // Shortcut ke Bank Soal
-            // _buildMenuCard(
-            //   context,
-            //   icon: Icons.menu_book_outlined,
-            //   label: 'Bank Soal',
-            //   subtitle: 'Jelajahi & kerjakan soal latihan',
-            //   onTap: () => Navigator.push(
-            //     context,
-            //     MaterialPageRoute(builder: (_) => const BankSoalScreen()),
-            //   ),
-            // ),
+            // ── Menu Cards — pakai AppMenuCard dari app_widgets ───────────
+            AppMenuCard(
+              icon: Icons.menu_book_outlined,
+              label: 'Bank Soal',
+              subtitle: 'Jelajahi & kerjakan soal latihan',
+              onTap: () => Navigator.pushNamed(context, AppRoutes.bankSoal),
+            ),
 
             const SizedBox(height: 12),
 
-            _buildMenuCard(
-              context,
+            AppMenuCard(
               icon: Icons.bookmark_outline,
               label: 'Soal Tersimpan',
               subtitle: 'Lihat soal yang kamu bookmark',
@@ -78,45 +71,24 @@ class DashboardMahasiswaScreen extends ConsumerWidget {
 
             const SizedBox(height: 12),
 
-            _buildMenuCard(
-              context,
+            AppMenuCard(
               icon: Icons.history_outlined,
               label: 'Riwayat',
               subtitle: 'Soal yang sudah kamu kerjakan',
               onTap: () => Navigator.pushNamed(context, AppRoutes.riwayat),
             ),
+
+            const SizedBox(height: 12),
+
+            AppMenuCard(
+              icon: Icons.add_circle_outline,
+              label: 'Kontribusi Soal',
+              subtitle: 'Ajukan soal baru untuk ditinjau',
+              onTap: () =>
+                  Navigator.pushNamed(context, AppRoutes.kontribusi),
+            ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildMenuCard(
-    BuildContext context, {
-    required IconData icon,
-    required String label,
-    required String subtitle,
-    required VoidCallback onTap,
-  }) {
-    return Card(
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        leading: Container(
-          width: 44,
-          height: 44,
-          decoration: BoxDecoration(
-            color: AppTheme.lightBlue,
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Icon(icon, color: AppTheme.primaryBlue),
-        ),
-        title: Text(
-          label,
-          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
-        ),
-        subtitle: Text(subtitle, style: TextStyle(color: AppTheme.textGrey, fontSize: 12)),
-        trailing: const Icon(Icons.chevron_right, color: AppTheme.primaryBlue),
-        onTap: onTap,
       ),
     );
   }
