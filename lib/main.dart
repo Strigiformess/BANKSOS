@@ -15,6 +15,7 @@ import 'routes/app_routes.dart';
 // Auth
 import 'features/auth/screens/login_screen.dart';
 import 'features/auth/screens/register_screen.dart';
+import 'features/auth/screens/splash_screen.dart';
 
 // Dashboard
 import 'features/dashboard/screens/dashboard_mahasiswa_screen.dart';
@@ -50,11 +51,12 @@ class BanksosApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.system, // ikuti preferensi sistem Android
-      home: const BankSoalScreen(),
+      themeMode: ThemeMode.system, 
+      home: const LoginScreen(), 
       routes: {
         AppRoutes.login:              (_) => const LoginScreen(),
         AppRoutes.register:           (_) => const RegisterScreen(),
+        AppRoutes.splash:             (_) => const SplashScreen(), // <-- Dan ini juga
         AppRoutes.dashboardMahasiswa: (_) => const DashboardMahasiswaScreen(),
         AppRoutes.bankSoal:           (_) => const BankSoalScreen(),
         AppRoutes.dashboardReviewer:  (_) => const _PlaceholderScreen(title: 'Dashboard Reviewer'),
@@ -68,74 +70,7 @@ class BanksosApp extends StatelessWidget {
   }
 }
 
-// ─── Splash Router ─────────────────────────────────────────────────────────────
-/// Cek sesi Hive → redirect ke halaman yang sesuai tanpa loading screen panjang.
-class SplashRouter extends StatefulWidget {
-  const SplashRouter({super.key});
 
-  @override
-  State<SplashRouter> createState() => _SplashRouterState();
-}
-
-class _SplashRouterState extends State<SplashRouter> {
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _redirect());
-  }
-
-  void _redirect() {
-    if (!mounted) return;
-    final session = SessionService.instance;
-
-    if (!session.isLoggedIn) {
-      Navigator.pushReplacementNamed(context, AppRoutes.login);
-      return;
-    }
-
-    switch (session.role) {
-      case 'admin':
-        Navigator.pushReplacementNamed(context, AppRoutes.dashboardAdmin);
-        break;
-      case 'reviewer':
-        Navigator.pushReplacementNamed(context, AppRoutes.dashboardReviewer);
-        break;
-      default:
-        Navigator.pushReplacementNamed(context, AppRoutes.dashboardMahasiswa);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    // Splash screen sementara redirect diproses
-    return const Scaffold(
-      backgroundColor: AppTheme.primaryBlue,
-      body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'BANKSOS',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 36,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 5,
-              ),
-            ),
-            SizedBox(height: 8),
-            Text(
-              'Bank Soal Kolaboratif POLBAN',
-              style: TextStyle(color: Colors.white70, fontSize: 13),
-            ),
-            SizedBox(height: 32),
-            CircularProgressIndicator(color: Colors.white),
-          ],
-        ),
-      ),
-    );
-  }
-}
 
 // ─── Placeholder untuk route Sprint 3+ ────────────────────────────────────────
 class _PlaceholderScreen extends StatelessWidget {
