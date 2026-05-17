@@ -4,6 +4,9 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/question_model.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
+import '../../../core/services/connectivity_service.dart';
+import '../../../shared/widgets/app_widgets.dart';
 import '../controllers/question_controller.dart';
 
 class QuestionDetailScreen extends StatefulWidget {
@@ -149,6 +152,17 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Banner offline — tampilkan saat tidak ada koneksi
+            StreamBuilder<ConnectivityResult>(
+              stream: ConnectivityService.instance.onConnectivityChanged,
+              builder: (context, snapshot) {
+                final isOffline = snapshot.hasData
+                    ? (snapshot.data == ConnectivityResult.none)
+                    : false;
+                return isOffline ? const OfflineBanner() : const SizedBox.shrink();
+              },
+            ),
+
             // ── Kotak Pertanyaan ──────────────────────────────────────────
             Container(
               width: double.infinity,

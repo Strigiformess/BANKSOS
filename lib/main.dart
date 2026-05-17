@@ -35,7 +35,7 @@ Future<void> main() async {
   await HiveService.init();
 
   // 3. Init MongoDB
-  MongoDBService.instance.init();
+  await MongoDBService.instance.init();
 
   // cek koneksi internet dan log statusnya
   await ConnectivityService.instance.init();

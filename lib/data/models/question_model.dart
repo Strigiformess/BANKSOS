@@ -3,10 +3,39 @@ import 'package:hive/hive.dart';
 part 'question_model.g.dart';
 
 /// Status soal dalam siklus hidup BANKSOS.
-enum QuestionStatus { pending, published, rejected, archived, inactive, revisionRequired }
+@HiveType(typeId: 3)
+enum QuestionStatus {
+  @HiveField(0)
+  pending,
+
+  @HiveField(1)
+  published,
+
+  @HiveField(2)
+  rejected,
+
+  @HiveField(3)
+  archived,
+
+  @HiveField(4)
+  inactive,
+
+  @HiveField(5)
+  revisionRequired,
+}
 
 /// Tingkat kesulitan soal, ditentukan oleh reviewer.
-enum DifficultyLevel { easy, medium, hard }
+@HiveType(typeId: 2)
+enum DifficultyLevel {
+  @HiveField(0)
+  easy,
+
+  @HiveField(1)
+  medium,
+
+  @HiveField(2)
+  hard,
+}
 
 /// Model soal BANKSOS.
 /// Berkorespondensi dengan collection "questions" di MongoDB
@@ -71,7 +100,7 @@ class QuestionModel extends HiveObject {
   /// Tanggal data soal terakhir diperbarui.
   @HiveField(13)
   final DateTime updatedAt;
-
+  
   QuestionModel({
     required this.id,
     required this.pertanyaan,
@@ -97,16 +126,16 @@ class QuestionModel extends HiveObject {
 
   factory QuestionModel.fromMap(Map<String, dynamic> map) {
     return QuestionModel(
-      id: map['_id']?.toString() ?? '',
+      id: _parseObjectId(map['_id']),
       pertanyaan: map['pertanyaan'] ?? '',
       jawaban: (map['jawaban'] ?? '').toString().toLowerCase(),
-      kategoriId: map['kategori_id']?.toString() ?? '',
+      kategoriId: _parseObjectId(map['kategori_id']),
       kategoriNama: map['kategori_nama'] ?? '',
       tingkatKesulitan: _difficultyFromString(map['tingkat_kesulitan']),
       status: _statusFromString(map['status']),
       hints: List<String>.from(map['hints'] ?? []),
-      submittedBy: map['submitted_by']?.toString() ?? '',
-      reviewedBy: map['reviewed_by']?.toString(),
+      submittedBy: _parseObjectId(map['submitted_by']),
+      reviewedBy: map['reviewed_by'] != null ? _parseObjectId(map['reviewed_by']) : null,
       rejectionReason: map['rejection_reason'],
       solveCount: map['solve_count'] ?? 0,
       createdAt: DateTime.tryParse(map['created_at']?.toString() ?? '') ?? DateTime.now(),
@@ -194,4 +223,13 @@ class QuestionModel extends HiveObject {
         return QuestionStatus.pending;
     }
   }
+
+  static String _parseObjectId(dynamic value) {
+  if (value == null) return '';
+  final raw = value.toString();
+  // Kalau formatnya ObjectId("abc123..."), ambil isinya saja
+  final match = RegExp(r'ObjectId\("([a-f0-9]{24})"\)').firstMatch(raw);
+  if (match != null) return match.group(1)!;
+  return raw; // sudah string biasa, langsung pakai
+} 
 }

@@ -59,10 +59,21 @@ class QuestionBox {
     required String kategoriId,
     required String tingkatKesulitan, // 'easy' | 'medium' | 'hard'
   }) {
+    DifficultyLevel mapLevel(String s) {
+      switch (s) {
+        case 'medium':
+          return DifficultyLevel.medium;
+        case 'hard':
+          return DifficultyLevel.hard;
+        default:
+          return DifficultyLevel.easy;
+      }
+    }
+
+    final wanted = mapLevel(tingkatKesulitan);
+
     return _box.values
-        .where((q) =>
-            q.kategoriId == kategoriId &&
-            q.tingkatKesulitan == tingkatKesulitan)
+        .where((q) => q.kategoriId == kategoriId && q.tingkatKesulitan == wanted)
         .toList();
   }
 

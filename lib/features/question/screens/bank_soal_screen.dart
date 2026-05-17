@@ -69,7 +69,7 @@ final questionProvider =
 });
 
 final connectivityProvider =
-    StreamProvider<List<ConnectivityResult>>((ref) {
+    StreamProvider<ConnectivityResult>((ref) {
   return ConnectivityService.instance.onConnectivityChanged;
 });
 
@@ -210,8 +210,7 @@ class _BankSoalScreenState extends ConsumerState<BankSoalScreen> {
     final selectedCategoryId = ref.watch(selectedCategoryIdProvider);
 
     final isOffline = connectivityAsync.when(
-      data: (results) =>
-          results.contains(ConnectivityResult.none) || results.isEmpty,
+      data: (result) => result == ConnectivityResult.none,
       loading: () => false,
       error:   (_, __) => false,
     );
