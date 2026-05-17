@@ -24,10 +24,11 @@ dependencies:
   uuid: ^4.3.3
 
   # Cek koneksi internet
-  connectivity_plus: ^6.0.3
+  connectivity_plus: ^7.1.1
 
   # State management
   flutter_riverpod: ^2.5.1
+
 
   cupertino_icons: ^1.0.2
   bcrypt: ^1.2.0

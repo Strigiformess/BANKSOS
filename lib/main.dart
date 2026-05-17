@@ -5,6 +5,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 
 import 'core/services/session_service.dart';
 import 'core/theme/app_theme.dart';
@@ -21,6 +22,9 @@ import 'features/auth/screens/splash_screen.dart';
 import 'features/dashboard/screens/dashboard_mahasiswa_screen.dart';
 import 'features/question/screens/bank_soal_screen.dart';
 
+//conectivity
+import 'core/services/connectivity_service.dart';
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -32,6 +36,9 @@ Future<void> main() async {
 
   // 3. Init MongoDB
   MongoDBService.instance.init();
+
+  // cek koneksi internet dan log statusnya
+  await ConnectivityService.instance.init();
 
   runApp(
     const ProviderScope(
