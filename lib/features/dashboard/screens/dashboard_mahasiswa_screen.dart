@@ -4,11 +4,14 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/services/session_service.dart';
+import '../../../core/services/connectivity_service.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import '../../../routes/app_routes.dart';
+
 
 class DashboardMahasiswaScreen extends ConsumerStatefulWidget {
   const DashboardMahasiswaScreen({super.key});
@@ -112,35 +115,8 @@ class _DashboardMahasiswaScreenState
             ],
           ),
           const Spacer(),
-          // Badge synced light theme
-          Container(
-            padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacings.sm + 4, vertical: AppSpacings.xs + 2),
-            decoration: BoxDecoration(
-              color: AppColors.bgWhite,
-              borderRadius: AppRadius.pill,
-              border: Border.all(color: AppColors.bgBlue),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.primaryBlue.withOpacity(0.05),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                )
-              ],
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.sync, color: AppColors.primaryBlue, size: 14),
-                const SizedBox(width: 4),
-                Text(
-                  'Synced',
-                  style: AppTextStyles.smallSemibold.copyWith(
-                    color: AppColors.primaryBlue,
-                  ),
-                ),
-              ],
-            ),
-          ),
+          // Badge dengan status koneksi dinamis
+          _buildConnectivityBadge(),
         ],
       ),
     );
@@ -270,15 +246,7 @@ class _DashboardMahasiswaScreenState
         ),
         const SizedBox(width: AppSpacings.md),
         Expanded(
-          child: _buildStatCard(
-            iconWidget: const Icon(
-              Icons.cloud_done_rounded,
-              color: AppColors.primaryBlue,
-              size: 22,
-            ),
-            label: 'Status',
-            value: 'Synced',
-          ),
+          child: _buildDynamicStatusCard(),
         ),
       ],
     );
@@ -342,6 +310,75 @@ class _DashboardMahasiswaScreenState
           ),
         ],
       ),
+    );
+  }
+
+  // ─── Dynamic Status Card (berubah saat offline) ────────────────────────────
+  Widget _buildDynamicStatusCard() {
+    return StreamBuilder<ConnectivityResult>(
+      stream: ConnectivityService.instance.onConnectivityChanged,
+      initialData: ConnectivityResult.none,
+      builder: (context, snapshot) {
+        final isOnline = snapshot.data != ConnectivityResult.none;
+        
+        return Container(
+          padding: AppSpacings.cardPadding,
+          decoration: BoxDecoration(
+            color: AppColors.bgWhite,
+            borderRadius: AppRadius.lgAll,
+            border: Border.all(color: AppColors.borderGrey.withOpacity(0.4)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.02),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: isOnline
+                          ? AppColors.primaryBlue.withOpacity(0.1)
+                          : AppColors.errorRed.withOpacity(0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      isOnline
+                          ? Icons.cloud_done_rounded
+                          : Icons.cloud_off_rounded,
+                      color: isOnline
+                          ? AppColors.primaryBlue
+                          : AppColors.errorRed,
+                      size: 22,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacings.sm),
+                  Text(
+                    'Status',
+                    style: AppTextStyles.smallSemibold.copyWith(
+                        color: AppColors.textGrey),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacings.sm),
+              Text(
+                isOnline ? 'Synced' : 'Offline',
+                style: AppTextStyles.h2.copyWith(
+                  color: isOnline
+                      ? AppColors.primaryBlue
+                      : AppColors.errorRed,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -722,6 +759,55 @@ class _DashboardMahasiswaScreenState
           ),
         ),
       ],
+    );
+  }
+
+  // ─── Connectivity Badge dengan Status Dinamis ─────────────────────────────
+  /// Badge yang berubah icon, warna, dan text saat koneksi offline
+  Widget _buildConnectivityBadge() {
+    return StreamBuilder<ConnectivityResult>(
+      stream: ConnectivityService.instance.onConnectivityChanged,
+      initialData: ConnectivityResult.none,
+      builder: (context, snapshot) {
+        final isOnline = snapshot.data != ConnectivityResult.none;
+        
+        return Container(
+          padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacings.sm + 4, vertical: AppSpacings.xs + 2),
+          decoration: BoxDecoration(
+            color: AppColors.bgWhite,
+            borderRadius: AppRadius.pill,
+            border: Border.all(
+              color: isOnline ? AppColors.bgBlue : AppColors.errorRed,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: (isOnline ? AppColors.primaryBlue : AppColors.errorRed)
+                    .withOpacity(0.05),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              )
+            ],
+          ),
+          child: Row(
+            children: [
+              Icon(
+                isOnline ? Icons.sync : Icons.cloud_off_outlined,
+                color: isOnline ? AppColors.primaryBlue : AppColors.errorRed,
+                size: 14,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                isOnline ? 'Synced' : 'Offline',
+                style: AppTextStyles.smallSemibold.copyWith(
+                  color:
+                      isOnline ? AppColors.primaryBlue : AppColors.errorRed,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
