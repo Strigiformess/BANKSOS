@@ -1,5 +1,5 @@
 // lib/main.dart
-// Updated Sprint 3 — tambah route Bookmarks & Riwayat
+// Updated Sprint 4 — integrasi layar Kontribusi, Submit Soal, dan Review Queue
 
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -23,6 +23,11 @@ import 'features/dashboard/screens/dashboard_mahasiswa_screen.dart';
 import 'features/dashboard/screens/dashboard_reviewer_screen.dart';
 import 'features/dashboard/screens/dashboard_admin_screen.dart';
 import 'features/question/screens/bank_soal_screen.dart';
+
+// Sprint 4 Screens
+import 'features/kontribusi/screens/kontribusi_screen.dart';
+import 'features/kontribusi/screens/submit_soal_screen.dart';
+import 'features/review/screens/review_queue_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -54,7 +59,7 @@ class BanksosApp extends StatelessWidget {
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: ThemeMode.system, // ikuti preferensi sistem Android
-      home: const DashboardMahasiswaScreen(),
+      home: const LoginScreen(),
       routes: {
         AppRoutes.login:              (_) => const LoginScreen(),
         AppRoutes.register:           (_) => const RegisterScreen(),
@@ -65,8 +70,13 @@ class BanksosApp extends StatelessWidget {
         AppRoutes.bankSoal:           (_) => const BankSoalScreen(),
         AppRoutes.bookmarks:          (_) => const _PlaceholderScreen(title: 'Bookmark'),
         AppRoutes.riwayat:            (_) => const _PlaceholderScreen(title: 'Riwayat'),
-        AppRoutes.kontribusi:         (_) => const _PlaceholderScreen(title: 'Kontribusi'),
-        AppRoutes.reviewQueue:        (_) => const _PlaceholderScreen(title: 'Review Queue'),
+        
+        // Update rute Sprint 4 ke screen yang sebenarnya
+        AppRoutes.kontribusi:         (_) => const KontribusiScreen(),
+        AppRoutes.reviewQueue:        (_) => const ReviewQueueScreen(),
+        
+        // Tambahkan rute untuk Submit Soal
+        AppRoutes.submitSoal:         (_) => const SubmitSoalScreen(),
       },
     );
   }
@@ -83,7 +93,7 @@ class _PlaceholderScreen extends StatelessWidget {
       appBar: AppBar(title: Text(title)),
       body: Center(
         child: Text(
-          '$title\n(Coming Soon — Sprint 4)',
+          '$title\n(Coming Soon — Menunggu Sprint Berikutnya)',
           textAlign: TextAlign.center,
           style: const TextStyle(color: AppTheme.textGrey, fontSize: 16),
         ),

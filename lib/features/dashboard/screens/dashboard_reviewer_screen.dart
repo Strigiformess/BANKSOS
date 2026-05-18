@@ -13,6 +13,9 @@ class DashboardReviewerScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final session = SessionService.instance;
+    
+    // TODO: Hubungkan ini ke State Management (misal: review_controller) untuk update real-time
+    final int pendingCount = 3; 
 
     return Scaffold(
       appBar: AppBar(
@@ -30,7 +33,7 @@ class DashboardReviewerScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: AppSpacings.pagePadding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -50,26 +53,26 @@ class DashboardReviewerScreen extends StatelessWidget {
               icon: Icons.rate_review_outlined,
               label: 'Antrian Review',
               subtitle: 'Tinjau soal yang masuk dari mahasiswa',
-              onTap: () =>
-                  Navigator.pushNamed(context, AppRoutes.reviewQueue),
-            ),
-
-            const SizedBox(height: 12),
-
-            AppMenuCard(
-              icon: Icons.check_circle_outline,
-              label: 'Soal Disetujui',
-              subtitle: 'Soal yang sudah kamu approve',
-              onTap: () {}, // TODO: navigasi ke daftar soal approved
+              badge: pendingCount > 0 ? pendingCount.toString() : null,
+              onTap: () => Navigator.pushNamed(context, AppRoutes.reviewQueue),
             ),
 
             const SizedBox(height: 12),
 
             AppMenuCard(
               icon: Icons.category_outlined,
-              label: 'Kelola Kategori',
-              subtitle: 'Atur kategori dan tingkat kesulitan',
-              onTap: () {}, // TODO: navigasi ke halaman kategori
+              label: 'Manajemen Koleksi',
+              subtitle: 'Kelola kategori dan koleksi soal aktif',
+              onTap: () {}, // TODO: navigasi ke halaman manajemen koleksi
+            ),
+
+            const SizedBox(height: 12),
+
+            AppMenuCard(
+              icon: Icons.add_circle_outline,
+              label: 'Buat Soal Baru',
+              subtitle: 'Tambahkan soal langsung ke bank soal',
+              onTap: () {}, // TODO: navigasi ke form buat soal (opsional beda dari mahasiswa)
             ),
           ],
         ),
