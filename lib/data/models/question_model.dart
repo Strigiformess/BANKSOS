@@ -72,6 +72,9 @@ class QuestionModel extends HiveObject {
   @HiveField(13)
   final DateTime updatedAt;
 
+  @HiveField(14)
+  final String? imageUrl;
+
   QuestionModel({
     required this.id,
     required this.pertanyaan,
@@ -87,6 +90,7 @@ class QuestionModel extends HiveObject {
     this.solveCount = 0,
     required this.createdAt,
     required this.updatedAt,
+    this.imageUrl,
   });
 
   /// Memeriksa apakah jawaban user benar.
@@ -111,6 +115,7 @@ class QuestionModel extends HiveObject {
       solveCount: map['solve_count'] ?? 0,
       createdAt: DateTime.tryParse(map['created_at']?.toString() ?? '') ?? DateTime.now(),
       updatedAt: DateTime.tryParse(map['updated_at']?.toString() ?? '') ?? DateTime.now(),
+      imageUrl: map['image_url']?.toString(),
     );
   }
 
@@ -130,6 +135,7 @@ class QuestionModel extends HiveObject {
       'solve_count': solveCount,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
+      'image_url': imageUrl,
     };
   }
 
@@ -148,6 +154,7 @@ class QuestionModel extends HiveObject {
     int? solveCount,
     DateTime? createdAt,
     DateTime? updatedAt,
+    String? imageUrl,
   }) {
     return QuestionModel(
       id: id ?? this.id,
@@ -164,6 +171,7 @@ class QuestionModel extends HiveObject {
       solveCount: solveCount ?? this.solveCount,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      imageUrl: imageUrl ?? this.imageUrl,
     );
   }
 

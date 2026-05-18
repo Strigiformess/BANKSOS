@@ -31,13 +31,13 @@ class QuestionModelAdapter extends TypeAdapter<QuestionModel> {
       solveCount: fields[11] as int,
       createdAt: fields[12] as DateTime,
       updatedAt: fields[13] as DateTime,
+      imageUrl: fields[14] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, QuestionModel obj) {
     writer
-      ..writeByte(14)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -65,7 +65,9 @@ class QuestionModelAdapter extends TypeAdapter<QuestionModel> {
       ..writeByte(12)
       ..write(obj.createdAt)
       ..writeByte(13)
-      ..write(obj.updatedAt);
+      ..write(obj.updatedAt)
+      ..writeByte(14)
+      ..write(obj.imageUrl);
   }
 
   @override

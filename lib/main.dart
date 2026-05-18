@@ -10,6 +10,7 @@ import 'core/services/session_service.dart';
 import 'core/theme/app_theme.dart';
 import 'data/local/hive/hive_service.dart';
 import 'data/remote/mongodb/mongodb_service.dart';
+import 'package:banksos/data/models/question_model.dart';
 import 'routes/app_routes.dart';
 
 // Auth
@@ -19,6 +20,7 @@ import 'features/auth/screens/register_screen.dart';
 // Dashboard
 import 'features/dashboard/screens/dashboard_mahasiswa_screen.dart';
 import 'features/questions/screens/bank_soal_screen.dart';
+import 'features/questions/screens/question_detail_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -50,13 +52,36 @@ class BanksosApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.system, // ikuti preferensi sistem Android
-      home: const DashboardMahasiswaScreen(),
+      themeMode: ThemeMode.system,
+      home: QuestionDetailScreen(
+        question: QuestionModel(
+          id: 'test-001',
+          pertanyaan: 'Manakah dari berikut ini yang merupakan karakteristik utama dari sistem terdistribusi?',
+          jawaban: 'upay',
+          kategoriId: 'kat-001',
+          kategoriNama: 'Sistem Terdistribusi',
+          tingkatKesulitan: DifficultyLevel.medium,
+          status: QuestionStatus.published,
+          hints: [
+            'Pikirkan tentang bagaimana komputer saling terhubung tanpa titik kendali tunggal.',
+            'Bayangkan beberapa node yang masing-masing memiliki tugas tersendiri.',
+            'Sistem ini memiliki toleransi terhadap kegagalan satu komponen.',
+            'Mereka sering menggunakan protokol komunikasi untuk berinteraksi satu sama lain.',
+            'Keuntungan utama dari sistem ini adalah skalabilitas dan ketersediaan yang tinggi.'
+          ],
+          submittedBy: 'user-001',
+          solveCount: 0,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+          imageUrl: 'https://blog.sribu.com/wp-content/uploads/2024/08/pexels-markusspiske-360591.jpg',
+        ),
+      ),
       routes: {
         AppRoutes.login:              (_) => const LoginScreen(),
         AppRoutes.register:           (_) => const RegisterScreen(),
         AppRoutes.dashboardMahasiswa: (_) => const DashboardMahasiswaScreen(),
         AppRoutes.bankSoal:           (_) => const BankSoalScreen(),
+        AppRoutes.kerjakanSoal:       (_) => const _PlaceholderScreen(title: 'Kerjakan Soal'),
         AppRoutes.dashboardReviewer:  (_) => const _PlaceholderScreen(title: 'Dashboard Reviewer'),
         AppRoutes.dashboardAdmin:     (_) => const _PlaceholderScreen(title: 'Dashboard Admin'),
         AppRoutes.bookmarks:          (_) => const _PlaceholderScreen(title: 'Bookmark'),
