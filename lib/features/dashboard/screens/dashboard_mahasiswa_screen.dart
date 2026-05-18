@@ -12,6 +12,11 @@ import '../../../core/services/connectivity_service.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import '../../../routes/app_routes.dart';
 
+// ─── TAMBAHAN IMPORT ────────────────────────────────────────────────────────
+import '../../../data/local/hive/hive_service.dart';
+import '../../../data/models/question_model.dart';
+import '../../../features/riwayat/screens/riwayat_screen.dart';
+import '../../../features/bookmarks/screens/bookmarks_screen.dart';
 
 class DashboardMahasiswaScreen extends ConsumerStatefulWidget {
   const DashboardMahasiswaScreen({super.key});
@@ -56,6 +61,10 @@ class _DashboardMahasiswaScreenState
                         children: [
                           _buildRankCard(),
                           const SizedBox(height: AppSpacings.md),
+                          // ─── SUMMARY DITAMBAHKAN DI SINI ───
+                          _buildProgressSummary(),
+                          const SizedBox(height: AppSpacings.md),
+                          // ───────────────────────────────────
                           _buildStreakStatusRow(),
                           const SizedBox(height: AppSpacings.xxl),
                           _buildMenuUtama(),
@@ -227,6 +236,159 @@ class _DashboardMahasiswaScreenState
               backgroundColor: Colors.white.withOpacity(0.2),
               valueColor: AlwaysStoppedAnimation<Color>(AppColors.successGreen),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ─── Progress Summary ────────────────────────────────────────────────────
+  Widget _buildProgressSummary() {
+    final userId = SessionService.instance.userId ?? '';
+
+    // Hitung dari Hive (data real)
+    final progressBox = HiveService.instance.userProgressBox;
+    final questionBox = HiveService.instance.questionsBox;
+
+    final totalSelesai = progressBox.values
+        .where((p) => p.userId == userId && p.isSolved)
+        .length;
+
+    final totalSoal = questionBox.values
+        .where((q) => q.status == QuestionStatus.published)
+        .length;
+
+    final totalBookmark = HiveService.instance.bookmarksBox.values
+        .where((b) => b.userId == userId)
+        .length;
+
+    final persen = totalSoal > 0
+        ? (totalSelesai / totalSoal).clamp(0.0, 1.0)
+        : 0.0;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacings.lg),
+      decoration: BoxDecoration(
+        color: AppColors.bgWhite,
+        borderRadius: AppRadius.lgAll,
+        border:
+            Border.all(color: AppColors.borderGrey.withOpacity(0.4)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Header ─────────────────────────────────────────────────
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Progres Belajar',
+                style: AppTextStyles.h3.copyWith(color: AppColors.textDark),
+              ),
+              GestureDetector(
+                onTap: () =>
+                    Navigator.pushNamed(context, AppRoutes.riwayat),
+                child: Text(
+                  'Lihat Riwayat',
+                  style: AppTextStyles.smallSemibold.copyWith(
+                    color: AppColors.primaryBlue,
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: AppSpacings.md),
+
+          // ── Progress bar ───────────────────────────────────────────
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                totalSoal > 0
+                    ? '$totalSelesai dari $totalSoal soal'
+                    : '$totalSelesai soal diselesaikan',
+                style: AppTextStyles.body.copyWith(
+                  color: AppColors.textGrey,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              Text(
+                '${(persen * 100).toStringAsFixed(0)}%',
+                style: AppTextStyles.bodySemibold.copyWith(
+                  color: AppColors.primaryBlue,
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: AppSpacings.sm),
+
+          ClipRRect(
+            borderRadius: AppRadius.smAll,
+            child: LinearProgressIndicator(
+              value: persen,
+              minHeight: 8,
+              backgroundColor: AppColors.lightBlue,
+              valueColor: const AlwaysStoppedAnimation<Color>(
+                  AppColors.primaryBlue),
+            ),
+          ),
+
+          const SizedBox(height: AppSpacings.md),
+
+          // ── Row stat kecil ─────────────────────────────────────────
+          Row(
+            children: [
+              // Selesai
+              _MiniStat(
+                icon: Icons.check_circle_outline,
+                iconColor: AppColors.successGreen,
+                label: 'Selesai',
+                value: '$totalSelesai',
+              ),
+
+              const SizedBox(width: AppSpacings.xl),
+
+              // Bookmark
+              GestureDetector(
+                onTap: () =>
+                    Navigator.pushNamed(context, AppRoutes.bookmarks),
+                child: _MiniStat(
+                  icon: Icons.bookmark_outline,
+                  iconColor: Colors.amber,
+                  label: 'Tersimpan',
+                  value: '$totalBookmark',
+                ),
+              ),
+
+              const Spacer(),
+
+              // Shortcut Kontribusi (Sprint 4)
+              TextButton.icon(
+                onPressed: () =>
+                    Navigator.pushNamed(context, AppRoutes.kontribusi),
+                icon: const Icon(Icons.add_circle_outline, size: 16),
+                label: const Text('Kontribusi'),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.primaryBlue,
+                  textStyle: AppTextStyles.small.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                  padding: EdgeInsets.zero,
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -913,6 +1075,43 @@ class _DashboardMahasiswaScreenState
           );
         }).toList(),
       ),
+    );
+  }
+}
+
+// ─── Widget helper kecil di luar class ────────────────────────────────────────
+
+class _MiniStat extends StatelessWidget {
+  final IconData icon;
+  final Color iconColor;
+  final String label;
+  final String value;
+
+  const _MiniStat({
+    required this.icon,
+    required this.iconColor,
+    required this.label,
+    required this.value,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, color: iconColor, size: 16),
+        const SizedBox(width: 4),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              value,
+              style: AppTextStyles.bodySemibold
+                  .copyWith(color: AppColors.textDark),
+            ),
+            Text(label, style: AppTextStyles.caption),
+          ],
+        ),
+      ],
     );
   }
 }

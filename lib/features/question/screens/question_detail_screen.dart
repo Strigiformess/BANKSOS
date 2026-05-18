@@ -1,12 +1,18 @@
 // lib/features/question/screens/question_detail_screen.dart
+// Sprint 3: Tambah bookmark toggle (Seruni) + save progress ke Hive
 
 import 'package:flutter/material.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/services/session_service.dart';
+import '../../../data/local/hive/hive_service.dart';
 import '../../../data/models/question_model.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import '../../../core/services/connectivity_service.dart';
 import '../../../shared/widgets/app_widgets.dart';
+import '../../../data/models/bookmark_model.dart';
+import '../../../data/models/user_progress_model.dart';
 import '../controllers/question_controller.dart';
 
 class QuestionDetailScreen extends StatefulWidget {
@@ -26,10 +32,15 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen>
   final TextEditingController _answerController = TextEditingController();
   late final QuestionController _controller;
 
-  bool _showHints   = false;
-  bool _isCorrect   = false;
+  // ─── State UI ────────────────────────────────────────────────────────────
+  bool _showHints    = false;
+  bool _isCorrect    = false;
   bool _hasSubmitted = false;
-  bool _isShaking   = false;
+  bool _isShaking    = false;
+
+  // ─── State Sprint 3 ───────────────────────────────────────────────────────
+  bool _isBookmarked      = false;
+  bool _isTogglingBookmark = false;
 
   late AnimationController _shakeController;
   late Animation<double> _shakeAnimation;
@@ -49,6 +60,9 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen>
     _shakeController.addStatusListener((status) {
       if (status == AnimationStatus.completed) _shakeController.reverse();
     });
+
+    // Cek status bookmark saat halaman dibuka
+    _checkBookmarkStatus();
   }
 
   @override
@@ -58,6 +72,119 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen>
     super.dispose();
   }
 
+  // ─── Bookmark ─────────────────────────────────────────────────────────────
+
+  void _checkBookmarkStatus() {
+    final userId = SessionService.instance.userId ?? '';
+    if (userId.isEmpty) return;
+
+    final box = HiveService.instance.bookmarksBox;
+    final exists = box.values.any(
+      (b) => b.questionId == widget.question.id && b.userId == userId,
+    );
+
+    setState(() => _isBookmarked = exists);
+  }
+
+  Future<void> _toggleBookmark() async {
+    if (_isTogglingBookmark) return;
+    setState(() => _isTogglingBookmark = true);
+
+    final userId = SessionService.instance.userId ?? '';
+    if (userId.isEmpty) {
+      setState(() => _isTogglingBookmark = false);
+      return;
+    }
+
+    final box = HiveService.instance.bookmarksBox;
+
+    if (_isBookmarked) {
+      // ── Hapus bookmark ─────────────────────────────────────────────────
+      final toDelete = box.values
+          .where((b) =>
+              b.questionId == widget.question.id && b.userId == userId)
+          .toList();
+      for (final b in toDelete) {
+        await box.delete(b.key);
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Bookmark dihapus'),
+            behavior: SnackBarBehavior.floating,
+            duration: Duration(seconds: 1),
+          ),
+        );
+      }
+    } else {
+      // ── Tambah bookmark ────────────────────────────────────────────────
+      const uuid = Uuid();
+      final bookmark = BookmarkModel(
+        id: uuid.v4(),
+        userId: userId,
+        questionId: widget.question.id,
+        createdAt: DateTime.now(),
+        isSynced: false,
+      );
+      await box.put(bookmark.id, bookmark);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Soal disimpan ke Bookmark'),
+            backgroundColor: AppColors.successGreen,
+            behavior: SnackBarBehavior.floating,
+            duration: Duration(seconds: 1),
+          ),
+        );
+      }
+    }
+
+    setState(() {
+      _isBookmarked = !_isBookmarked;
+      _isTogglingBookmark = false;
+    });
+  }
+
+  // ─── Simpan Progress ke Hive ─────────────────────────────────────────────
+
+  Future<void> _saveProgress({required bool isCorrect}) async {
+    final userId = SessionService.instance.userId ?? '';
+    if (userId.isEmpty) return;
+
+    final box = HiveService.instance.userProgressBox;
+
+    // Cari progress yang sudah ada untuk soal ini
+    final existing = box.values
+        .where((p) =>
+            p.questionId == widget.question.id && p.userId == userId)
+        .toList();
+
+    if (existing.isNotEmpty) {
+      final p = existing.first;
+      final updated = p.copyWith(
+        isSolved: p.isSolved || isCorrect,
+        solvedAt: (isCorrect && p.solvedAt == null) ? DateTime.now() : p.solvedAt,
+        attemptCount: p.attemptCount + 1,
+        isSynced: false, // akan di-sync oleh SyncManager (Sprint 5)
+      );
+      await box.put(p.key, updated);
+    } else {
+      const uuid = Uuid();
+      final progress = UserProgressModel(
+        id: uuid.v4(),
+        userId: userId,
+        questionId: widget.question.id,
+        isSolved: isCorrect,
+        solvedAt: isCorrect ? DateTime.now() : null,
+        attemptCount: 1,
+        isSynced: false,
+      );
+      await box.put(progress.id, progress);
+    }
+  }
+
   // ─── Helper ───────────────────────────────────────────────────────────────
 
   String _buildAnswerPlaceholder() {
@@ -65,7 +192,6 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen>
     return words.map((word) => '_' * word.length).join(' ');
   }
 
-  /// Warna badge kesulitan dari AppColors ─ tidak hardcode lagi.
   Color _getDifficultyColor() {
     switch (widget.question.tingkatKesulitan) {
       case DifficultyLevel.easy:
@@ -96,6 +222,9 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen>
 
     final correct = widget.question.checkAnswer(userAnswer);
 
+    // Simpan progress ke Hive (Sprint 3)
+    _saveProgress(isCorrect: correct);
+
     if (correct) {
       setState(() {
         _isCorrect    = true;
@@ -123,10 +252,12 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen>
           ? AppColors.easyBg
           : AppColors.bgWhite,
       appBar: AppBar(
-        title: Text(widget.question.kategoriNama,
-            style: AppTextStyles.appBarTitle.copyWith(fontSize: 16)),
+        title: Text(
+          widget.question.kategoriNama,
+          style: AppTextStyles.appBarTitle.copyWith(fontSize: 16),
+        ),
         actions: [
-          // Badge kesulitan di AppBar
+          // ── Badge Kesulitan ──────────────────────────────────────────
           Container(
             margin: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
@@ -134,17 +265,32 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen>
               color: _getDifficultyColor(),
               borderRadius: AppRadius.pill,
             ),
-            child: Text(
-              _getDifficultyLabel(),
-              style: AppTextStyles.buttonSmall,
-            ),
+            child: Text(_getDifficultyLabel(), style: AppTextStyles.buttonSmall),
           ),
-          IconButton(
-            icon: const Icon(Icons.bookmark_border),
-            onPressed: () {
-              // TODO Sprint 3: implementasi bookmark
-            },
-          ),
+
+          // ── Bookmark Toggle ──────────────────────────────────────────
+          _isTogglingBookmark
+              ? const Padding(
+                  padding: EdgeInsets.all(12),
+                  child: SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      color: AppColors.textLight,
+                      strokeWidth: 2,
+                    ),
+                  ),
+                )
+              : IconButton(
+                  tooltip: _isBookmarked ? 'Hapus Bookmark' : 'Simpan Soal',
+                  icon: Icon(
+                    _isBookmarked ? Icons.bookmark : Icons.bookmark_border,
+                    color: _isBookmarked
+                        ? Colors.amberAccent
+                        : AppColors.textLight,
+                  ),
+                  onPressed: _toggleBookmark,
+                ),
         ],
       ),
       body: SingleChildScrollView(
@@ -182,11 +328,8 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen>
 
             const SizedBox(height: 16),
 
-            // ── Placeholder Panjang Jawaban ───────────────────────────────
-            Text(
-              'Petunjuk panjang jawaban:',
-              style: AppTextStyles.small,
-            ),
+            // ── Placeholder Jawaban ───────────────────────────────────────
+            Text('Petunjuk panjang jawaban:', style: AppTextStyles.small),
             const SizedBox(height: 4),
             Text(
               _buildAnswerPlaceholder(),
@@ -205,19 +348,22 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen>
                 onTap: () => setState(() => _showHints = !_showHints),
                 child: Container(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 12),
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.mediumBg,
                     borderRadius: AppRadius.mdAll,
-                    border: Border.all(color: AppColors.mediumAmber.withOpacity(0.4)),
+                    border: Border.all(
+                        color: AppColors.mediumAmber.withOpacity(0.4)),
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.lightbulb_outline,
+                      const Icon(Icons.lightbulb_outline,
                           color: AppColors.mediumAmber, size: 20),
                       const SizedBox(width: 8),
                       Text(
-                        'Lihat Hint',
+                        'Lihat Hint (${widget.question.hints.length})',
                         style: AppTextStyles.bodySemibold
                             .copyWith(color: AppColors.mediumText),
                       ),
@@ -249,10 +395,22 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen>
                         .map(
                           (entry) => Padding(
                             padding: const EdgeInsets.only(bottom: 6),
-                            child: Text(
-                              '${entry.key + 1}. ${entry.value}',
-                              style: AppTextStyles.body
-                                  .copyWith(color: AppColors.mediumText),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '${entry.key + 1}. ',
+                                  style: AppTextStyles.bodySemibold
+                                      .copyWith(color: AppColors.mediumText),
+                                ),
+                                Expanded(
+                                  child: Text(
+                                    entry.value,
+                                    style: AppTextStyles.body
+                                        .copyWith(color: AppColors.mediumText),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         )
@@ -263,7 +421,7 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen>
               const SizedBox(height: 20),
             ],
 
-            // ── Input Jawaban dengan shake animation ──────────────────────
+            // ── Input Jawaban + Shake ────────────────────────────────────
             AnimatedBuilder(
               animation: _shakeAnimation,
               builder: (context, child) => Transform.translate(
@@ -321,7 +479,7 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen>
                         color: AppColors.successGreen),
                     const SizedBox(width: 8),
                     Text(
-                      'Benar!',
+                      'Benar! Progres disimpan.',
                       style: AppTextStyles.bodySemibold
                           .copyWith(color: AppColors.easyText),
                     ),
