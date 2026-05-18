@@ -12,7 +12,7 @@ class AppRoutes {
   static const String dashboardReviewer  = '/dashboard-reviewer';
   static const String dashboardAdmin     = '/dashboard-admin';
   static const String bankSoal           = '/bank-soal';
-  static const String kerjakanSoal       = '/kerjakan-soal';
+  static const String questionDetail     = '/question-detail';
   static const String kontribusi         = '/kontribusi';
   static const String reviewQueue        = '/review-queue';
   static const String bookmarks          = '/bookmarks';

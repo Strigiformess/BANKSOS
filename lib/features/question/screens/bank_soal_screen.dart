@@ -101,7 +101,7 @@ class _BankSoalScreenState extends ConsumerState<BankSoalScreen> {
     super.dispose();
   }
 
-  // ─── Download untuk offline ───────────────────────────────────────────────
+  // ─── Download untuk offline 
 
   Future<void> _downloadForOffline(
       String categoryId, String categoryName) async {
@@ -173,7 +173,7 @@ class _BankSoalScreenState extends ConsumerState<BankSoalScreen> {
     }
   }
 
-  // ─── Filter ───────────────────────────────────────────────────────────────
+  // ─── Filter 
 
   List<QuestionModel> _applyFilters(List<QuestionModel> questions) {
     var filtered = questions;
@@ -200,7 +200,7 @@ class _BankSoalScreenState extends ConsumerState<BankSoalScreen> {
     return filtered;
   }
 
-  // ─── Build ───────────────────────────────────────────────────────────────
+  // ─── Build 
 
   @override
   Widget build(BuildContext context) {
@@ -269,7 +269,7 @@ class _BankSoalScreenState extends ConsumerState<BankSoalScreen> {
           // ── Banner Offline — pakai OfflineBanner dari app_widgets ───────
           if (isOffline) const OfflineBanner(),
 
-          // ── Progress Bar Unduh ─────────────────────────────────────────
+          // ── Progress Bar Unduh 
           if (_isDownloading) ...[
             LinearProgressIndicator(
               value: _downloadProgress,
@@ -293,7 +293,7 @@ class _BankSoalScreenState extends ConsumerState<BankSoalScreen> {
             ),
           ],
 
-          // ── Konten Utama: Sidebar + Daftar Soal ───────────────────────
+          // ── Konten Utama: Sidebar + Daftar Soal 
           Expanded(
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -381,7 +381,7 @@ class _BankSoalScreenState extends ConsumerState<BankSoalScreen> {
     );
   }
 
-  // ─── Sidebar Kategori ─────────────────────────────────────────────────────
+  // ─── Sidebar Kategori 
 
   Widget _buildSidebar(
     AsyncValue<List<CategoryModel>> categoriesAsync,
@@ -564,7 +564,7 @@ class _BankSoalScreenState extends ConsumerState<BankSoalScreen> {
   }
 }
 
-// ─── Card Soal ────────────────────────────────────────────────────────────────
+// ─── Card Soal 
 
 class _QuestionCard extends StatelessWidget {
   final QuestionModel question;

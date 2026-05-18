@@ -1,26 +1,27 @@
 // lib/features/question/screens/question_detail_screen.dart
-// Sprint 3: Tambah bookmark toggle (Seruni) + save progress ke Hive
+// Sprint 3: Tambah bookmark toggle (Seruni) + save progress via repository (Integrated)
 
-import 'package:flutter/material.dart';
-import 'package:uuid/uuid.dart';
-
-import '../../../core/theme/app_theme.dart';
-import '../../../core/services/session_service.dart';
-import '../../../data/local/hive/hive_service.dart';
-import '../../../data/models/question_model.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:flutter/material.dart';
+
 import '../../../core/services/connectivity_service.dart';
+import '../../../core/theme/app_theme.dart';
+import '../../../data/models/question_model.dart';
 import '../../../shared/widgets/app_widgets.dart';
-import '../../../data/models/bookmark_model.dart';
-import '../../../data/models/user_progress_model.dart';
-import '../controllers/question_controller.dart';
+import '../repositories/bookmark_repository.dart';
+import '../repositories/progress_repository.dart';
+import '../services/hint_service.dart';
 
 class QuestionDetailScreen extends StatefulWidget {
   final QuestionModel question;
+  final BookmarkRepository? bookmarkRepository;
+  final IProgressRepository? progressRepository;
 
   const QuestionDetailScreen({
     super.key,
     required this.question,
+    this.bookmarkRepository,
+    this.progressRepository,
   });
 
   @override
@@ -30,17 +31,19 @@ class QuestionDetailScreen extends StatefulWidget {
 class _QuestionDetailScreenState extends State<QuestionDetailScreen>
     with SingleTickerProviderStateMixin {
   final TextEditingController _answerController = TextEditingController();
-  late final QuestionController _controller;
 
   // ─── State UI ────────────────────────────────────────────────────────────
-  bool _showHints    = false;
-  bool _isCorrect    = false;
+  late final HintService _hintService;
+  bool _isCorrect = false;
   bool _hasSubmitted = false;
-  bool _isShaking    = false;
+  bool _isShaking = false;
+  bool _isSavingProgress = false;
 
   // ─── State Sprint 3 ───────────────────────────────────────────────────────
-  bool _isBookmarked      = false;
+  bool _isBookmarked = false;
   bool _isTogglingBookmark = false;
+  late final BookmarkRepository _bookmarkRepository;
+  late final IProgressRepository _progressRepository;
 
   late AnimationController _shakeController;
   late Animation<double> _shakeAnimation;
@@ -48,7 +51,11 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen>
   @override
   void initState() {
     super.initState();
-    _controller = QuestionController();
+
+    _hintService = HintService();
+
+    _bookmarkRepository = widget.bookmarkRepository ?? BookmarkRepository();
+    _progressRepository = widget.progressRepository ?? ProgressRepository();
 
     _shakeController = AnimationController(
       vsync: this,
@@ -61,8 +68,9 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen>
       if (status == AnimationStatus.completed) _shakeController.reverse();
     });
 
-    // Cek status bookmark saat halaman dibuka
+    // ─── Integrasi Awal Progress & Bookmark ───
     _checkBookmarkStatus();
+    _checkExistingProgress();
   }
 
   @override
@@ -72,117 +80,62 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen>
     super.dispose();
   }
 
+  // ─── Integrasi Progress Checking ──────────────────────────────────────────
+  void _checkExistingProgress() {
+    // Cek ke Hive lewat repository apakah soal ini sudah berstatus 'solved' sebelumnya
+    final solved = _progressRepository.isSolved(widget.question.id);
+    if (solved) {
+      setState(() {
+        _isCorrect = true;
+        _hasSubmitted = true;
+        // Tampilkan jawaban asli/placeholder bahwa ini sudah selesai
+        _answerController.text = widget.question.jawaban; 
+      });
+    }
+  }
+
   // ─── Bookmark ─────────────────────────────────────────────────────────────
 
   void _checkBookmarkStatus() {
-    final userId = SessionService.instance.userId ?? '';
-    if (userId.isEmpty) return;
-
-    final box = HiveService.instance.bookmarksBox;
-    final exists = box.values.any(
-      (b) => b.questionId == widget.question.id && b.userId == userId,
-    );
-
-    setState(() => _isBookmarked = exists);
+    final isBookmarked = _bookmarkRepository.isBookmarked(widget.question.id);
+    setState(() => _isBookmarked = isBookmarked);
   }
 
   Future<void> _toggleBookmark() async {
     if (_isTogglingBookmark) return;
     setState(() => _isTogglingBookmark = true);
 
-    final userId = SessionService.instance.userId ?? '';
-    if (userId.isEmpty) {
-      setState(() => _isTogglingBookmark = false);
-      return;
-    }
+    final result = await _bookmarkRepository.toggleBookmark(widget.question);
 
-    final box = HiveService.instance.bookmarksBox;
-
-    if (_isBookmarked) {
-      // ── Hapus bookmark ─────────────────────────────────────────────────
-      final toDelete = box.values
-          .where((b) =>
-              b.questionId == widget.question.id && b.userId == userId)
-          .toList();
-      for (final b in toDelete) {
-        await box.delete(b.key);
-      }
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Bookmark dihapus'),
-            behavior: SnackBarBehavior.floating,
-            duration: Duration(seconds: 1),
-          ),
-        );
-      }
-    } else {
-      // ── Tambah bookmark ────────────────────────────────────────────────
-      const uuid = Uuid();
-      final bookmark = BookmarkModel(
-        id: uuid.v4(),
-        userId: userId,
-        questionId: widget.question.id,
-        createdAt: DateTime.now(),
-        isSynced: false,
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result.message ??
+              (result.isNowBookmarked
+                  ? 'Soal disimpan ke Bookmark'
+                  : 'Bookmark dihapus')),
+          backgroundColor:
+              result.isNowBookmarked ? AppColors.successGreen : null,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 1),
+        ),
       );
-      await box.put(bookmark.id, bookmark);
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Soal disimpan ke Bookmark'),
-            backgroundColor: AppColors.successGreen,
-            behavior: SnackBarBehavior.floating,
-            duration: Duration(seconds: 1),
-          ),
-        );
-      }
     }
 
     setState(() {
-      _isBookmarked = !_isBookmarked;
+      _isBookmarked = result.isNowBookmarked;
       _isTogglingBookmark = false;
     });
   }
 
-  // ─── Simpan Progress ke Hive ─────────────────────────────────────────────
+  // ─── Simpan Progress ─────────────────────────────────────────────────────
 
   Future<void> _saveProgress({required bool isCorrect}) async {
-    final userId = SessionService.instance.userId ?? '';
-    if (userId.isEmpty) return;
-
-    final box = HiveService.instance.userProgressBox;
-
-    // Cari progress yang sudah ada untuk soal ini
-    final existing = box.values
-        .where((p) =>
-            p.questionId == widget.question.id && p.userId == userId)
-        .toList();
-
-    if (existing.isNotEmpty) {
-      final p = existing.first;
-      final updated = p.copyWith(
-        isSolved: p.isSolved || isCorrect,
-        solvedAt: (isCorrect && p.solvedAt == null) ? DateTime.now() : p.solvedAt,
-        attemptCount: p.attemptCount + 1,
-        isSynced: false, // akan di-sync oleh SyncManager (Sprint 5)
-      );
-      await box.put(p.key, updated);
-    } else {
-      const uuid = Uuid();
-      final progress = UserProgressModel(
-        id: uuid.v4(),
-        userId: userId,
-        questionId: widget.question.id,
-        isSolved: isCorrect,
-        solvedAt: isCorrect ? DateTime.now() : null,
-        attemptCount: 1,
-        isSynced: false,
-      );
-      await box.put(progress.id, progress);
-    }
+    await _progressRepository.recordAttempt(
+      questionId: widget.question.id,
+      categoryId: widget.question.kategoriId,
+      isCorrect: isCorrect,
+    );
   }
 
   // ─── Helper ───────────────────────────────────────────────────────────────
@@ -214,32 +167,50 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen>
     }
   }
 
-  // ─── Submit ───────────────────────────────────────────────────────────────
+  // ─── Submit 
 
-  void _submitAnswer() {
+  Future<void> _submitAnswer() async {
+    if (_isSavingProgress) return;
+
     final userAnswer = _answerController.text;
     if (userAnswer.trim().isEmpty) return;
 
     final correct = widget.question.checkAnswer(userAnswer);
 
-    // Simpan progress ke Hive (Sprint 3)
-    _saveProgress(isCorrect: correct);
-
     if (correct) {
       setState(() {
-        _isCorrect    = true;
+        _isCorrect = true;
         _hasSubmitted = true;
+        _isSavingProgress = true;
       });
     } else {
       setState(() {
-        _isCorrect    = false;
+        _isCorrect = false;
         _hasSubmitted = true;
-        _isShaking    = true;
+        _isShaking = true;
+        _isSavingProgress = true;
       });
       _shakeController.forward();
       Future.delayed(const Duration(milliseconds: 500), () {
         if (mounted) setState(() => _isShaking = false);
       });
+    }
+
+    try {
+      await _saveProgress(isCorrect: correct);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Progress belum berhasil disimpan. Coba lagi nanti.'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSavingProgress = false);
+      }
     }
   }
 
@@ -248,16 +219,15 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _hasSubmitted && _isCorrect
-          ? AppColors.easyBg
-          : AppColors.bgWhite,
+      backgroundColor:
+          _hasSubmitted && _isCorrect ? AppColors.easyBg : AppColors.bgWhite,
       appBar: AppBar(
         title: Text(
           widget.question.kategoriNama,
           style: AppTextStyles.appBarTitle.copyWith(fontSize: 16),
         ),
         actions: [
-          // ── Badge Kesulitan ──────────────────────────────────────────
+          // ── Badge Kesulitan
           Container(
             margin: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
@@ -265,10 +235,11 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen>
               color: _getDifficultyColor(),
               borderRadius: AppRadius.pill,
             ),
-            child: Text(_getDifficultyLabel(), style: AppTextStyles.buttonSmall),
+            child:
+                Text(_getDifficultyLabel(), style: AppTextStyles.buttonSmall),
           ),
 
-          // ── Bookmark Toggle ──────────────────────────────────────────
+          // ── Bookmark Toggle
           _isTogglingBookmark
               ? const Padding(
                   padding: EdgeInsets.all(12),
@@ -305,11 +276,13 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen>
                 final isOffline = snapshot.hasData
                     ? (snapshot.data == ConnectivityResult.none)
                     : false;
-                return isOffline ? const OfflineBanner() : const SizedBox.shrink();
+                return isOffline
+                    ? const OfflineBanner()
+                    : const SizedBox.shrink();
               },
             ),
 
-            // ── Kotak Pertanyaan ──────────────────────────────────────────
+            // ── Kotak Pertanyaan
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(20),
@@ -328,7 +301,7 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen>
 
             const SizedBox(height: 16),
 
-            // ── Placeholder Jawaban ───────────────────────────────────────
+            // ── Placeholder Jawaban
             Text('Petunjuk panjang jawaban:', style: AppTextStyles.small),
             const SizedBox(height: 4),
             Text(
@@ -342,10 +315,10 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen>
 
             const SizedBox(height: 20),
 
-            // ── Panel Hint ────────────────────────────────────────────────
-            if (widget.question.hints.isNotEmpty) ...[
+            // ── Panel Hint
+            if (_hintService.hasHints(widget.question)) ...[
               GestureDetector(
-                onTap: () => setState(() => _showHints = !_showHints),
+                onTap: () => setState(() => _hintService.toggleHints()),
                 child: Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16,
@@ -363,20 +336,35 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen>
                           color: AppColors.mediumAmber, size: 20),
                       const SizedBox(width: 8),
                       Text(
-                        'Lihat Hint (${widget.question.hints.length})',
+                        'Lihat Hint (${_hintService.hintCount(widget.question)})',
                         style: AppTextStyles.bodySemibold
                             .copyWith(color: AppColors.mediumText),
                       ),
+                      if (!_hintService.hasBeenViewed)
+                        Container(
+                          margin: const EdgeInsets.only(left: 8),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppColors.mediumAmber,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text('Baru',
+                              style: AppTextStyles.small
+                                  .copyWith(color: Colors.white)),
+                        ),
                       const Spacer(),
                       Icon(
-                        _showHints ? Icons.expand_less : Icons.expand_more,
+                        _hintService.isExpanded
+                            ? Icons.expand_less
+                            : Icons.expand_more,
                         color: AppColors.mediumAmber,
                       ),
                     ],
                   ),
                 ),
               ),
-              if (_showHints) ...[
+              if (_hintService.isExpanded) ...[
                 const SizedBox(height: 8),
                 Container(
                   width: double.infinity,
@@ -389,7 +377,8 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen>
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: widget.question.hints
+                    children: _hintService
+                        .getHints(widget.question)
                         .asMap()
                         .entries
                         .map(
@@ -421,7 +410,7 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen>
               const SizedBox(height: 20),
             ],
 
-            // ── Input Jawaban + Shake ────────────────────────────────────
+            // ── Input Jawaban + Shake
             AnimatedBuilder(
               animation: _shakeAnimation,
               builder: (context, child) => Transform.translate(
@@ -517,7 +506,7 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen>
               child: ElevatedButton(
                 onPressed: _hasSubmitted && _isCorrect
                     ? () => Navigator.pop(context)
-                    : _submitAnswer,
+                    : (_isSavingProgress ? null : _submitAnswer),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: _hasSubmitted && _isCorrect
                       ? AppColors.successGreen
