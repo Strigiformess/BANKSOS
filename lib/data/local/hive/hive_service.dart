@@ -30,11 +30,8 @@ class HiveService {
 
   // ─── Inisialisasi ────────────────────────────────────────────────────────
 
-  /// Dipanggil sekali di main.dart sebelum runApp().
-  /// Mendaftarkan semua adapter lalu membuka semua box.
   static Future<void> init() async {
     await Hive.initFlutter();
-
     _registerAdapters();
     await _openAllBoxes();
   }
@@ -42,25 +39,21 @@ class HiveService {
   // ─── Register adapter ────────────────────────────────────────────────────
 
   static void _registerAdapters() {
-    // Daftarkan adapter hanya jika belum terdaftar
-    // (mencegah error jika init() dipanggil lebih dari sekali, misal di test)
-    if (!Hive.isAdapterRegistered(0)) {
-      Hive.registerAdapter(UserModelAdapter());
-    }
-    if (!Hive.isAdapterRegistered(1)) {
-      Hive.registerAdapter(QuestionModelAdapter());
-    }
-    if (!Hive.isAdapterRegistered(2)) {
-      Hive.registerAdapter(CategoryModelAdapter());
-    }
-    if (!Hive.isAdapterRegistered(3)) {
-      Hive.registerAdapter(UserProgressModelAdapter());
-    }
-    if (!Hive.isAdapterRegistered(4)) {
-      Hive.registerAdapter(BookmarkModelAdapter());
-    }
-    if (!Hive.isAdapterRegistered(5)) {
-      Hive.registerAdapter(SyncQueueModelAdapter());
+    // Daftarkan satu per satu dengan tipe eksplisit supaya Dart
+    // mengenali .typeId dari TypeAdapter, bukan Object.
+    _register(UserModelAdapter());
+    _register(DifficultyLevelAdapter());
+    _register(QuestionStatusAdapter());
+    _register(QuestionModelAdapter());
+    _register(CategoryModelAdapter());
+    _register(UserProgressModelAdapter());
+    _register(BookmarkModelAdapter());
+    _register(SyncQueueModelAdapter());
+  }
+
+  static void _register<T>(TypeAdapter<T> adapter) {
+    if (!Hive.isAdapterRegistered(adapter.typeId)) {
+      Hive.registerAdapter(adapter);
     }
   }
 
@@ -68,9 +61,7 @@ class HiveService {
 
   static Future<void> _openAllBoxes() async {
     await Future.wait([
-      // Box session pakai tipe dynamic (Map) karena menyimpan data sesi mentah
       Hive.openBox(HiveBoxes.session),
-
       Hive.openBox<QuestionModel>(HiveBoxes.questions),
       Hive.openBox<CategoryModel>(HiveBoxes.categories),
       Hive.openBox<UserProgressModel>(HiveBoxes.userProgress),
@@ -81,7 +72,6 @@ class HiveService {
 
   // ─── Tutup semua box ─────────────────────────────────────────────────────
 
-  /// Opsional — dipanggil saat app ditutup atau di tear-down test.
   Future<void> closeAll() async {
     await Hive.close();
   }
@@ -101,7 +91,5 @@ class HiveService {
       bookmarksBox.clear(),
       syncQueueBox.clear(),
     ]);
-    // Session TIDAK ikut di-clear di sini —
-    // gunakan SessionService.clearSession() untuk logout.
   }
 }

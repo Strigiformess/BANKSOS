@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:banksos/data/models/question_model.dart';
-import 'package:banksos/features/questions/repositories/question_repository.dart';
+import 'package:banksos/features/question/repositories/question_repository.dart';
 
 enum QuestionLoadState { idle, loading, loaded, error }
 

@@ -1,4 +1,4 @@
-import 'package:hive/hive.dart';
+  import 'package:hive/hive.dart';
 
 part 'category_model.g.dart';
 
@@ -16,7 +16,7 @@ class CategoryModel extends HiveObject {
   final String nama;
 
   /// Deskripsi singkat mata kuliah.
-  @HiveField(2)
+  @HiveField(5)
   final String deskripsi;
 
   /// Status aktif kategori.
@@ -33,10 +33,10 @@ class CategoryModel extends HiveObject {
 
   factory CategoryModel.fromMap(Map<String, dynamic> map) {
     return CategoryModel(
-      id: map['_id']?.toString() ?? '',
-      nama: map['nama'] ?? '',
-      deskripsi: map['deskripsi'] ?? '',
-      isActive: map['is_active'] ?? true,
+       id: _parseObjectId(map['_id']),
+    nama: map['nama'] ?? '',
+    deskripsi: map['deskripsi'] ?? '',
+    isActive: map['is_active'] ?? true,
     );
   }
 
@@ -62,4 +62,13 @@ class CategoryModel extends HiveObject {
       isActive: isActive ?? this.isActive,
     );
   }
+
+  static String _parseObjectId(dynamic value) {
+  if (value == null) return '';
+  final raw = value.toString();
+  // Kalau formatnya ObjectId("abc123..."), ambil isinya saja
+  final match = RegExp(r'ObjectId\("([a-f0-9]{24})"\)').firstMatch(raw);
+  if (match != null) return match.group(1)!;
+  return raw; // sudah string biasa, langsung pakai
+}
 }

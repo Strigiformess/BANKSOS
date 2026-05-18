@@ -1,11 +1,12 @@
 // lib/features/auth/screens/register_screen.dart
 // PIC: Seruni (SL) — UI Layer
-// Sprint 1 Rabu + Kamis: Halaman Register dengan real-time validator, connect ke auth_controller.
+// Tampilan sesuai mockup Figma, fully pakai AppColors/AppTextStyles/AppSpacings/AppRadius
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../shared/widgets/app_widgets.dart';
 import '../controllers/auth_controller.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
@@ -16,23 +17,21 @@ class RegisterScreen extends ConsumerStatefulWidget {
 }
 
 class _RegisterScreenState extends ConsumerState<RegisterScreen> {
-  final _namaCtrl      = TextEditingController();
-  final _nimCtrl       = TextEditingController();
-  final _emailCtrl     = TextEditingController();
-  final _passwordCtrl  = TextEditingController();
-  final _konfirmasiCtrl= TextEditingController();
+  final _namaCtrl       = TextEditingController();
+  final _nimCtrl        = TextEditingController();
+  final _emailCtrl      = TextEditingController();
+  final _passwordCtrl   = TextEditingController();
+  final _konfirmasiCtrl = TextEditingController();
 
-  bool _obscurePassword     = true;
-  bool _obscureKonfirmasi   = true;
+  bool _obscurePassword   = true;
+  bool _obscureKonfirmasi = true;
 
-  // Untuk real-time validation — tiap field punya error string sendiri
   String? _namaError;
   String? _nimError;
   String? _emailError;
   String? _passwordError;
   String? _konfirmasiError;
 
-  // Tombol Daftar hanya aktif jika semua field sudah valid
   bool get _isFormValid =>
       _namaError == null && _namaCtrl.text.isNotEmpty &&
       _nimError == null && _nimCtrl.text.isNotEmpty &&
@@ -100,7 +99,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       } else {
         _passwordError = null;
       }
-      // Re-validate konfirmasi jika sudah diisi
       if (_konfirmasiCtrl.text.isNotEmpty) {
         _validateKonfirmasi(_konfirmasiCtrl.text);
       }
@@ -119,7 +117,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     });
   }
 
-  // ─── Submit register ──────────────────────────────────────────────────────
+  // ─── Submit ───────────────────────────────────────────────────────────────
+
   Future<void> _onRegister() async {
     if (!_isFormValid) return;
 
@@ -136,60 +135,67 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Pendaftaran berhasil! Silakan login.'),
-          backgroundColor: AppTheme.successGreen,
+          backgroundColor: AppColors.successGreen,
           behavior: SnackBarBehavior.floating,
         ),
       );
-      Navigator.pop(context); // Kembali ke LoginScreen
+      Navigator.pop(context);
     }
   }
 
-  // ─── Build ───────────────────────────────────────────────────────────────
+  // ─── Build ────────────────────────────────────────────────────────────────
+
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authControllerProvider);
 
     return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        title: const Text('Buat Akun Baru'),
-        backgroundColor: Colors.white,
-        foregroundColor: AppTheme.primaryBlue,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
+      backgroundColor: AppColors.bgLight,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
+          padding: AppSpacings.pagePadding,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Subjudul
+              const SizedBox(height: AppSpacings.lg),
+
+              // ── Tab Toggle: Login | Register ────────────────────────────
+              _buildTabToggle(),
+
+              const SizedBox(height: AppSpacings.xxxl),
+
+              // ── Header ──────────────────────────────────────────────────
+              Text(
+                'Create Account',
+                textAlign: TextAlign.center,
+                style: AppTextStyles.h1.copyWith(
+                  fontSize: 26,
+                  color: AppColors.primaryBlue,
+                ),
+              ),
+              const SizedBox(height: AppSpacings.sm),
               Text(
                 'Isi data diri kamu untuk mulai belajar bersama BANKSOS.',
-                style: TextStyle(
-                  color: AppTheme.textGrey,
-                  fontSize: 14,
-                  height: 1.5,
-                ),
                 textAlign: TextAlign.center,
+                style: AppTextStyles.body.copyWith(color: AppColors.textGrey),
               ),
 
-              const SizedBox(height: 24),
+              const SizedBox(height: AppSpacings.xxl),
 
-              // ── Error dari server ──────────────────────────────────────────
+              // ── Error Banner ─────────────────────────────────────────────
               if (authState.errorMessage != null) ...[
-                _buildErrorBanner(authState.errorMessage!),
-                const SizedBox(height: 16),
+                AppMessageBanner(
+                  type: BannerType.error,
+                  message: authState.errorMessage!,
+                ),
+                const SizedBox(height: AppSpacings.lg),
               ],
 
-              // ── Nama Lengkap ───────────────────────────────────────────────
-              _buildField(
+              // ── Nama Lengkap ─────────────────────────────────────────────
+              _buildLabel('Nama Lengkap'),
+              const SizedBox(height: AppSpacings.xs),
+              _buildTextField(
                 controller: _namaCtrl,
-                label: 'Nama Lengkap',
                 hint: 'Masukkan nama lengkap kamu',
                 icon: Icons.person_outline,
                 errorText: _namaError,
@@ -197,12 +203,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 textInputAction: TextInputAction.next,
               ),
 
-              const SizedBox(height: 14),
+              const SizedBox(height: AppSpacings.md),
 
-              // ── NIM ────────────────────────────────────────────────────────
-              _buildField(
+              // ── NIM ──────────────────────────────────────────────────────
+              _buildLabel('NIM'),
+              const SizedBox(height: AppSpacings.xs),
+              _buildTextField(
                 controller: _nimCtrl,
-                label: 'NIM',
                 hint: '241511xxx',
                 icon: Icons.badge_outlined,
                 errorText: _nimError,
@@ -211,13 +218,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 textInputAction: TextInputAction.next,
               ),
 
-              const SizedBox(height: 14),
+              const SizedBox(height: AppSpacings.md),
 
-              // ── Email ──────────────────────────────────────────────────────
-              _buildField(
+              // ── Email ────────────────────────────────────────────────────
+              _buildLabel('Email Address'),
+              const SizedBox(height: AppSpacings.xs),
+              _buildTextField(
                 controller: _emailCtrl,
-                label: 'Email',
-                hint: 'email@student.polban.ac.id',
+                hint: 'name@university.ac.id',
                 icon: Icons.email_outlined,
                 errorText: _emailError,
                 onChanged: _validateEmail,
@@ -225,40 +233,43 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 textInputAction: TextInputAction.next,
               ),
 
-              const SizedBox(height: 14),
+              const SizedBox(height: AppSpacings.md),
 
-              // ── Kata Sandi ─────────────────────────────────────────────────
+              // ── Password ─────────────────────────────────────────────────
+              _buildLabel('Password'),
+              const SizedBox(height: AppSpacings.xs),
               _buildPasswordField(
                 controller: _passwordCtrl,
-                label: 'Kata Sandi',
                 hint: 'Min. 8 karakter, huruf + angka',
                 errorText: _passwordError,
                 obscure: _obscurePassword,
                 onChanged: _validatePassword,
-                onToggleObscure: () =>
+                onToggle: () =>
                     setState(() => _obscurePassword = !_obscurePassword),
                 textInputAction: TextInputAction.next,
               ),
 
-              const SizedBox(height: 14),
+              const SizedBox(height: AppSpacings.md),
 
-              // ── Konfirmasi Kata Sandi ──────────────────────────────────────
+              // ── Konfirmasi Password ──────────────────────────────────────
+              _buildLabel('Confirm Password'),
+              const SizedBox(height: AppSpacings.xs),
               _buildPasswordField(
                 controller: _konfirmasiCtrl,
-                label: 'Konfirmasi Kata Sandi',
                 hint: 'Ulangi kata sandi kamu',
                 errorText: _konfirmasiError,
                 obscure: _obscureKonfirmasi,
                 onChanged: _validateKonfirmasi,
-                onToggleObscure: () =>
+                onToggle: () =>
                     setState(() => _obscureKonfirmasi = !_obscureKonfirmasi),
                 textInputAction: TextInputAction.done,
-                onFieldSubmitted: (_) => _onRegister(),
+                onSubmitted: (_) => _onRegister(),
               ),
 
-              const SizedBox(height: 28),
+              const SizedBox(height: AppSpacings.xxl),
 
-              // ── Tombol Daftar ──────────────────────────────────────────────
+              // ── Tombol Daftar ────────────────────────────────────────────
+              // Pakai ElevatedButton dari AppTheme.lightTheme (auto-styled)
               ElevatedButton(
                 onPressed: (!_isFormValid || authState.isLoading)
                     ? null
@@ -275,35 +286,33 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     : const Text('Daftar'),
               ),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: AppSpacings.xxl),
 
-              // ── Link ke Login ──────────────────────────────────────────────
+              // ── Link ke Login ────────────────────────────────────────────
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
                     'Sudah punya akun? ',
-                    style: TextStyle(color: AppTheme.textGrey, fontSize: 14),
+                    style: AppTextStyles.body.copyWith(
+                        color: AppColors.textGrey),
                   ),
                   GestureDetector(
                     onTap: () {
                       ref.read(authControllerProvider.notifier).clearError();
                       Navigator.pop(context);
                     },
-                    child: const Text(
+                    child: Text(
                       'Masuk',
-                      style: TextStyle(
-                        color: AppTheme.primaryBlue,
-                        fontSize: 14,
+                      style: AppTextStyles.bodyPrimary.copyWith(
                         fontWeight: FontWeight.w600,
-                        decoration: TextDecoration.underline,
                       ),
                     ),
                   ),
                 ],
               ),
 
-              const SizedBox(height: 16),
+              const SizedBox(height: AppSpacings.lg),
             ],
           ),
         ),
@@ -311,11 +320,71 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     );
   }
 
-  // ─── Widget helper ────────────────────────────────────────────────────────
+  // ─── Tab Toggle ───────────────────────────────────────────────────────────
 
-  Widget _buildField({
+  Widget _buildTabToggle() {
+    return Container(
+      height: 44,
+      decoration: BoxDecoration(
+        color: AppColors.borderGrey.withOpacity(0.35),
+        borderRadius: AppRadius.pill,
+      ),
+      padding: const EdgeInsets.all(4),
+      child: Row(
+        children: [
+          // Tab Login — tidak aktif
+          Expanded(
+            child: GestureDetector(
+              onTap: () {
+                ref.read(authControllerProvider.notifier).clearError();
+                Navigator.pop(context);
+              },
+              child: Container(
+                alignment: Alignment.center,
+                child: Text(
+                  'Login',
+                  style: AppTextStyles.body.copyWith(
+                    color: AppColors.textGrey,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          // Tab Register — aktif
+          Expanded(
+            child: Container(
+              decoration: BoxDecoration(
+                color: AppColors.primaryBlue,
+                borderRadius: AppRadius.pill,
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                'Register',
+                style: AppTextStyles.bodySemibold.copyWith(
+                  color: AppColors.textLight,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ─── Widget Helpers ───────────────────────────────────────────────────────
+
+  Widget _buildLabel(String label) {
+    return Text(
+      label,
+      style: AppTextStyles.small.copyWith(
+        color: AppColors.textDark,
+        fontWeight: FontWeight.w500,
+      ),
+    );
+  }
+
+  Widget _buildTextField({
     required TextEditingController controller,
-    required String label,
     required String hint,
     required IconData icon,
     required String? errorText,
@@ -323,77 +392,56 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     TextInputType keyboardType = TextInputType.text,
     TextInputAction textInputAction = TextInputAction.next,
   }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        TextFormField(
-          controller: controller,
-          keyboardType: keyboardType,
-          textInputAction: textInputAction,
-          onChanged: onChanged,
-          decoration: InputDecoration(
-            labelText: label,
-            hintText: hint,
-            prefixIcon: Icon(icon),
-            errorText: errorText,
-          ),
-        ),
-      ],
+    return TextFormField(
+      controller: controller,
+      keyboardType: keyboardType,
+      textInputAction: textInputAction,
+      onChanged: onChanged,
+      style: AppTextStyles.body,
+      decoration: InputDecoration(
+        hintText: hint,
+        errorText: errorText,
+        // AppTheme.lightTheme sudah atur border, fill, padding
+        prefixIcon: Icon(icon, color: AppColors.textGrey, size: 20),
+      ),
     );
   }
 
   Widget _buildPasswordField({
     required TextEditingController controller,
-    required String label,
     required String hint,
     required String? errorText,
     required bool obscure,
     required ValueChanged<String> onChanged,
-    required VoidCallback onToggleObscure,
+    required VoidCallback onToggle,
     TextInputAction textInputAction = TextInputAction.next,
-    ValueChanged<String>? onFieldSubmitted,
+    ValueChanged<String>? onSubmitted,
   }) {
     return TextFormField(
       controller: controller,
       obscureText: obscure,
       textInputAction: textInputAction,
       onChanged: onChanged,
-      onFieldSubmitted: onFieldSubmitted,
+      onFieldSubmitted: onSubmitted,
+      style: AppTextStyles.body,
       decoration: InputDecoration(
-        labelText: label,
         hintText: hint,
-        prefixIcon: const Icon(Icons.lock_outline),
         errorText: errorText,
+        prefixIcon: const Icon(
+          Icons.lock_outline,
+          color: AppColors.textGrey,
+          size: 20,
+        ),
         suffixIcon: IconButton(
           icon: Icon(
-            obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-            color: AppTheme.textGrey,
+            obscure
+                ? Icons.visibility_off_outlined
+                : Icons.visibility_outlined,
+            color: AppColors.textGrey,
+            size: 20,
           ),
-          onPressed: onToggleObscure,
+          onPressed: onToggle,
         ),
-      ),
-    );
-  }
-
-  Widget _buildErrorBanner(String message) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: AppTheme.errorRed.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppTheme.errorRed.withOpacity(0.4)),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.error_outline, color: AppTheme.errorRed, size: 18),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              message,
-              style: const TextStyle(color: AppTheme.errorRed, fontSize: 13),
-            ),
-          ),
-        ],
       ),
     );
   }

@@ -7,6 +7,7 @@ class AppRoutes {
 
   static const String login              = '/login';
   static const String register           = '/register';
+  static const String splash             = '/splash';
   static const String dashboardMahasiswa = '/dashboard-mahasiswa';
   static const String dashboardReviewer  = '/dashboard-reviewer';
   static const String dashboardAdmin     = '/dashboard-admin';
