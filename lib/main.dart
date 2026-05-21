@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
 import 'core/services/session_service.dart';
 import 'core/theme/app_theme.dart';
@@ -23,6 +24,7 @@ import 'features/dashboard/screens/dashboard_mahasiswa_screen.dart';
 import 'features/dashboard/screens/dashboard_reviewer_screen.dart';
 import 'features/dashboard/screens/dashboard_admin_screen.dart';
 import 'features/question/screens/bank_soal_screen.dart';
+import 'features/question/screens/question_detail_screen.dart';
 
 // Sprint 4 Screens
 import 'features/kontribusi/screens/kontribusi_screen.dart';
@@ -59,7 +61,7 @@ class BanksosApp extends StatelessWidget {
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: ThemeMode.system, // ikuti preferensi sistem Android
-      home: const LoginScreen(),
+      home: const BankSoalScreen(),
       routes: {
         AppRoutes.login:              (_) => const LoginScreen(),
         AppRoutes.register:           (_) => const RegisterScreen(),
@@ -68,6 +70,7 @@ class BanksosApp extends StatelessWidget {
         AppRoutes.dashboardReviewer:  (_) => const DashboardReviewerScreen(),
         AppRoutes.dashboardAdmin:     (_) => const DashboardAdminScreen(),
         AppRoutes.bankSoal:           (_) => const BankSoalScreen(),
+        AppRoutes.questionDetail:     (_) => const _PlaceholderScreen(title: 'Question Detail'),
         AppRoutes.bookmarks:          (_) => const _PlaceholderScreen(title: 'Bookmark'),
         AppRoutes.riwayat:            (_) => const _PlaceholderScreen(title: 'Riwayat'),
         
