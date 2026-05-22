@@ -38,7 +38,7 @@ Future<void> main() async {
   await HiveService.init();
 
   // 3. Init MongoDB
-  MongoDBService.instance.init();
+  await MongoDBService.instance.init();
 
   // cek koneksi internet dan log statusnya
   await ConnectivityService.instance.init();
@@ -61,7 +61,7 @@ class BanksosApp extends StatelessWidget {
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: ThemeMode.system, // ikuti preferensi sistem Android
-      home: const BankSoalScreen(),
+      home: const LoginScreen(),
       routes: {
         AppRoutes.login:              (_) => const LoginScreen(),
         AppRoutes.register:           (_) => const RegisterScreen(),
