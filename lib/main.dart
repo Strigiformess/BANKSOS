@@ -31,6 +31,12 @@ import 'features/kontribusi/screens/kontribusi_screen.dart';
 import 'features/kontribusi/screens/submit_soal_screen.dart';
 import 'features/review/screens/review_queue_screen.dart';
 
+// Tambahkan import di bagian atas
+import 'features/admin/screens/admin_user_management_screen.dart';
+import 'features/admin/screens/admin_question_management_screen.dart';
+import 'features/bookmarks/screens/bookmarks_screen.dart';
+import 'features/riwayat/screens/riwayat_screen.dart';
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -80,6 +86,10 @@ class BanksosApp extends StatelessWidget {
         
         // Tambahkan rute untuk Submit Soal
         AppRoutes.submitSoal:         (_) => const SubmitSoalScreen(),
+
+        // Sprint 5 - Admin routes
+        AppRoutes.adminUserManagement:     (_) => const AdminUserManagementScreen(),
+        AppRoutes.adminQuestionManagement: (_) => const AdminQuestionManagementScreen(),
       },
     );
   }
