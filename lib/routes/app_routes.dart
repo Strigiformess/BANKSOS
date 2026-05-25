@@ -1,4 +1,5 @@
 // lib/routes/app_routes.dart
+// Sprint 5 UPDATE — tambah route admin panel
 
 /// Konstanta nama route untuk seluruh aplikasi BANKSOS.
 /// Gunakan nama ini di Navigator.pushNamed / pushReplacementNamed.
@@ -19,4 +20,8 @@ class AppRoutes {
   static const String reviewQueue        = '/review-queue';
   static const String bookmarks          = '/bookmarks';
   static const String riwayat            = '/riwayat';
+
+  // Sprint 5 — Panel Admin
+  static const String adminKelolaUser    = '/admin/kelola-user';
+  static const String adminKelolasoal   = '/admin/kelola-soal';
 }
