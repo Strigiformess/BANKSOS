@@ -49,6 +49,8 @@ class HiveService {
     _register(UserProgressModelAdapter());
     _register(BookmarkModelAdapter());
     _register(SyncQueueModelAdapter());
+
+    _register(SyncTypeAdapter()); 
   }
 
   static void _register<T>(TypeAdapter<T> adapter) {

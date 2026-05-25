@@ -1,9 +1,7 @@
 // lib/core/services/download_service.dart
 
-import '../constants/hive_boxes.dart';
 import '../../data/local/boxes/category_box.dart';
 import '../../data/local/boxes/question_box.dart';
-import '../../data/models/category_model.dart';
 import '../../data/models/question_model.dart';
 import 'connectivity_service.dart';
 

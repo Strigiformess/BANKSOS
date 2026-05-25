@@ -20,7 +20,7 @@ import '../../../data/models/bookmark_model.dart';
 import '../../../data/models/question_model.dart';
 import '../../../core/services/session_service.dart';
 import '../../../core/services/connectivity_service.dart';
-import '../../../features/auth/data/bookmark_remote.dart';
+import '../../../data/remote/bookmark_remote.dart';
 
 /// Abstraksi interface agar mudah di-mock saat unit test.
 abstract class IBookmarkRepository {

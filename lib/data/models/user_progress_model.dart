@@ -8,7 +8,7 @@ part 'user_progress_model.g.dart';
 ///
 /// Catatan: hanya soal yang berhasil dijawab benar yang dicatat
 /// ke dalam riwayat pengerjaan.
-@HiveType(typeId: 3)
+@HiveType(typeId: 6)
 class UserProgressModel extends HiveObject {
   /// ID unik rekap progress dari MongoDB (_id).
   @HiveField(0)

@@ -61,7 +61,7 @@ class QuestionModel extends HiveObject {
 
   /// Nama kategori mata kuliah (disimpan lokal agar tidak perlu
   /// join saat akses offline).
-  @HiveField(4)
+  @HiveField(4, defaultValue: '')
   final String kategoriNama;
 
   /// Tingkat kesulitan: easy | medium | hard.

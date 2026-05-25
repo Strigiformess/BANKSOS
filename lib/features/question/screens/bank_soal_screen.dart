@@ -1,17 +1,22 @@
-// lib/features/questions/screens/bank_soal_screen.dart
+// lib/features/question/screens/bank_soal_screen.dart
+// FINAL SPRINT 3: Terintegrasi penuh, Anti-RenderFlex Bug & Anti Status Offline Palsu
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import '../../../core/services/connectivity_service.dart';
+import '../../../core/services/session_service.dart';
+import '../../../core/services/sync_service.dart';
 import '../../../data/models/question_model.dart';
 import '../../../data/models/category_model.dart';
+import '../../../data/models/bookmark_model.dart';
 import '../../../data/local/hive/hive_service.dart';
-import '../../../features/auth/data/category_remote.dart';
-import '../../../features/auth/data/question_remote.dart';
+import '../../../data/remote/category_remote.dart';
+import '../../../data/remote/question_remote.dart';
 import '../../question/screens/question_detail_screen.dart';
 
 // ─── Providers ────────────────────────────────────────────────────────────────
@@ -85,7 +90,6 @@ class BankSoalScreen extends ConsumerStatefulWidget {
 class _BankSoalScreenState extends ConsumerState<BankSoalScreen> {
   bool _isSidebarOpen = true;
 
-  // Filter kesulitan — pakai enum dari app_widgets
   DifficultyFilter _selectedDifficulty = DifficultyFilter.all;
 
   final _searchCtrl = TextEditingController();
@@ -101,11 +105,10 @@ class _BankSoalScreenState extends ConsumerState<BankSoalScreen> {
     super.dispose();
   }
 
-  // ─── Download untuk offline 
-
   Future<void> _downloadForOffline(
       String categoryId, String categoryName) async {
     final isOnline = await ConnectivityService.instance.isOnline;
+    if (!context.mounted) return;
     if (!isOnline) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -173,8 +176,6 @@ class _BankSoalScreenState extends ConsumerState<BankSoalScreen> {
     }
   }
 
-  // ─── Filter 
-
   List<QuestionModel> _applyFilters(List<QuestionModel> questions) {
     var filtered = questions;
 
@@ -200,8 +201,6 @@ class _BankSoalScreenState extends ConsumerState<BankSoalScreen> {
     return filtered;
   }
 
-  // ─── Build 
-
   @override
   Widget build(BuildContext context) {
     final categoriesAsync    = ref.watch(categoryProvider);
@@ -209,10 +208,11 @@ class _BankSoalScreenState extends ConsumerState<BankSoalScreen> {
     final connectivityAsync  = ref.watch(connectivityProvider);
     final selectedCategoryId = ref.watch(selectedCategoryIdProvider);
 
+    // FIX: Kebal terhadap perubahan tipe data ConnectivityResult
     final isOffline = connectivityAsync.when(
-      data: (result) => result == ConnectivityResult.none,
+      data: (result) => result.toString().contains('none'),
       loading: () => false,
-      error:   (_, __) => false,
+      error:  (_, __) => false,
     );
 
     return Scaffold(
@@ -260,16 +260,14 @@ class _BankSoalScreenState extends ConsumerState<BankSoalScreen> {
                 );
               },
               loading: () => const SizedBox.shrink(),
-              error:   (_, __) => const SizedBox.shrink(),
+              error:  (_, __) => const SizedBox.shrink(),
             ),
         ],
       ),
       body: Column(
         children: [
-          // ── Banner Offline — pakai OfflineBanner dari app_widgets ───────
           if (isOffline) const OfflineBanner(),
 
-          // ── Progress Bar Unduh 
           if (_isDownloading) ...[
             LinearProgressIndicator(
               value: _downloadProgress,
@@ -293,12 +291,10 @@ class _BankSoalScreenState extends ConsumerState<BankSoalScreen> {
             ),
           ],
 
-          // ── Konten Utama: Sidebar + Daftar Soal 
           Expanded(
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // ── Sidebar Kategori ───────────────────────────────────
                 AnimatedContainer(
                   duration: const Duration(milliseconds: 250),
                   curve: Curves.easeInOut,
@@ -311,11 +307,9 @@ class _BankSoalScreenState extends ConsumerState<BankSoalScreen> {
                 if (_isSidebarOpen)
                   const VerticalDivider(width: 1, thickness: 1),
 
-                // ── Kolom Kanan ────────────────────────────────────────
                 Expanded(
                   child: Column(
                     children: [
-                      // Search bar
                       Padding(
                         padding:
                             const EdgeInsets.fromLTRB(12, 10, 12, 4),
@@ -344,7 +338,6 @@ class _BankSoalScreenState extends ConsumerState<BankSoalScreen> {
                         ),
                       ),
 
-                      // Filter Chip — pakai AppDifficultyChips ──────────
                       AppDifficultyChips(
                         selected: _selectedDifficulty,
                         onChanged: (val) =>
@@ -353,12 +346,14 @@ class _BankSoalScreenState extends ConsumerState<BankSoalScreen> {
 
                       const Divider(height: 1),
 
-                      // Daftar Soal
                       Expanded(
                         child: questionsAsync.when(
                           loading: () =>
                               const AppLoadingIndicator(),
-                          error: (e, _) => _buildError(e.toString()),
+                          error: (e, _) {
+                            debugPrint("❌ ERROR ASLI SOAL: $e");
+                            return _buildError(e.toString(), () => ref.invalidate(questionProvider));
+                          },
                           data: (questions) {
                             final filtered =
                                 _applyFilters(questions);
@@ -380,8 +375,6 @@ class _BankSoalScreenState extends ConsumerState<BankSoalScreen> {
       ),
     );
   }
-
-  // ─── Sidebar Kategori 
 
   Widget _buildSidebar(
     AsyncValue<List<CategoryModel>> categoriesAsync,
@@ -411,12 +404,25 @@ class _BankSoalScreenState extends ConsumerState<BankSoalScreen> {
                   child: CircularProgressIndicator(strokeWidth: 2),
                 ),
               ),
-              error: (e, _) => Padding(
-                padding: const EdgeInsets.all(12),
-                child: Text('Gagal memuat kategori',
-                    style: AppTextStyles.small
-                        .copyWith(color: AppColors.errorRed)),
-              ),
+              error: (e, _) {
+                debugPrint("❌ ERROR ASLI KATEGORI: $e");
+                return Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text('Gagal memuat',
+                          style: AppTextStyles.small
+                              .copyWith(color: AppColors.errorRed)),
+                      const SizedBox(height: 8),
+                      InkWell(
+                        onTap: () => ref.invalidate(categoryProvider),
+                        child: const Icon(Icons.refresh, color: AppColors.primaryBlue, size: 24),
+                      ),
+                    ],
+                  ),
+                );
+              },
               data: (categories) => ListView.builder(
                 padding: EdgeInsets.zero,
                 itemCount: categories.length,
@@ -496,8 +502,6 @@ class _BankSoalScreenState extends ConsumerState<BankSoalScreen> {
     );
   }
 
-  // ─── Daftar Soal ──────────────────────────────────────────────────────────
-
   Widget _buildQuestionList(List<QuestionModel> questions) {
     return ListView.separated(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -512,9 +516,6 @@ class _BankSoalScreenState extends ConsumerState<BankSoalScreen> {
     );
   }
 
-  // ─── Empty & Error State ──────────────────────────────────────────────────
-
-  /// Pakai AppEmptyState dari app_widgets
   Widget _buildEmpty(String? categoryId) {
     return AppEmptyState(
       icon: categoryId == null
@@ -542,7 +543,7 @@ class _BankSoalScreenState extends ConsumerState<BankSoalScreen> {
     );
   }
 
-  Widget _buildError(String message) {
+  Widget _buildError(String message, VoidCallback onRetry) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -553,9 +554,15 @@ class _BankSoalScreenState extends ConsumerState<BankSoalScreen> {
                 size: 48, color: AppColors.errorRed),
             const SizedBox(height: 12),
             Text(
-              message,
+              "Gagal memuat data dari server.",
               style: AppTextStyles.small,
               textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
+            ElevatedButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Coba Lagi'),
             ),
           ],
         ),
@@ -564,7 +571,7 @@ class _BankSoalScreenState extends ConsumerState<BankSoalScreen> {
   }
 }
 
-// ─── Card Soal 
+// ─── Card Soal ──────────────────────────
 
 class _QuestionCard extends StatelessWidget {
   final QuestionModel question;
@@ -573,25 +580,27 @@ class _QuestionCard extends StatelessWidget {
   const _QuestionCard({required this.question, required this.nomor});
 
   String _buildPlaceholder(String answer) {
-    return answer
-        .trim()
-        .split(' ')
-        .map((word) => '_' * word.length)
-        .join(' ');
+    return answer.trim().split(' ').map((word) => '_' * word.length).join(' ');
   }
 
   @override
   Widget build(BuildContext context) {
+    final rawUserId = SessionService.instance.userId ?? '';
+
+    String cleanId(String id) {
+      final match = RegExp(r'ObjectId\("([a-f0-9]{24})"\)').firstMatch(id);
+      return match != null ? match.group(1)! : id;
+    }
+    
+    final currentUserId = rawUserId.isNotEmpty ? cleanId(rawUserId) : '';
+
     return Card(
       child: InkWell(
         borderRadius: AppRadius.lgAll,
         onTap: () {
           Navigator.push(
             context,
-            MaterialPageRoute(
-              builder: (_) =>
-                  QuestionDetailScreen(question: question),
-            ),
+            MaterialPageRoute(builder: (_) => QuestionDetailScreen(question: question)),
           );
         },
         child: Padding(
@@ -599,80 +608,99 @@ class _QuestionCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Baris atas: nomor + badge kesulitan + hint count + bookmark
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Nomor soal
                   Container(
-                    width: 26,
-                    height: 26,
-                    decoration: BoxDecoration(
-                      color: AppColors.lightBlue,
-                      borderRadius: AppRadius.smAll,
-                    ),
+                    width: 24, height: 24,
+                    decoration: BoxDecoration(color: AppColors.lightBlue, borderRadius: AppRadius.smAll),
                     alignment: Alignment.center,
-                    child: Text(
-                      '$nomor',
-                      style: AppTextStyles.captionBold
-                          .copyWith(color: AppColors.primaryBlue),
-                    ),
+                    child: Text('$nomor', style: AppTextStyles.captionBold.copyWith(color: AppColors.primaryBlue)),
                   ),
                   const SizedBox(width: 8),
 
-                  // Badge kesulitan — pakai AppBadge.difficulty() ─────────
-                  AppBadge.difficulty(question.tingkatKesulitan.name),
-
-                  const Spacer(),
-
-                  // Ikon hint
-                  if (question.hints.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.lightbulb_outline,
-                              size: 14,
-                              color: AppColors.warningYellow),
-                          const SizedBox(width: 2),
-                          Text(
-                            '${question.hints.length}',
-                            style: AppTextStyles.caption,
+                  Expanded(
+                    child: Wrap(
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 6, runSpacing: 4,
+                      children: [
+                        AppBadge.difficulty(question.tingkatKesulitan.name),
+                        if (question.hints.isNotEmpty)
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.lightbulb_outline, size: 14, color: AppColors.warningYellow),
+                              const SizedBox(width: 2),
+                              Text('${question.hints.length}', style: AppTextStyles.caption),
+                            ],
                           ),
-                        ],
-                      ),
+                      ],
                     ),
+                  ),
 
-                  Icon(
-                    Icons.bookmark_border_outlined,
-                    size: 18,
-                    color: AppColors.textGrey.withOpacity(0.5),
+                  // LOGIKA BOOKMARK DENGAN SNACKBAR
+                  ValueListenableBuilder<Box<BookmarkModel>>(
+                    valueListenable: HiveService.instance.bookmarksBox.listenable(),
+                    builder: (context, box, _) {
+                      final isBookmarked = box.values.any((b) =>
+                          cleanId(b.questionId) == cleanId(question.id) &&
+                          cleanId(b.userId) == currentUserId);
+
+                      return SizedBox(
+                        width: 32, height: 32,
+                        child: IconButton(
+                          icon: Icon(
+                            isBookmarked ? Icons.bookmark : Icons.bookmark_border_outlined,
+                            size: 20,
+                            color: isBookmarked ? Colors.amberAccent : AppColors.textGrey.withOpacity(0.5),
+                          ),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          onPressed: () async {
+                            if (currentUserId.isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Sesi tidak valid.'), backgroundColor: AppColors.errorRed),
+                              );
+                              return;
+                            }
+                            
+                            // Eksekusi fungsi dan tangkap hasil boolean
+                            final isNowSaved = await SyncService.instance.toggleBookmark(
+                              userId: currentUserId,
+                              questionId: question.id,
+                            );
+
+                            // Munculkan Feedback SnackBar!
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).clearSnackBars();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(isNowSaved ? 'Soal disimpan ke Bookmark' : 'Bookmark dihapus'),
+                                  backgroundColor: isNowSaved ? AppColors.successGreen : AppColors.textGrey,
+                                  behavior: SnackBarBehavior.floating,
+                                  duration: const Duration(seconds: 1),
+                                ),
+                              );
+                            }
+                          },
+                        ),
+                      );
+                    },
                   ),
                 ],
               ),
-
               const SizedBox(height: 10),
-
-              // Pertanyaan
               Text(question.pertanyaan, style: AppTextStyles.bodySemibold),
-
               const SizedBox(height: 8),
-
-              // Placeholder jawaban
-              Text(
-                _buildPlaceholder(question.jawaban),
-                style: AppTextStyles.answerPlaceholder,
-              ),
-
+              Text(_buildPlaceholder(question.jawaban), style: AppTextStyles.answerPlaceholder),
               const SizedBox(height: 8),
-
-              // Kategori
               Row(
                 children: [
-                  const Icon(Icons.folder_outlined,
-                      size: 13, color: AppColors.textGrey),
+                  const Icon(Icons.folder_outlined, size: 13, color: AppColors.textGrey),
                   const SizedBox(width: 4),
-                  Text(question.kategoriNama,
-                      style: AppTextStyles.caption),
+                  Expanded(
+                    child: Text(question.kategoriNama, style: AppTextStyles.caption, overflow: TextOverflow.ellipsis),
+                  ),
                 ],
               ),
             ],

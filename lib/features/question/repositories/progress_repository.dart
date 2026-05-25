@@ -20,7 +20,7 @@ import '../../../data/local/hive/hive_service.dart';
 import '../../../data/models/user_progress_model.dart';
 import '../../../core/services/session_service.dart';
 import '../../../core/services/connectivity_service.dart';
-import '../../../features/auth/data/progress_remote.dart';
+import '../../../data/remote/progress_remote.dart';
 
 /// Abstraksi interface agar mudah di-mock saat unit test.
 abstract class IProgressRepository {

@@ -1,17 +1,17 @@
 // lib/main.dart
-// Updated Sprint 4 — integrasi layar Kontribusi, Submit Soal, dan Review Queue
+// Updated Sprint 4 — Integrasi menyeluruh dengan penanganan Error, Routing, & SyncQueue
 
+import 'package:banksos/core/diagnostics/master_backend_suite.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 
-import 'core/services/session_service.dart';
 import 'core/theme/app_theme.dart';
 import 'data/local/hive/hive_service.dart';
 import 'data/remote/mongodb/mongodb_service.dart';
 import 'core/services/connectivity_service.dart';
+import 'core/services/sync_service.dart';
 import 'routes/app_routes.dart';
 
 // Auth
@@ -24,7 +24,6 @@ import 'features/dashboard/screens/dashboard_mahasiswa_screen.dart';
 import 'features/dashboard/screens/dashboard_reviewer_screen.dart';
 import 'features/dashboard/screens/dashboard_admin_screen.dart';
 import 'features/question/screens/bank_soal_screen.dart';
-import 'features/question/screens/question_detail_screen.dart';
 
 // Sprint 4 Screens
 import 'features/kontribusi/screens/kontribusi_screen.dart';
@@ -34,20 +33,60 @@ import 'features/review/screens/review_queue_screen.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await dotenv.load(fileName: '.env');
-  await HiveService.init();
+  try {
+    // 1. Muat Environment
+    await dotenv.load(fileName: '.env');
+    
+    // 2. Init Penyimpanan Lokal (Hive)
+    await HiveService.init();
 
-  // 3. Init MongoDB
-  MongoDBService.instance.init();
+    // 3. Init Database & Koneksi Internet
+    MongoDBService.instance.init();
+    await ConnectivityService.instance.init();
 
-  // cek koneksi internet dan log statusnya
-  await ConnectivityService.instance.init();
+    // 4. INIT SINKRONISASI LATAR BELAKANG (SPRINT 3)
+    // Jalankan satu kali saat aplikasi baru dibuka
+    SyncService.instance.flushQueue(); 
+    
+    // Jalankan otomatis setiap kali HP kembali mendapatkan sinyal internet
+    ConnectivityService.instance.onConnectivityChanged.listen((status) {
+      // Jika statusnya bukan 'none' (artinya ada internet), tembakkan antrean!
+      if (status != ConnectivityResult.none) {
+        SyncService.instance.flushQueue();
+      }
+    });
 
-  runApp(
-    const ProviderScope(
-      child: BanksosApp(),
-    ),
-  );
+    await MasterBackendSuite.runMasterSuite();
+
+    // 5. JIKA SEMUA SUKSES, baru jalankan aplikasi utama
+    runApp(
+      const ProviderScope(
+        child: BanksosApp(),
+      ),
+    );
+    
+  } catch (e) {
+    debugPrint("❌ FATAL ERROR SAAT STARTUP: $e");
+    
+    // 6. JIKA GAGAL, tahan aplikasi di layar error
+    runApp(
+      MaterialApp(
+        debugShowCheckedModeBanner: false,
+        home: Scaffold(
+          body: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Center(
+              child: Text(
+                "Aplikasi gagal dimuat karena kesalahan sistem:\n\n$e\n\nPastikan file .env sudah didaftarkan di pubspec.yaml dan tipe data Adapter tidak ada yang bentrok.",
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.red, fontSize: 14),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class BanksosApp extends StatelessWidget {
@@ -60,8 +99,10 @@ class BanksosApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.system, // ikuti preferensi sistem Android
-      home: const LoginScreen(),
+      themeMode: ThemeMode.system,
+      
+      initialRoute: AppRoutes.splash,
+      
       routes: {
         AppRoutes.login:              (_) => const LoginScreen(),
         AppRoutes.register:           (_) => const RegisterScreen(),
@@ -74,18 +115,16 @@ class BanksosApp extends StatelessWidget {
         AppRoutes.bookmarks:          (_) => const _PlaceholderScreen(title: 'Bookmark'),
         AppRoutes.riwayat:            (_) => const _PlaceholderScreen(title: 'Riwayat'),
         
-        // Update rute Sprint 4 ke screen yang sebenarnya
+        // Sprint 4
         AppRoutes.kontribusi:         (_) => const KontribusiScreen(),
         AppRoutes.reviewQueue:        (_) => const ReviewQueueScreen(),
-        
-        // Tambahkan rute untuk Submit Soal
         AppRoutes.submitSoal:         (_) => const SubmitSoalScreen(),
       },
     );
   }
 }
 
-// ─── Placeholder Sprint 4+ ─────────────────────────────────────────────────────
+// ─── Placeholder ───────────────────────────────────────────────────────────────
 class _PlaceholderScreen extends StatelessWidget {
   const _PlaceholderScreen({required this.title});
   final String title;
@@ -96,9 +135,9 @@ class _PlaceholderScreen extends StatelessWidget {
       appBar: AppBar(title: Text(title)),
       body: Center(
         child: Text(
-          '$title\n(Coming Soon — Menunggu Sprint Berikutnya)',
+          '$title\n(Sedang Dalam Pengembangan)',
           textAlign: TextAlign.center,
-          style: const TextStyle(color: AppTheme.textGrey, fontSize: 16),
+          style: const TextStyle(color: Colors.grey, fontSize: 16),
         ),
       ),
     );

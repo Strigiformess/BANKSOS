@@ -3,7 +3,11 @@ import 'package:hive/hive.dart';
 part 'sync_queue_model.g.dart';
 
 /// Jenis data yang ada dalam antrian sinkronisasi.
-enum SyncType { progress, bookmark }
+@HiveType(typeId: 7) // <-- WAJIB DIDAFTARKAN
+enum SyncType { 
+  @HiveField(0) progress, 
+  @HiveField(1) bookmark 
+}
 
 /// Model antrian sinkronisasi offline ke cloud.
 /// Hanya disimpan di Hive lokal — tidak ada collection MongoDB untuk ini.
@@ -11,7 +15,7 @@ enum SyncType { progress, bookmark }
 /// Ketika pengguna mengerjakan soal atau membuat bookmark secara offline,
 /// data tersebut dimasukkan ke SyncQueue. SyncManager akan membaca
 /// antrian ini dan mengirimkannya ke server saat perangkat kembali online.
-@HiveType(typeId: 5)
+@HiveType(typeId: 8)
 class SyncQueueModel extends HiveObject {
   /// ID unik antrian (UUID yang dibuat secara lokal).
   @HiveField(0)

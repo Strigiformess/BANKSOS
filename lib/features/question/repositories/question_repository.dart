@@ -1,7 +1,7 @@
 import 'package:banksos/data/local/hive/hive_service.dart';
 import 'package:banksos/data/models/question_model.dart';
 import 'package:banksos/data/remote/mongodb/mongodb_service.dart';
-import 'package:banksos/core/config/db_config.dart';
+
 
 abstract class IQuestionRepository {
   Future<List<QuestionModel>> getQuestionsByCategory({

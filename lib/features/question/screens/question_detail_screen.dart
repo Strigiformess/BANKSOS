@@ -1,26 +1,27 @@
 // lib/features/question/screens/question_detail_screen.dart
-// Sprint 3: Tambah bookmark toggle (Seruni) + save progress via repository (Integrated)
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
+import 'package:hive_flutter/hive_flutter.dart'; // Tambahan untuk UI Reactive
 
 import '../../../core/services/connectivity_service.dart';
+import '../../../core/services/session_service.dart';
+import '../../../core/services/sync_service.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../data/local/hive/hive_service.dart';
+import '../../../data/models/bookmark_model.dart';
 import '../../../data/models/question_model.dart';
 import '../../../shared/widgets/app_widgets.dart';
-import '../repositories/bookmark_repository.dart';
 import '../repositories/progress_repository.dart';
 import '../services/hint_service.dart';
 
 class QuestionDetailScreen extends StatefulWidget {
   final QuestionModel question;
-  final BookmarkRepository? bookmarkRepository;
   final IProgressRepository? progressRepository;
 
   const QuestionDetailScreen({
     super.key,
     required this.question,
-    this.bookmarkRepository,
     this.progressRepository,
   });
 
@@ -39,10 +40,6 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen>
   bool _isShaking = false;
   bool _isSavingProgress = false;
 
-  // ─── State Sprint 3 ───────────────────────────────────────────────────────
-  bool _isBookmarked = false;
-  bool _isTogglingBookmark = false;
-  late final BookmarkRepository _bookmarkRepository;
   late final IProgressRepository _progressRepository;
 
   late AnimationController _shakeController;
@@ -53,8 +50,6 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen>
     super.initState();
 
     _hintService = HintService();
-
-    _bookmarkRepository = widget.bookmarkRepository ?? BookmarkRepository();
     _progressRepository = widget.progressRepository ?? ProgressRepository();
 
     _shakeController = AnimationController(
@@ -68,8 +63,6 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen>
       if (status == AnimationStatus.completed) _shakeController.reverse();
     });
 
-    // ─── Integrasi Awal Progress & Bookmark ───
-    _checkBookmarkStatus();
     _checkExistingProgress();
   }
 
@@ -82,54 +75,17 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen>
 
   // ─── Integrasi Progress Checking ──────────────────────────────────────────
   void _checkExistingProgress() {
-    // Cek ke Hive lewat repository apakah soal ini sudah berstatus 'solved' sebelumnya
     final solved = _progressRepository.isSolved(widget.question.id);
     if (solved) {
       setState(() {
         _isCorrect = true;
         _hasSubmitted = true;
-        // Tampilkan jawaban asli/placeholder bahwa ini sudah selesai
         _answerController.text = widget.question.jawaban; 
       });
     }
   }
 
-  // ─── Bookmark ─────────────────────────────────────────────────────────────
-
-  void _checkBookmarkStatus() {
-    final isBookmarked = _bookmarkRepository.isBookmarked(widget.question.id);
-    setState(() => _isBookmarked = isBookmarked);
-  }
-
-  Future<void> _toggleBookmark() async {
-    if (_isTogglingBookmark) return;
-    setState(() => _isTogglingBookmark = true);
-
-    final result = await _bookmarkRepository.toggleBookmark(widget.question);
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(result.message ??
-              (result.isNowBookmarked
-                  ? 'Soal disimpan ke Bookmark'
-                  : 'Bookmark dihapus')),
-          backgroundColor:
-              result.isNowBookmarked ? AppColors.successGreen : null,
-          behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 1),
-        ),
-      );
-    }
-
-    setState(() {
-      _isBookmarked = result.isNowBookmarked;
-      _isTogglingBookmark = false;
-    });
-  }
-
   // ─── Simpan Progress ─────────────────────────────────────────────────────
-
   Future<void> _saveProgress({required bool isCorrect}) async {
     await _progressRepository.recordAttempt(
       questionId: widget.question.id,
@@ -139,7 +95,6 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen>
   }
 
   // ─── Helper ───────────────────────────────────────────────────────────────
-
   String _buildAnswerPlaceholder() {
     final words = widget.question.jawaban.trim().split(' ');
     return words.map((word) => '_' * word.length).join(' ');
@@ -167,8 +122,7 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen>
     }
   }
 
-  // ─── Submit 
-
+  // ─── Submit ───────────────────────────────────────────────────────────────
   Future<void> _submitAnswer() async {
     if (_isSavingProgress) return;
 
@@ -215,9 +169,16 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen>
   }
 
   // ─── Build ───────────────────────────────────────────────────────────────
-
   @override
   Widget build(BuildContext context) {
+    // 1. Ekstrak & Bersihkan User ID
+    final rawUserId = SessionService.instance.userId ?? '';
+    String cleanId(String id) {
+      final match = RegExp(r'ObjectId\("([a-f0-9]{24})"\)').firstMatch(id);
+      return match != null ? match.group(1)! : id;
+    }
+    final currentUserId = rawUserId.isNotEmpty ? cleanId(rawUserId) : '';
+
     return Scaffold(
       backgroundColor:
           _hasSubmitted && _isCorrect ? AppColors.easyBg : AppColors.bgWhite,
@@ -226,8 +187,9 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen>
           widget.question.kategoriNama,
           style: AppTextStyles.appBarTitle.copyWith(fontSize: 16),
         ),
+        // ─── Bagian AppBar di file question_detail_screen.dart (Cari bagian "actions: [") ───
+
         actions: [
-          // ── Badge Kesulitan
           Container(
             margin: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
@@ -235,33 +197,51 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen>
               color: _getDifficultyColor(),
               borderRadius: AppRadius.pill,
             ),
-            child:
-                Text(_getDifficultyLabel(), style: AppTextStyles.buttonSmall),
+            child: Text(_getDifficultyLabel(), style: AppTextStyles.buttonSmall),
           ),
 
-          // ── Bookmark Toggle
-          _isTogglingBookmark
-              ? const Padding(
-                  padding: EdgeInsets.all(12),
-                  child: SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      color: AppColors.textLight,
-                      strokeWidth: 2,
-                    ),
-                  ),
-                )
-              : IconButton(
-                  tooltip: _isBookmarked ? 'Hapus Bookmark' : 'Simpan Soal',
-                  icon: Icon(
-                    _isBookmarked ? Icons.bookmark : Icons.bookmark_border,
-                    color: _isBookmarked
-                        ? Colors.amberAccent
-                        : AppColors.textLight,
-                  ),
-                  onPressed: _toggleBookmark,
+          // Bookmark Toggle Dalam Soal
+          ValueListenableBuilder<Box<BookmarkModel>>(
+            valueListenable: HiveService.instance.bookmarksBox.listenable(),
+            builder: (context, box, _) {
+              final isBookmarked = box.values.any((b) =>
+                  cleanId(b.questionId) == cleanId(widget.question.id) &&
+                  cleanId(b.userId) == currentUserId);
+
+              return IconButton(
+                tooltip: isBookmarked ? 'Hapus Bookmark' : 'Simpan Soal',
+                icon: Icon(
+                  isBookmarked ? Icons.bookmark : Icons.bookmark_border,
+                  color: isBookmarked ? Colors.amberAccent : AppColors.textLight,
                 ),
+                onPressed: () async {
+                  if (currentUserId.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Sesi tidak valid.'), backgroundColor: AppColors.errorRed),
+                    );
+                    return;
+                  }
+                  
+                  final isNowSaved = await SyncService.instance.toggleBookmark(
+                    userId: currentUserId,
+                    questionId: widget.question.id,
+                  );
+
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).clearSnackBars();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(isNowSaved ? 'Soal disimpan ke Bookmark' : 'Bookmark dihapus'),
+                        backgroundColor: isNowSaved ? AppColors.successGreen : AppColors.textGrey,
+                        behavior: SnackBarBehavior.floating,
+                        duration: const Duration(seconds: 1),
+                      ),
+                    );
+                  }
+                },
+              );
+            },
+          ),
         ],
       ),
       body: SingleChildScrollView(
@@ -269,12 +249,12 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Banner offline — tampilkan saat tidak ada koneksi
+            // Banner offline — KEBAL TERHADAP BUG KONEKSI
             StreamBuilder<ConnectivityResult>(
               stream: ConnectivityService.instance.onConnectivityChanged,
               builder: (context, snapshot) {
                 final isOffline = snapshot.hasData
-                    ? (snapshot.data == ConnectivityResult.none)
+                    ? snapshot.data.toString().contains('none')
                     : false;
                 return isOffline
                     ? const OfflineBanner()

@@ -1,11 +1,11 @@
-  import 'package:hive/hive.dart';
+import 'package:hive/hive.dart';
 
 part 'category_model.g.dart';
 
 /// Model kategori mata kuliah.
 /// Berkorespondensi dengan collection "categories" di MongoDB
 /// dan HiveBox "categories_box" untuk akses offline.
-@HiveType(typeId: 2)
+@HiveType(typeId: 4) // <--- UBAH DI SINI: Dari 2 menjadi 4
 class CategoryModel extends HiveObject {
   /// ID unik kategori dari MongoDB (_id).
   @HiveField(0)
@@ -33,10 +33,10 @@ class CategoryModel extends HiveObject {
 
   factory CategoryModel.fromMap(Map<String, dynamic> map) {
     return CategoryModel(
-       id: _parseObjectId(map['_id']),
-    nama: map['nama'] ?? '',
-    deskripsi: map['deskripsi'] ?? '',
-    isActive: map['is_active'] ?? true,
+      id: _parseObjectId(map['_id']),
+      nama: map['nama'] ?? '',
+      deskripsi: map['deskripsi'] ?? '',
+      isActive: map['is_active'] ?? true,
     );
   }
 

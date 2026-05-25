@@ -8,7 +8,7 @@ part of 'bookmark_model.dart';
 
 class BookmarkModelAdapter extends TypeAdapter<BookmarkModel> {
   @override
-  final int typeId = 4;
+  final int typeId = 5;
 
   @override
   BookmarkModel read(BinaryReader reader) {
