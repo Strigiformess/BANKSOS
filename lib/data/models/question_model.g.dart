@@ -38,6 +38,7 @@ class QuestionModelAdapter extends TypeAdapter<QuestionModel> {
   @override
   void write(BinaryWriter writer, QuestionModel obj) {
     writer
+      ..writeByte(15)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -83,7 +84,7 @@ class QuestionModelAdapter extends TypeAdapter<QuestionModel> {
 
 class QuestionStatusAdapter extends TypeAdapter<QuestionStatus> {
   @override
-  final int typeId = 7;
+  final int typeId = 3;
 
   @override
   QuestionStatus read(BinaryReader reader) {
@@ -142,7 +143,7 @@ class QuestionStatusAdapter extends TypeAdapter<QuestionStatus> {
 
 class DifficultyLevelAdapter extends TypeAdapter<DifficultyLevel> {
   @override
-  final int typeId = 6;
+  final int typeId = 2;
 
   @override
   DifficultyLevel read(BinaryReader reader) {
