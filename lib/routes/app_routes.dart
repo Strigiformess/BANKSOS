@@ -19,4 +19,6 @@ class AppRoutes {
   static const String reviewQueue        = '/review-queue';
   static const String bookmarks          = '/bookmarks';
   static const String riwayat            = '/riwayat';
+  static const String adminUserManagement      = '/admin-user-management';
+  static const String adminQuestionManagement  = '/admin-question-management';
 }

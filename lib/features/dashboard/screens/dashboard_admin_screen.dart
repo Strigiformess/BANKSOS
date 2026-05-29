@@ -50,7 +50,7 @@ class DashboardAdminScreen extends StatelessWidget {
               icon: Icons.people_outline,
               label: 'Kelola Pengguna',
               subtitle: 'Atur role, status, dan akses pengguna',
-              onTap: () {}, // TODO: navigasi ke halaman user management
+              onTap: () => Navigator.pushNamed(context, AppRoutes.adminUserManagement),
             ),
 
             const SizedBox(height: 12),
@@ -59,7 +59,7 @@ class DashboardAdminScreen extends StatelessWidget {
               icon: Icons.quiz_outlined,
               label: 'Kelola Soal',
               subtitle: 'Arsipkan atau nonaktifkan soal',
-              onTap: () {}, // TODO: navigasi ke halaman admin soal
+              onTap: () => Navigator.pushNamed(context, AppRoutes.adminQuestionManagement),
             ),
 
             const SizedBox(height: 12),
