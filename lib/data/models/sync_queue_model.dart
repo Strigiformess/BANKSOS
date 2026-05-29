@@ -3,7 +3,14 @@ import 'package:hive/hive.dart';
 part 'sync_queue_model.g.dart';
 
 /// Jenis data yang ada dalam antrian sinkronisasi.
-enum SyncType { progress, bookmark }
+@HiveType(typeId: 6)
+enum SyncType {
+  @HiveField(0)
+  progress,
+  
+  @HiveField(1)
+  bookmark
+}
 
 /// Model antrian sinkronisasi offline ke cloud.
 /// Hanya disimpan di Hive lokal — tidak ada collection MongoDB untuk ini.

@@ -41,19 +41,19 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen>
     with TickerProviderStateMixin {
   final TextEditingController _answerController = TextEditingController();
 
-  // ─── State ───────────────────────────────────────────────────────────────
+  // ─── State 
   late final HintService _hintService;
   bool _isCorrect = false;
   bool _hasSubmitted = false;
   bool _isSavingProgress = false;
 
-  // ─── Sprint 3: Bookmark ──────────────────────────────────────────────────
+  // ─── Sprint 3: Bookmark 
   bool _isBookmarked = false;
   bool _isTogglingBookmark = false;
   late final BookmarkRepository _bookmarkRepository;
   late final IProgressRepository _progressRepository;
 
-  // ─── Sprint 6: Animasi (Revaldi) ─────────────────────────────────────────
+  // ─── Sprint 6: Animasi (Revaldi) 
   late final AnswerAnimationController _animCtrl;
 
   @override
@@ -78,7 +78,7 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen>
     super.dispose();
   }
 
-  // ─── Progress ────────────────────────────────────────────────────────────
+  // ─── Progress 
 
   void _checkExistingProgress() {
     final solved = _progressRepository.isSolved(widget.question.id);
@@ -95,7 +95,7 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen>
     }
   }
 
-  // ─── Bookmark ────────────────────────────────────────────────────────────
+  // ─── Bookmark 
 
   void _checkBookmarkStatus() {
     setState(() {
@@ -130,7 +130,7 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen>
     }
   }
 
-  // ─── Submit jawaban ───────────────────────────────────────────────────────
+  // ─── Submit jawaban 
 
   Future<void> _submitAnswer() async {
     if (_isSavingProgress) return;
@@ -146,7 +146,7 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen>
       _isSavingProgress = true;
     });
 
-    // ── Sprint 6: Mainkan animasi sesuai hasil ────────────────────────────
+    // ── Sprint 6: Mainkan animasi sesuai hasil 
     if (correct) {
       await _animCtrl.playCorrect();
     } else {
@@ -175,7 +175,7 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen>
     }
   }
 
-  // ─── Helper ──────────────────────────────────────────────────────────────
+  // ─── Helper 
 
   String _buildAnswerPlaceholder() {
     return widget.question.jawaban
@@ -201,7 +201,7 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen>
     }
   }
 
-  // ─── Build ───────────────────────────────────────────────────────────────
+  // ─── Build 
 
   @override
   Widget build(BuildContext context) {
@@ -276,7 +276,7 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen>
               },
             ),
 
-            // ── Kotak Pertanyaan ─────────────────────────────────────────
+            // ── Kotak Pertanyaan 
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(20),
@@ -300,7 +300,7 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen>
 
             const SizedBox(height: 16),
 
-            // ── Placeholder Jawaban ──────────────────────────────────────
+            // ── Placeholder Jawaban 
             Text('Petunjuk panjang jawaban:',
                 style: AppTextStyles.small),
             const SizedBox(height: 4),
@@ -315,7 +315,7 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen>
 
             const SizedBox(height: 20),
 
-            // ── Panel Hint ───────────────────────────────────────────────
+            // ── Panel Hint 
             if (_hintService.hasHints(widget.question)) ...[
               GestureDetector(
                 onTap: () =>
@@ -403,7 +403,7 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen>
               const SizedBox(height: 20),
             ],
 
-            // ── Input Jawaban + Sprint 6 ShakeWidget ─────────────────────
+            // ── Input Jawaban + Sprint 6 ShakeWidget 
             ShakeWidget(
               controller: _animCtrl,
               child: TextField(
@@ -444,14 +444,14 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen>
 
             const SizedBox(height: 12),
 
-            // ── Sprint 6: Animasi Benar ──────────────────────────────────
+            // ── Sprint 6: Animasi Benar 
             CorrectAnswerCardAnimated(
               controller: _animCtrl,
               visible: _hasSubmitted && _isCorrect,
               message: 'Progres disimpan.',
             ),
 
-            // ── Sprint 6: Animasi Salah ──────────────────────────────────
+            // ── Sprint 6: Animasi Salah 
             WrongAnswerBanner(
               controller: _animCtrl,
               visible: _hasSubmitted && !_isCorrect,
@@ -459,7 +459,7 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen>
 
             const SizedBox(height: 20),
 
-            // ── Tombol Submit / Kembali ──────────────────────────────────
+            // ── Tombol Submit / Kembali 
             SizedBox(
               width: double.infinity,
               height: 50,

@@ -1,5 +1,4 @@
 // lib/main.dart
-// Sprint 5 UPDATE — tambah route admin: kelola user & kelola soal
 
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -9,6 +8,7 @@ import 'core/theme/app_theme.dart';
 import 'data/local/hive/hive_service.dart';
 import 'data/remote/mongodb/mongodb_service.dart';
 import 'core/services/connectivity_service.dart';
+import 'core/services/sync_manager.dart';
 import 'routes/app_routes.dart';
 
 // Auth
@@ -23,13 +23,18 @@ import 'features/dashboard/screens/dashboard_admin_screen.dart';
 
 // Bank Soal
 import 'features/question/screens/bank_soal_screen.dart';
+import 'features/question/screens/question_detail_screen.dart';
+
+// Sprint 3 
+import 'features/bookmarks/screens/bookmarks_screen.dart';
+import 'features/riwayat/screens/riwayat_screen.dart';
 
 // Sprint 4
 import 'features/kontribusi/screens/kontribusi_screen.dart';
 import 'features/kontribusi/screens/submit_soal_screen.dart';
 import 'features/review/screens/review_queue_screen.dart';
 
-// Sprint 5 — Panel Admin (Revaldi: RBAC guard)
+// Sprint 5 — Panel Admin
 import 'features/admin/screens/admin_kelola_user_screen.dart';
 import 'features/admin/screens/admin_kelola_soal_screen.dart';
 
@@ -40,6 +45,9 @@ Future<void> main() async {
   await HiveService.init();
   await MongoDBService.instance.init();
   await ConnectivityService.instance.init();
+
+  // Sprint 5/6: Mulai SyncManager — proses antrian offline saat app buka
+  SyncManager.instance.startListening();
 
   runApp(
     const ProviderScope(
@@ -68,18 +76,20 @@ class BanksosApp extends StatelessWidget {
         AppRoutes.dashboardReviewer:  (_) => const DashboardReviewerScreen(),
         AppRoutes.dashboardAdmin:     (_) => const DashboardAdminScreen(),
         AppRoutes.bankSoal:           (_) => const BankSoalScreen(),
-        AppRoutes.questionDetail:     (_) => const _PlaceholderScreen(title: 'Question Detail'),
-        AppRoutes.bookmarks:          (_) => const _PlaceholderScreen(title: 'Bookmark'),
-        AppRoutes.riwayat:            (_) => const _PlaceholderScreen(title: 'Riwayat'),
+        // AppRoutes.questionDetail:     (_) => const _PlaceholderScreen(title: 'Question Detail'),
+
+        // FIX Sprint 6: route yang sebelumnya placeholder, sekarang pakai screen asli
+        AppRoutes.bookmarks:          (_) => const BookmarksScreen(),
+        AppRoutes.riwayat:            (_) => const RiwayatScreen(),
 
         // Sprint 4
         AppRoutes.kontribusi:         (_) => const KontribusiScreen(),
         AppRoutes.reviewQueue:        (_) => const ReviewQueueScreen(),
         AppRoutes.submitSoal:         (_) => const SubmitSoalScreen(),
 
-        // Sprint 5 — Panel Admin (guard di controller level, Revaldi)
+        // Sprint 5 — Panel Admin
         AppRoutes.adminKelolaUser:    (_) => const AdminKelolaUserScreen(),
-        AppRoutes.adminKelolasoal:   (_) => const AdminKelolasoalScreen(),
+        AppRoutes.adminKelolasoal:    (_) => const AdminKelolasoalScreen(),
       },
     );
   }
