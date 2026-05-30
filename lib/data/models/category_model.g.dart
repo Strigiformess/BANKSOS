@@ -8,7 +8,7 @@ part of 'category_model.dart';
 
 class CategoryModelAdapter extends TypeAdapter<CategoryModel> {
   @override
-  final int typeId = 2;
+  final int typeId = 7;
 
   @override
   CategoryModel read(BinaryReader reader) {
