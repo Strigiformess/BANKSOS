@@ -14,23 +14,37 @@ import '../../../features/auth/data/category_remote.dart';
 import '../../../features/auth/data/question_remote.dart';
 import '../../question/screens/question_detail_screen.dart';
 
-// ─── Providers ────────────────────────────────────────────────────────────────
+// ─── Providers 
 
 final categoryProvider = FutureProvider<List<CategoryModel>>((ref) async {
   final hive = HiveService.instance.categoriesBox;
+  
+  // 1. Jika ada data lokal, langsung pakai
   if (hive.isNotEmpty) {
     return hive.values.where((c) => c.isActive).toList();
   }
 
+  // 2. Cek koneksi internet
   final isOnline = await ConnectivityService.instance.isOnline;
   if (!isOnline) return [];
 
-  final rawList = await CategoryRemote().getActiveCategories();
-  final categories = rawList.map((m) => CategoryModel.fromMap(m)).toList();
-  for (final cat in categories) {
-    await hive.put(cat.id, cat);
+  // 3. Ambil dari remote dengan try-catch agar tidak crash jika DB offline
+  try {
+    final rawList = await CategoryRemote().getActiveCategories();
+    final categories = rawList.map((m) => CategoryModel.fromMap(m)).toList();
+    
+    for (final cat in categories) {
+      await hive.put(cat.id, cat);
+    }
+    return categories;
+  } catch (e) {
+    // Log error untuk debugging internal
+    debugPrint('Error mengambil kategori dari remote: $e');
+    
+    // Alih-alih membiarkan aplikasi crash/error screen, 
+    // kembalikan list kosong atau lempar pesan yang lebih spesifik
+    return []; 
   }
-  return categories;
 });
 
 final selectedCategoryIdProvider = StateProvider<String?>((ref) => null);
@@ -413,9 +427,9 @@ class _BankSoalScreenState extends ConsumerState<BankSoalScreen> {
               ),
               error: (e, _) => Padding(
                 padding: const EdgeInsets.all(12),
-                child: Text('Gagal memuat kategori',
-                    style: AppTextStyles.small
-                        .copyWith(color: AppColors.errorRed)),
+                child: Text(
+                  'Tidak dapat memuat kategori.\nCek koneksi & konfigurasi database.',
+                    style: AppTextStyles.small.copyWith(color: AppColors.errorRed)),
               ),
               data: (categories) => ListView.builder(
                 padding: EdgeInsets.zero,
