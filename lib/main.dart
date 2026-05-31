@@ -1,5 +1,4 @@
 // lib/main.dart
-// Updated Sprint 4 — integrasi layar Kontribusi, Submit Soal, dan Review Queue
 
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -24,13 +23,23 @@ import 'features/auth/screens/splash_screen.dart';
 import 'features/dashboard/screens/dashboard_mahasiswa_screen.dart';
 import 'features/dashboard/screens/dashboard_reviewer_screen.dart';
 import 'features/dashboard/screens/dashboard_admin_screen.dart';
+
+// Bank Soal
 import 'features/question/screens/bank_soal_screen.dart';
 import 'features/question/screens/offline_questions_screen.dart';
 
-// Sprint 4 Screens
+// Sprint 3 
+import 'features/bookmarks/screens/bookmarks_screen.dart';
+import 'features/riwayat/screens/riwayat_screen.dart';
+
+// Sprint 4
 import 'features/kontribusi/screens/kontribusi_screen.dart';
 import 'features/kontribusi/screens/submit_soal_screen.dart';
 import 'features/review/screens/review_queue_screen.dart';
+
+// Sprint 5 — Panel Admin
+import 'features/admin/screens/admin_kelola_user_screen.dart';
+import 'features/admin/screens/admin_kelola_soal_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -86,6 +95,12 @@ Future<void> main() async {
   } catch (e) {
     debugPrint('⚠️ Auto-download questions failed: $e');
   }
+  await HiveService.init();
+  await MongoDBService.instance.init();
+  await ConnectivityService.instance.init();
+
+  // Sprint 5/6: Mulai SyncManager — proses antrian offline saat app buka
+  SyncManager.instance.startListening();
 
   runApp(
     const ProviderScope(
@@ -166,7 +181,7 @@ class BanksosApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.system, // ikuti preferensi sistem Android
+      themeMode: ThemeMode.system,
       home: const LoginScreen(),
       routes: {
         AppRoutes.login:              (_) => const LoginScreen(),
@@ -182,17 +197,25 @@ class BanksosApp extends StatelessWidget {
         AppRoutes.riwayat:            (_) => const _PlaceholderScreen(title: 'Riwayat'),
         
         // Update rute Sprint 4 ke screen yang sebenarnya
+        // AppRoutes.questionDetail:     (_) => const _PlaceholderScreen(title: 'Question Detail'),
+
+        // FIX Sprint 6: route yang sebelumnya placeholder, sekarang pakai screen asli
+        AppRoutes.bookmarks:          (_) => const BookmarksScreen(),
+        AppRoutes.riwayat:            (_) => const RiwayatScreen(),
+
+        // Sprint 4
         AppRoutes.kontribusi:         (_) => const KontribusiScreen(),
         AppRoutes.reviewQueue:        (_) => const ReviewQueueScreen(),
-        
-        // Tambahkan rute untuk Submit Soal
         AppRoutes.submitSoal:         (_) => const SubmitSoalScreen(),
+
+        // Sprint 5 — Panel Admin
+        AppRoutes.adminKelolaUser:    (_) => const AdminKelolaUserScreen(),
+        AppRoutes.adminKelolasoal:    (_) => const AdminKelolasoalScreen(),
       },
     );
   }
 }
 
-// ─── Placeholder Sprint 4+ ─────────────────────────────────────────────────────
 class _PlaceholderScreen extends StatelessWidget {
   const _PlaceholderScreen({required this.title});
   final String title;
@@ -203,7 +226,7 @@ class _PlaceholderScreen extends StatelessWidget {
       appBar: AppBar(title: Text(title)),
       body: Center(
         child: Text(
-          '$title\n(Coming Soon — Menunggu Sprint Berikutnya)',
+          '$title\n(Coming Soon)',
           textAlign: TextAlign.center,
           style: const TextStyle(color: AppTheme.textGrey, fontSize: 16),
         ),

@@ -54,3 +54,42 @@ class SyncQueueModelAdapter extends TypeAdapter<SyncQueueModel> {
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }
+
+class SyncTypeAdapter extends TypeAdapter<SyncType> {
+  @override
+  final int typeId = 6;
+
+  @override
+  SyncType read(BinaryReader reader) {
+    switch (reader.readByte()) {
+      case 0:
+        return SyncType.progress;
+      case 1:
+        return SyncType.bookmark;
+      default:
+        return SyncType.progress;
+    }
+  }
+
+  @override
+  void write(BinaryWriter writer, SyncType obj) {
+    switch (obj) {
+      case SyncType.progress:
+        writer.writeByte(0);
+        break;
+      case SyncType.bookmark:
+        writer.writeByte(1);
+        break;
+    }
+  }
+
+  @override
+  int get hashCode => typeId.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is SyncTypeAdapter &&
+          runtimeType == other.runtimeType &&
+          typeId == other.typeId;
+}

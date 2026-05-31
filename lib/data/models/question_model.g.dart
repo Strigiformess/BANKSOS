@@ -32,12 +32,16 @@ class QuestionModelAdapter extends TypeAdapter<QuestionModel> {
       createdAt: fields[12] as DateTime? ?? DateTime.now(),
       updatedAt: fields[13] as DateTime? ?? DateTime.now(),
       imageUrl: fields[14] as String?,
+      solveCount: fields[11] as int,
+      createdAt: fields[12] as DateTime,
+      updatedAt: fields[13] as DateTime,
     );
   }
 
   @override
   void write(BinaryWriter writer, QuestionModel obj) {
     writer
+      ..writeByte(14)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -65,9 +69,7 @@ class QuestionModelAdapter extends TypeAdapter<QuestionModel> {
       ..writeByte(12)
       ..write(obj.createdAt)
       ..writeByte(13)
-      ..write(obj.updatedAt)
-      ..writeByte(14)
-      ..write(obj.imageUrl);
+      ..write(obj.updatedAt);
   }
 
   @override
@@ -83,7 +85,7 @@ class QuestionModelAdapter extends TypeAdapter<QuestionModel> {
 
 class QuestionStatusAdapter extends TypeAdapter<QuestionStatus> {
   @override
-  final int typeId = 7;
+  final int typeId = 3;
 
   @override
   QuestionStatus read(BinaryReader reader) {
@@ -142,7 +144,7 @@ class QuestionStatusAdapter extends TypeAdapter<QuestionStatus> {
 
 class DifficultyLevelAdapter extends TypeAdapter<DifficultyLevel> {
   @override
-  final int typeId = 6;
+  final int typeId = 2;
 
   @override
   DifficultyLevel read(BinaryReader reader) {
