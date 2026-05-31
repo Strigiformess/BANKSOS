@@ -1,6 +1,12 @@
 // lib/features/auth/screens/splash_screen.dart
-// PIC: Seruni (SL) — Splash & Onboarding
-// Tampilan sesuai mockup Figma, fully pakai AppColors/AppTextStyles/AppSpacings/AppRadius
+// PIC: Seruni Libertina Islami (SL)
+// Sprint 1: Splash screen & onboarding sesuai Figma
+//
+// ALUR:
+//   1. Tampilkan splash (logo + nama app) minimal 2 detik
+//   2. Cek sesi login → jika ada, redirect ke dashboard sesuai role
+//   3. Jika belum login → tampilkan onboarding (swipeable PageView)
+//   4. Onboarding selesai → navigasi ke halaman Login
 
 import 'package:flutter/material.dart';
 
@@ -15,43 +21,73 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> {
+class _SplashScreenState extends State<SplashScreen>
+    with SingleTickerProviderStateMixin {
+  // ─── State ────────────────────────────────────────────────────────────────
+  bool _showOnboarding = false;
+  int _currentPage     = 0;
   final PageController _pageController = PageController();
-  int _currentPage = 0;
 
-  // Isi konten tiap halaman onboarding
-  final List<String> _subtitles = [
-    'Belajar Cerdas, Kumpulkan Poin, Buka\nSoal Premium',
-    'Kerjakan soal kapan saja, bahkan\ntanpa koneksi internet.',
-    'Berkontribusi soal dan bantu\nteman-teman belajar bersama.',
+  // ─── Konten Onboarding (sesuai Figma) ────────────────────────────────────
+  final List<_OnboardingData> _pages = const [
+    _OnboardingData(
+      title: 'BANKSOS',
+      subtitle: 'Belajar Cerdas, Kumpulkan Poin,\nBuka Soal Premium',
+    ),
+    _OnboardingData(
+      title: 'Offline First',
+      subtitle: 'Kerjakan soal kapan saja,\nbahkan tanpa koneksi internet.',
+    ),
+    _OnboardingData(
+      title: 'Kontribusi',
+      subtitle: 'Ajukan soal dan bantu\nteman-teman belajar bersama.',
+    ),
   ];
+
+  // ─── Animasi splash ───────────────────────────────────────────────────────
+  late final AnimationController _fadeCtrl;
+  late final Animation<double>   _fadeAnim;
 
   @override
   void initState() {
     super.initState();
-    // Kalau user sudah pernah login, lewati onboarding langsung ke dashboard
-    _checkSession();
+
+    _fadeCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+    _fadeAnim = CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeIn);
+    _fadeCtrl.forward();
+
+    _initSplash();
   }
 
   @override
   void dispose() {
+    _fadeCtrl.dispose();
     _pageController.dispose();
     super.dispose();
   }
 
-  Future<void> _checkSession() async {
-    // Tampilkan splash minimal 1.5 detik
-    await Future.delayed(const Duration(milliseconds: 1500));
+  // ─── Logika Splash ────────────────────────────────────────────────────────
+
+  Future<void> _initSplash() async {
+    // Tampilkan splash minimal 2 detik
+    await Future.delayed(const Duration(milliseconds: 2000));
     if (!mounted) return;
 
     final session = SessionService.instance;
+
     if (session.isLoggedIn) {
       _redirectByRole(session.role);
+    } else {
+      // Tampilkan onboarding
+      if (mounted) setState(() => _showOnboarding = true);
     }
-    // Kalau belum login, biarkan di onboarding, user swipe sendiri
   }
 
   void _redirectByRole(String? role) {
+    if (!mounted) return;
     switch (role) {
       case 'admin':
         Navigator.pushReplacementNamed(context, AppRoutes.dashboardAdmin);
@@ -69,9 +105,9 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   void _onNext() {
-    if (_currentPage < _subtitles.length - 1) {
+    if (_currentPage < _pages.length - 1) {
       _pageController.nextPage(
-        duration: const Duration(milliseconds: 300),
+        duration: const Duration(milliseconds: 350),
         curve: Curves.easeInOut,
       );
     } else {
@@ -79,59 +115,130 @@ class _SplashScreenState extends State<SplashScreen> {
     }
   }
 
+  // ─── Build ────────────────────────────────────────────────────────────────
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.bgWhite,
-      body: SafeArea(
+      body: _showOnboarding ? _buildOnboarding() : _buildSplash(),
+    );
+  }
+
+  // ─── Widget: Splash Screen ────────────────────────────────────────────────
+  // Sesuai halaman "Splash & Onboarding" di Figma
+
+  Widget _buildSplash() {
+    return FadeTransition(
+      opacity: _fadeAnim,
+      child: Center(
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // ── Konten Onboarding (swipeable) ───────────────────────────
-            Expanded(
-              child: PageView.builder(
-                controller: _pageController,
-                onPageChanged: (index) =>
-                    setState(() => _currentPage = index),
-                itemCount: _subtitles.length,
-                itemBuilder: (context, index) {
-                  return _OnboardingPage(subtitle: _subtitles[index]);
-                },
+            // Logo BS
+            Container(
+              width: 88, height: 88,
+              decoration: BoxDecoration(
+                color: AppColors.primaryBlue,
+                borderRadius: AppRadius.xlAll,
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primaryBlue.withOpacity(0.3),
+                    blurRadius: 24,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: Center(
+                child: Text(
+                  'BS',
+                  style: AppTextStyles.appBarTitle.copyWith(
+                    fontSize: 32,
+                    letterSpacing: 2,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ),
             ),
 
-            // ── Dot Indicator ────────────────────────────────────────────
             const SizedBox(height: AppSpacings.xxl),
-            _buildDots(),
+
+            // Nama Aplikasi
+            Text(
+              'BANKSOS',
+              style: AppTextStyles.h1.copyWith(
+                fontSize: 28,
+                color: AppColors.primaryBlue,
+                letterSpacing: 4,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+
+            const SizedBox(height: AppSpacings.sm),
+
+            // Tagline sesuai Figma
+            Text(
+              'Belajar Cerdas, Kumpulkan Poin, Buka\nSoal Premium',
+              textAlign: TextAlign.center,
+              style: AppTextStyles.body.copyWith(
+                color: AppColors.textGrey,
+                height: 1.6,
+              ),
+            ),
+
             const SizedBox(height: AppSpacings.xxxl),
 
-            // ── Tombol: Lanjut / Mulai ───────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacings.xl),
-              child: ElevatedButton(
-                onPressed: _onNext,
-                child: Text(
-                  _currentPage < _subtitles.length - 1
-                      ? 'Lanjut'
-                      : 'Mulai',
-                ),
-              ),
-            ),
-
-            // ── Skip ─────────────────────────────────────────────────────
-            TextButton(
-              onPressed: _goToLogin,
-              child: Text(
-                'Lewati',
-                style: AppTextStyles.body.copyWith(
-                  color: AppColors.textGrey,
-                ),
-              ),
-            ),
-
-            const SizedBox(height: AppSpacings.lg),
+            // Dots loading indicator
+            const _LoadingDots(),
           ],
         ),
+      ),
+    );
+  }
+
+  // ─── Widget: Onboarding ───────────────────────────────────────────────────
+
+  Widget _buildOnboarding() {
+    return SafeArea(
+      child: Column(
+        children: [
+          // PageView konten
+          Expanded(
+            child: PageView.builder(
+              controller: _pageController,
+              onPageChanged: (i) => setState(() => _currentPage = i),
+              itemCount: _pages.length,
+              itemBuilder: (_, i) => _OnboardingPage(data: _pages[i]),
+            ),
+          ),
+
+          // Dot indicator
+          const SizedBox(height: AppSpacings.lg),
+          _buildDots(),
+          const SizedBox(height: AppSpacings.xxxl),
+
+          // Tombol Lanjut / Mulai
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacings.xl),
+            child: ElevatedButton(
+              onPressed: _onNext,
+              child: Text(
+                _currentPage < _pages.length - 1 ? 'Lanjut' : 'Mulai',
+              ),
+            ),
+          ),
+
+          // Tombol Skip
+          TextButton(
+            onPressed: _goToLogin,
+            child: Text(
+              'Lewati',
+              style: AppTextStyles.body.copyWith(color: AppColors.textGrey),
+            ),
+          ),
+
+          const SizedBox(height: AppSpacings.lg),
+        ],
       ),
     );
   }
@@ -139,32 +246,40 @@ class _SplashScreenState extends State<SplashScreen> {
   Widget _buildDots() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(
-        _subtitles.length,
-        (index) => AnimatedContainer(
+      children: List.generate(_pages.length, (i) {
+        final isActive = _currentPage == i;
+        return AnimatedContainer(
           duration: const Duration(milliseconds: 250),
           margin: const EdgeInsets.symmetric(horizontal: AppSpacings.xs),
-          width: _currentPage == index ? 24 : 8,
+          width: isActive ? 24 : 8,
           height: 8,
           decoration: BoxDecoration(
-            // Pakai AppColors dari app_theme.dart
-            color: _currentPage == index
+            color: isActive
                 ? AppColors.primaryBlue
                 : AppColors.primaryBlue.withOpacity(0.25),
             borderRadius: AppRadius.pill,
           ),
-        ),
-      ),
+        );
+      }),
     );
   }
 }
 
-// ─── Halaman Onboarding ───────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+// WIDGET PENDUKUNG
+// ══════════════════════════════════════════════════════════════════════════════
 
-class _OnboardingPage extends StatefulWidget {
+/// Data model satu halaman onboarding.
+class _OnboardingData {
+  final String title;
   final String subtitle;
+  const _OnboardingData({required this.title, required this.subtitle});
+}
 
-  const _OnboardingPage({required this.subtitle});
+/// Satu halaman onboarding dengan animasi fade + slide.
+class _OnboardingPage extends StatefulWidget {
+  final _OnboardingData data;
+  const _OnboardingPage({super.key, required this.data});
 
   @override
   State<_OnboardingPage> createState() => _OnboardingPageState();
@@ -172,53 +287,45 @@ class _OnboardingPage extends StatefulWidget {
 
 class _OnboardingPageState extends State<_OnboardingPage>
     with SingleTickerProviderStateMixin {
-  late AnimationController _animCtrl;
-  late Animation<double> _fadeAnim;
-  late Animation<Offset> _slideAnim;
+  late final AnimationController _ctrl;
+  late final Animation<double>   _fade;
+  late final Animation<Offset>   _slide;
 
   @override
   void initState() {
     super.initState();
-    _animCtrl = AnimationController(
+    _ctrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 500),
     );
-    _fadeAnim = CurvedAnimation(
-        parent: _animCtrl, curve: Curves.easeOut);
-    _slideAnim = Tween<Offset>(
-      begin: const Offset(0, 0.08),
-      end: Offset.zero,
-    ).animate(
-        CurvedAnimation(parent: _animCtrl, curve: Curves.easeOut));
-
-    _animCtrl.forward();
+    _fade  = CurvedAnimation(parent: _ctrl, curve: Curves.easeOut);
+    _slide = Tween<Offset>(begin: const Offset(0, 0.08), end: Offset.zero)
+        .animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOut));
+    _ctrl.forward();
   }
 
   @override
   void dispose() {
-    _animCtrl.dispose();
+    _ctrl.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return FadeTransition(
-      opacity: _fadeAnim,
+      opacity: _fade,
       child: SlideTransition(
-        position: _slideAnim,
+        position: _slide,
         child: Padding(
           padding: AppSpacings.pagePadding,
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // ── Logo BS ────────────────────────────────────────────────
+              // Logo
               Container(
-                width: 88,
-                height: 88,
+                width: 88, height: 88,
                 decoration: BoxDecoration(
-                  // Pakai AppColors.primaryBlue dari app_theme.dart
                   color: AppColors.primaryBlue,
-                  // Pakai AppRadius.xl dari app_theme.dart
                   borderRadius: AppRadius.xlAll,
                   boxShadow: [
                     BoxShadow(
@@ -241,21 +348,19 @@ class _OnboardingPageState extends State<_OnboardingPage>
 
               const SizedBox(height: AppSpacings.xxxl),
 
-              // ── App Name ───────────────────────────────────────────────
               Text(
-                'BANKSOS',
+                widget.data.title,
                 style: AppTextStyles.h1.copyWith(
-                  fontSize: 28,
+                  fontSize: 26,
                   color: AppColors.primaryBlue,
-                  letterSpacing: 4,
+                  letterSpacing: 2,
                 ),
               ),
 
               const SizedBox(height: AppSpacings.lg),
 
-              // ── Subtitle ───────────────────────────────────────────────
               Text(
-                widget.subtitle,
+                widget.data.subtitle,
                 textAlign: TextAlign.center,
                 style: AppTextStyles.body.copyWith(
                   color: AppColors.textGrey,
@@ -266,6 +371,61 @@ class _OnboardingPageState extends State<_OnboardingPage>
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Tiga titik animasi loading untuk splash screen.
+class _LoadingDots extends StatefulWidget {
+  const _LoadingDots();
+
+  @override
+  State<_LoadingDots> createState() => _LoadingDotsState();
+}
+
+class _LoadingDotsState extends State<_LoadingDots>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _ctrl,
+      builder: (_, __) {
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: List.generate(3, (i) {
+            // Tiap dot punya delay berbeda
+            final delay  = i / 3.0;
+            final value  = (_ctrl.value - delay).clamp(0.0, 1.0);
+            final opacity = (value < 0.5 ? value * 2 : (1 - value) * 2).clamp(0.3, 1.0);
+
+            return Container(
+              margin: const EdgeInsets.symmetric(horizontal: 4),
+              width: 8, height: 8,
+              decoration: BoxDecoration(
+                color: AppColors.primaryBlue.withOpacity(opacity),
+                shape: BoxShape.circle,
+              ),
+            );
+          }),
+        );
+      },
     );
   }
 }

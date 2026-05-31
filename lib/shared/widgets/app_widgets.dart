@@ -1,24 +1,36 @@
 // lib/shared/widgets/app_widgets.dart
+// PIC: Seruni Libertina Islami (SL)
+// Sprint 1: Widget dasar (badge, avatar, loading, empty state)
+// Sprint 2: OfflineBanner, AppMessageBanner, SyncStatusIcon
+// Sprint 3: AppDifficultyChips, AppMenuCard
+// Sprint 4: AppBadge.status lengkap
 //
-// BANKSOS — Kumpulan widget reusable siap pakai
-// Cara pakai: import file ini, lalu panggil langsung
-//
+// KUMPULAN WIDGET REUSABLE BANKSOS
+// Cara pakai:
+//   import 'package:banksos/shared/widgets/app_widgets.dart';
 //   AppBadge.difficulty('hard')
 //   AppBadge.status('pending')
 //   AppDifficultyChips(selected: ..., onChanged: ...)
-//   SyncStatusIcon(isSynced: true)
+//   UserAvatar(name: 'Ahmad', size: 36)
 //   OfflineBanner()
-//   AppErrorBanner(message: '...')
+//   AppEmptyState(icon: ..., title: '...')
+//   AppMenuCard(icon: ..., label: '...', onTap: ...)
 
 import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
 
 // ══════════════════════════════════════════════════════════════════════════════
-// BADGE KESULITAN & STATUS
+// 1. BADGE — KESULITAN & STATUS
 // ══════════════════════════════════════════════════════════════════════════════
 
-/// Badge warna untuk tingkat kesulitan soal (Easy / Medium / Hard)
-/// Cara pakai: AppBadge.difficulty('hard')
+/// Badge berwarna untuk tingkat kesulitan dan status soal.
+///
+/// Contoh:
+///   AppBadge.difficulty('easy')    → badge hijau "Mudah"
+///   AppBadge.difficulty('medium')  → badge kuning "Sedang"
+///   AppBadge.difficulty('hard')    → badge merah "Sulit"
+///   AppBadge.status('pending')     → badge kuning "Pending"
+///   AppBadge.status('published')   → badge hijau "Diterima"
 class AppBadge extends StatelessWidget {
   final String label;
   final Color bg;
@@ -31,9 +43,10 @@ class AppBadge extends StatelessWidget {
     required this.textColor,
   });
 
+  /// Badge tingkat kesulitan soal.
   factory AppBadge.difficulty(String level) {
     final s = AppBadgeStyle.difficulty(level);
-    final labels = {'easy': 'Mudah', 'medium': 'Sedang', 'hard': 'Sulit'};
+    const labels = {'easy': 'Mudah', 'medium': 'Sedang', 'hard': 'Sulit'};
     return AppBadge(
       label: labels[level.toLowerCase()] ?? level,
       bg: s.bg,
@@ -41,14 +54,16 @@ class AppBadge extends StatelessWidget {
     );
   }
 
+  /// Badge status soal dalam alur review.
   factory AppBadge.status(String status) {
     final s = AppBadgeStyle.questionStatus(status);
-    final labels = {
-      'pending': 'Pending',
-      'published': 'Diterima',
-      'rejected': 'Ditolak',
-      'archived': 'Diarsip',
-      'inactive': 'Nonaktif',
+    const labels = {
+      'pending':    'Pending',
+      'published':  'Diterima',
+      'rejected':   'Ditolak',
+      'archived':   'Diarsip',
+      'inactive':   'Nonaktif',
+      'revision_required': 'Revisi',
     };
     return AppBadge(
       label: labels[status.toLowerCase()] ?? status,
@@ -74,13 +89,15 @@ class AppBadge extends StatelessWidget {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// FILTER CHIP KESULITAN
+// 2. FILTER CHIP KESULITAN
 // ══════════════════════════════════════════════════════════════════════════════
 
+/// Enum filter tingkat kesulitan soal.
 enum DifficultyFilter { all, easy, medium, hard }
 
-/// Baris chip filter kesulitan soal
-/// Cara pakai:
+/// Baris chip filter kesulitan yang bisa di-scroll horizontal.
+///
+/// Contoh:
 ///   AppDifficultyChips(
 ///     selected: _filter,
 ///     onChanged: (val) => setState(() => _filter = val),
@@ -102,28 +119,28 @@ class AppDifficultyChips extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         children: [
-          _Chip(
+          _FilterChip(
             label: 'Semua',
             isSelected: selected == DifficultyFilter.all,
             activeColor: AppColors.primaryBlue,
             onTap: () => onChanged(DifficultyFilter.all),
           ),
           const SizedBox(width: 6),
-          _Chip(
+          _FilterChip(
             label: 'Mudah',
             isSelected: selected == DifficultyFilter.easy,
             activeColor: AppColors.easyGreen,
             onTap: () => onChanged(DifficultyFilter.easy),
           ),
           const SizedBox(width: 6),
-          _Chip(
+          _FilterChip(
             label: 'Sedang',
             isSelected: selected == DifficultyFilter.medium,
             activeColor: AppColors.mediumAmber,
             onTap: () => onChanged(DifficultyFilter.medium),
           ),
           const SizedBox(width: 6),
-          _Chip(
+          _FilterChip(
             label: 'Sulit',
             isSelected: selected == DifficultyFilter.hard,
             activeColor: AppColors.hardRed,
@@ -135,13 +152,14 @@ class AppDifficultyChips extends StatelessWidget {
   }
 }
 
-class _Chip extends StatelessWidget {
+// Widget internal chip — tidak di-export
+class _FilterChip extends StatelessWidget {
   final String label;
   final bool isSelected;
   final Color activeColor;
   final VoidCallback onTap;
 
-  const _Chip({
+  const _FilterChip({
     required this.label,
     required this.isSelected,
     required this.activeColor,
@@ -175,11 +193,13 @@ class _Chip extends StatelessWidget {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// BANNER OFFLINE
+// 3. BANNER OFFLINE
 // ══════════════════════════════════════════════════════════════════════════════
 
-/// Banner kuning di atas halaman saat mode offline
-/// Cara pakai: if (isOffline) const OfflineBanner()
+/// Banner kuning tipis di bagian atas halaman saat device dalam mode offline.
+///
+/// Contoh:
+///   if (isOffline) const OfflineBanner()
 class OfflineBanner extends StatelessWidget {
   const OfflineBanner({super.key});
 
@@ -194,7 +214,7 @@ class OfflineBanner extends StatelessWidget {
           const Icon(Icons.wifi_off_outlined, size: 16, color: AppColors.warningYellow),
           const SizedBox(width: 8),
           Text(
-            'Mode Offline — Menampilkan soal tersimpan',
+            'Mode Offline — Menampilkan data tersimpan',
             style: AppTextStyles.small.copyWith(
               color: AppColors.warningYellow,
               fontWeight: FontWeight.w500,
@@ -207,14 +227,17 @@ class OfflineBanner extends StatelessWidget {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// ERROR & INFO BANNER
+// 4. BANNER PESAN INLINE
 // ══════════════════════════════════════════════════════════════════════════════
 
+/// Jenis banner pesan inline.
 enum BannerType { info, success, warning, error }
 
-/// Banner pesan inline (bukan dialog)
-/// Cara pakai:
+/// Banner pesan inline (bukan dialog/snackbar).
+///
+/// Contoh:
 ///   AppMessageBanner(type: BannerType.error, message: 'Email salah')
+///   AppMessageBanner(type: BannerType.info, message: 'Soal menunggu review')
 class AppMessageBanner extends StatelessWidget {
   final BannerType type;
   final String message;
@@ -274,11 +297,14 @@ class AppMessageBanner extends StatelessWidget {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// IKON SINKRONISASI
+// 5. IKON STATUS SINKRONISASI
 // ══════════════════════════════════════════════════════════════════════════════
 
-/// Ikon status sinkronisasi untuk dashboard
-/// Cara pakai: SyncStatusIcon(isSynced: true)
+/// Ikon kecil indikator status sinkronisasi cloud.
+///
+/// Contoh:
+///   SyncStatusIcon(isSynced: true)
+///   SyncStatusIcon(isSynced: false, isLoading: true)
 class SyncStatusIcon extends StatelessWidget {
   final bool isSynced;
   final bool isLoading;
@@ -293,12 +319,8 @@ class SyncStatusIcon extends StatelessWidget {
   Widget build(BuildContext context) {
     if (isLoading) {
       return const SizedBox(
-        width: 20,
-        height: 20,
-        child: CircularProgressIndicator(
-          strokeWidth: 2,
-          color: AppColors.primaryBlue,
-        ),
+        width: 20, height: 20,
+        child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primaryBlue),
       );
     }
 
@@ -311,11 +333,14 @@ class SyncStatusIcon extends StatelessWidget {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// AVATAR INISIAL
+// 6. AVATAR INISIAL
 // ══════════════════════════════════════════════════════════════════════════════
 
-/// Avatar lingkaran dengan inisial nama
-/// Cara pakai: UserAvatar(name: 'Sarah Wijaya', size: 36)
+/// Avatar lingkaran dengan inisial dari nama pengguna.
+///
+/// Contoh:
+///   UserAvatar(name: 'Sarah Wijaya', size: 40)
+///   UserAvatar(name: 'Ahmad', size: 36, bgColor: AppColors.lightBlue)
 class UserAvatar extends StatelessWidget {
   final String name;
   final double size;
@@ -329,11 +354,13 @@ class UserAvatar extends StatelessWidget {
   });
 
   String get _initials {
-    final parts = name.trim().split(' ');
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) return '?';
+    final parts = trimmed.split(' ');
     if (parts.length >= 2) {
       return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
     }
-    return name.substring(0, name.length >= 2 ? 2 : 1).toUpperCase();
+    return trimmed.substring(0, trimmed.length >= 2 ? 2 : 1).toUpperCase();
   }
 
   @override
@@ -358,10 +385,13 @@ class UserAvatar extends StatelessWidget {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// LOADING STATE
+// 7. LOADING INDICATOR
 // ══════════════════════════════════════════════════════════════════════════════
 
-/// Spinner loading untuk AsyncValue
+/// Loading indicator terpusat dengan warna brand.
+///
+/// Contoh:
+///   if (isLoading) const AppLoadingIndicator()
 class AppLoadingIndicator extends StatelessWidget {
   const AppLoadingIndicator({super.key});
 
@@ -374,15 +404,17 @@ class AppLoadingIndicator extends StatelessWidget {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// EMPTY STATE
+// 8. EMPTY STATE
 // ══════════════════════════════════════════════════════════════════════════════
 
-/// Tampilan saat data kosong
-/// Cara pakai:
+/// Tampilan saat data kosong — ikon besar, judul, subtitle, dan aksi opsional.
+///
+/// Contoh:
 ///   AppEmptyState(
 ///     icon: Icons.inbox_outlined,
 ///     title: 'Belum ada soal',
 ///     subtitle: 'Coba unduh soal terlebih dahulu',
+///     action: ElevatedButton(onPressed: ..., child: Text('Unduh')),
 ///   )
 class AppEmptyState extends StatelessWidget {
   final IconData icon;
@@ -408,7 +440,11 @@ class AppEmptyState extends StatelessWidget {
           children: [
             Icon(icon, size: 56, color: AppColors.textGrey.withOpacity(0.4)),
             const SizedBox(height: 12),
-            Text(title, style: AppTextStyles.h3.copyWith(color: AppColors.textGrey)),
+            Text(
+              title,
+              style: AppTextStyles.h3.copyWith(color: AppColors.textGrey),
+              textAlign: TextAlign.center,
+            ),
             if (subtitle != null) ...[
               const SizedBox(height: 6),
               Text(
@@ -429,16 +465,19 @@ class AppEmptyState extends StatelessWidget {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// MENU CARD (shortcut di dashboard)
+// 9. MENU CARD — SHORTCUT DASHBOARD
 // ══════════════════════════════════════════════════════════════════════════════
 
-/// Card menu shortcut di dashboard mahasiswa
-/// Cara pakai:
+/// Card menu dengan ikon, label, subtitle, dan badge opsional.
+/// Dipakai sebagai shortcut menu di halaman dashboard.
+///
+/// Contoh:
 ///   AppMenuCard(
 ///     icon: Icons.menu_book_outlined,
 ///     label: 'Bank Soal',
 ///     subtitle: 'Jelajahi soal latihan',
-///     onTap: () => ...,
+///     badge: '3',   // opsional, untuk badge notifikasi
+///     onTap: () => Navigator.pushNamed(context, AppRoutes.bankSoal),
 ///   )
 class AppMenuCard extends StatelessWidget {
   final IconData icon;
@@ -466,9 +505,9 @@ class AppMenuCard extends StatelessWidget {
           padding: AppSpacings.listItemPadding,
           child: Row(
             children: [
+              // Ikon dalam kotak biru muda
               Container(
-                width: 44,
-                height: 44,
+                width: 44, height: 44,
                 decoration: const BoxDecoration(
                   color: AppColors.lightBlue,
                   borderRadius: AppRadius.mdAll,
@@ -476,6 +515,8 @@ class AppMenuCard extends StatelessWidget {
                 child: Icon(icon, color: AppColors.primaryBlue, size: 22),
               ),
               const SizedBox(width: 12),
+
+              // Label & subtitle
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -486,7 +527,9 @@ class AppMenuCard extends StatelessWidget {
                   ],
                 ),
               ),
-              if (badge != null)
+
+              // Badge merah opsional
+              if (badge != null) ...[
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                   decoration: const BoxDecoration(
@@ -498,11 +541,87 @@ class AppMenuCard extends StatelessWidget {
                     style: AppTextStyles.captionBold.copyWith(color: Colors.white),
                   ),
                 ),
-              const SizedBox(width: 8),
+                const SizedBox(width: 8),
+              ],
+
               const Icon(Icons.chevron_right, color: AppColors.primaryBlue, size: 20),
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// 10. STAT CARD — MINI STATISTIK DASHBOARD
+// ══════════════════════════════════════════════════════════════════════════════
+
+/// Card statistik kecil dengan ikon, label, dan nilai.
+/// Dipakai di dashboard untuk menampilkan streak, poin, dsb.
+///
+/// Contoh:
+///   AppStatCard(
+///     emoji: '🔥',
+///     label: 'Streak',
+///     value: '5 Days',
+///   )
+class AppStatCard extends StatelessWidget {
+  final String? emoji;
+  final IconData? icon;
+  final Color? iconColor;
+  final String label;
+  final String value;
+
+  const AppStatCard({
+    super.key,
+    this.emoji,
+    this.icon,
+    this.iconColor,
+    required this.label,
+    required this.value,
+  }) : assert(emoji != null || icon != null, 'Berikan emoji atau icon');
+
+  @override
+  Widget build(BuildContext context) {
+    final Color bgColor = iconColor?.withOpacity(0.15) ?? AppColors.warningYellow.withOpacity(0.15);
+
+    return Container(
+      padding: AppSpacings.cardPadding,
+      decoration: BoxDecoration(
+        color: AppColors.bgWhite,
+        borderRadius: AppRadius.lgAll,
+        border: Border.all(color: AppColors.borderGrey.withOpacity(0.4)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(color: bgColor, shape: BoxShape.circle),
+                child: emoji != null
+                    ? Text(emoji!, style: const TextStyle(fontSize: 16))
+                    : Icon(icon!, color: iconColor ?? AppColors.primaryBlue, size: 20),
+              ),
+              const SizedBox(width: AppSpacings.sm),
+              Text(
+                label,
+                style: AppTextStyles.smallSemibold.copyWith(color: AppColors.textGrey),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacings.sm),
+          Text(value, style: AppTextStyles.h2.copyWith(color: AppColors.textDark)),
+        ],
       ),
     );
   }
