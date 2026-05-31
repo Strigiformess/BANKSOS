@@ -20,10 +20,10 @@ import 'features/auth/screens/splash_screen.dart';
 import 'features/dashboard/screens/dashboard_mahasiswa_screen.dart';
 import 'features/dashboard/screens/dashboard_reviewer_screen.dart';
 import 'features/dashboard/screens/dashboard_admin_screen.dart';
+import 'features/profile/screens/profile_screen.dart';
 
 // Bank Soal
 import 'features/question/screens/bank_soal_screen.dart';
-import 'features/question/screens/question_detail_screen.dart';
 
 // Sprint 3 
 import 'features/bookmarks/screens/bookmarks_screen.dart';
@@ -67,7 +67,7 @@ class BanksosApp extends StatelessWidget {
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: ThemeMode.system,
-      home: const LoginScreen(),
+      home: const SplashScreen(),
       routes: {
         AppRoutes.login:              (_) => const LoginScreen(),
         AppRoutes.register:           (_) => const RegisterScreen(),
@@ -76,8 +76,8 @@ class BanksosApp extends StatelessWidget {
         AppRoutes.dashboardReviewer:  (_) => const DashboardReviewerScreen(),
         AppRoutes.dashboardAdmin:     (_) => const DashboardAdminScreen(),
         AppRoutes.bankSoal:           (_) => const BankSoalScreen(),
-        // AppRoutes.questionDetail:     (_) => const _PlaceholderScreen(title: 'Question Detail'),
-
+        AppRoutes.profile:            (_) => const ProfileScreen(),
+        
         // FIX Sprint 6: route yang sebelumnya placeholder, sekarang pakai screen asli
         AppRoutes.bookmarks:          (_) => const BookmarksScreen(),
         AppRoutes.riwayat:            (_) => const RiwayatScreen(),

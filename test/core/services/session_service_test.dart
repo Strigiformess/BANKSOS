@@ -31,6 +31,7 @@ void main() {
         userId: 'user123',
         email: 'fathi@student.polban.ac.id',
         nama: 'Mohammad Jibril Fathi',
+        nim: '241511050',
         role: 'mahasiswa',
         status: 'active',
       );
@@ -40,6 +41,7 @@ void main() {
           equals('fathi@student.polban.ac.id'));
       expect(SessionService.instance.nama,
           equals('Mohammad Jibril Fathi'));
+      expect(SessionService.instance.nim, equals('241511050'));
       expect(SessionService.instance.role, equals('mahasiswa'));
       expect(SessionService.instance.status, equals('active'));
     });
@@ -49,6 +51,7 @@ void main() {
         userId: 'user123',
         email: 'fathi@student.polban.ac.id',
         nama: 'Mohammad Jibril Fathi',
+        nim: '241511050',
         role: 'mahasiswa',
         status: 'active',
       );
@@ -66,6 +69,7 @@ void main() {
         userId: 'user_lama',
         email: 'lama@student.polban.ac.id',
         nama: 'User Lama',
+        nim: '000000000',
         role: 'mahasiswa',
         status: 'active',
       );
@@ -74,6 +78,7 @@ void main() {
         userId: 'user_baru',
         email: 'baru@student.polban.ac.id',
         nama: 'User Baru',
+        nim: '111111111',
         role: 'reviewer',
         status: 'active',
       );
@@ -95,6 +100,7 @@ void main() {
         userId: 'user123',
         email: 'fathi@student.polban.ac.id',
         nama: 'Mohammad Jibril Fathi',
+        nim: '241511050',
         role: 'mahasiswa',
         status: 'active',
       );
@@ -107,6 +113,7 @@ void main() {
         userId: 'user123',
         email: 'fathi@student.polban.ac.id',
         nama: 'Mohammad Jibril Fathi',
+        nim: '241511050',
         role: 'mahasiswa',
         status: 'active',
       );
@@ -125,6 +132,7 @@ void main() {
         userId: 'u1',
         email: 'a@a.com',
         nama: 'A',
+        nim: '9999',
         role: 'mahasiswa',
         status: 'active',
       );
@@ -138,6 +146,7 @@ void main() {
         userId: 'u2',
         email: 'b@b.com',
         nama: 'B',
+        nim: '8888',
         role: 'reviewer',
         status: 'active',
       );
@@ -150,6 +159,7 @@ void main() {
         userId: 'u3',
         email: 'c@c.com',
         nama: 'C',
+        nim: '6666',
         role: 'admin',
         status: 'active',
       );
@@ -161,6 +171,7 @@ void main() {
         userId: 'u4',
         email: 'd@d.com',
         nama: 'D',
+        nim: '7777',
         role: 'mahasiswa',
         status: 'active',
       );
@@ -172,6 +183,7 @@ void main() {
         userId: 'u5',
         email: 'e@e.com',
         nama: 'E',
+        nim: '5555',
         role: 'mahasiswa',
         status: 'inactive',
       );
@@ -187,6 +199,7 @@ void main() {
         userId: 'user123',
         email: 'fathi@student.polban.ac.id',
         nama: 'Mohammad Jibril Fathi',
+        nim: '241511050',
         role: 'mahasiswa',
         status: 'active',
       );
@@ -196,6 +209,7 @@ void main() {
       expect(data.containsKey('userId'), isTrue);
       expect(data.containsKey('email'), isTrue);
       expect(data.containsKey('nama'), isTrue);
+      expect(data.containsKey('nim'), isTrue);
       expect(data.containsKey('role'), isTrue);
       expect(data.containsKey('status'), isTrue);
       expect(data.containsKey('loginAt'), isTrue);
@@ -217,6 +231,7 @@ void main() {
         userId: 'user123',
         email: 'fathi@student.polban.ac.id',
         nama: 'Mohammad Jibril Fathi',
+        nim: '241511050',
         role: 'mahasiswa',
         status: 'active',
       );
@@ -226,6 +241,7 @@ void main() {
       expect(SessionService.instance.userId, isNull);
       expect(SessionService.instance.email, isNull);
       expect(SessionService.instance.nama, isNull);
+      expect(SessionService.instance.nim, isNull);
       expect(SessionService.instance.role, isNull);
       expect(SessionService.instance.status, isNull);
       expect(SessionService.instance.loginAt, isNull);

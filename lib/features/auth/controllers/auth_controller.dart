@@ -32,6 +32,7 @@ class AuthController extends StateNotifier<AuthState> {
         userId: user.id,
         email: user.email,
         nama: user.namaLengkap,
+        nim: user.nim,
         role: user.role.name,
         status: user.status.name,
       );
