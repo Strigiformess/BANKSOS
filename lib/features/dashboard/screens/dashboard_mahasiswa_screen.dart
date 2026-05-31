@@ -17,7 +17,6 @@ import '../../../data/local/hive/hive_service.dart';
 import '../../../data/models/question_model.dart';
 import '../../../features/riwayat/screens/riwayat_screen.dart';
 import '../../../features/bookmarks/screens/bookmarks_screen.dart';
-import '../../../shared/widgets/sync_status_banner.dart'; // Widget untuk status sync offline (Sprint 5/6)
 
 class DashboardMahasiswaScreen extends ConsumerStatefulWidget {
   const DashboardMahasiswaScreen({super.key});
@@ -53,7 +52,7 @@ class _DashboardMahasiswaScreenState
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildTopBar(nama),
-                    const SyncStatusBanner(),
+                    _buildSyncStatusBanner(),
                     const SizedBox(height: AppSpacings.lg),
                     Padding(
                       padding: const EdgeInsets.symmetric(
@@ -130,6 +129,56 @@ class _DashboardMahasiswaScreenState
           _buildConnectivityBadge(),
         ],
       ),
+    );
+  }
+
+  Widget _buildSyncStatusBanner() {
+    return StreamBuilder<ConnectivityResult>(
+      stream: ConnectivityService.instance.onConnectivityChanged,
+      initialData: ConnectivityResult.none,
+      builder: (context, snapshot) {
+        final isOnline = snapshot.data != ConnectivityResult.none;
+
+        return Container(
+          width: double.infinity,
+          margin: const EdgeInsets.symmetric(horizontal: AppSpacings.lg),
+          padding: const EdgeInsets.symmetric(
+            vertical: AppSpacings.sm,
+            horizontal: AppSpacings.md,
+          ),
+          decoration: BoxDecoration(
+            color: isOnline
+                ? AppColors.successGreen.withOpacity(0.12)
+                : AppColors.errorRed.withOpacity(0.12),
+            borderRadius: AppRadius.lgAll,
+            border: Border.all(
+              color: isOnline
+                  ? AppColors.successGreen.withOpacity(0.2)
+                  : AppColors.errorRed.withOpacity(0.2),
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                isOnline ? Icons.cloud_done_rounded : Icons.cloud_off_rounded,
+                color: isOnline ? AppColors.successGreen : AppColors.errorRed,
+                size: 18,
+              ),
+              const SizedBox(width: AppSpacings.sm),
+              Expanded(
+                child: Text(
+                  isOnline
+                      ? 'Semua data tersinkronisasi'
+                      : 'Tidak ada koneksi. Data akan tersimpan offline.',
+                  style: AppTextStyles.body.copyWith(
+                    color: AppColors.textDark,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 

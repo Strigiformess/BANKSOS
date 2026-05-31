@@ -13,24 +13,26 @@ class MongoDBService {
 
   Future<void> init() async {
     try {
-      final uri = dotenv.env['MONGO_URI'] ?? '';
+      // FIX: Cek dua kemungkinan penamaan variabel .env
+      final uri = dotenv.env['MONGO_URI'] ?? dotenv.env['MONGODB_URI'] ?? '';
       if (uri.isEmpty) {
-        throw Exception('MONGO_URI tidak ditemukan di file .env');
+        throw Exception('URI MongoDB tidak ditemukan di file .env');
       }
       
       // 1. Buat instance Db di luar blok koneksi agar _db tidak null
       _db = await Db.create(uri);
       
-      // 2. Coba buka koneksi
+      // 2. Coba buka koneksi dengan Timeout 10 Detik (Brilian!)
       await _db!.open().timeout(
         const Duration(seconds: 10),
       );
+      
       _isConnected = true;
-      print('MongoDB terhubung: ${DbConfig.dbName}');
+      print('✅ MongoDB terhubung: ${DbConfig.dbName}');
     } catch (e) {
       _isConnected = false;
-      // Berikan log yang lebih informatif bahwa aplikasi masuk ke mode offline
-      print('Mode Offline Aktif (Gagal koneksi MongoDB): $e');
+      // Log informatif untuk mode offline
+      print('⚠️ Mode Offline Aktif (Gagal koneksi MongoDB): $e');
     }
   }
 
@@ -41,12 +43,11 @@ class MongoDBService {
 
   DbCollection collection(String name) {
     if (_db == null) {
-      // Hanya lempar error jika URI benar-benar rusak/kosong
+      // Lempar error jika URI benar-benar rusak/kosong
       throw Exception('Konfigurasi MongoDB rusak atau belum diinisialisasi.');
     }
-    // Hapus pengecekan !_isConnected di sini.
     // Biarkan aplikasi mengambil referensi collection. Jika query dilakukan 
-    // saat offline, biarkan fungsi query tersebut yang menangani error-nya.
+    // saat offline, fungsi remote (AuthRemote, dll) yang akan menangani error-nya.
     return _db!.collection(name);
   }
 

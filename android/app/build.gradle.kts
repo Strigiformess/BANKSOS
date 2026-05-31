@@ -1,6 +1,6 @@
 plugins {
     id("com.android.application")
-    // HAPUS baris: id("kotlin-android") — sudah tidak diperlukan
+    kotlin("android") 
     id("dev.flutter.flutter-gradle-plugin")
 }
 
@@ -15,7 +15,7 @@ android {
     }
 
     kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_17.toString()
+        jvmTarget = "17"
     }
 
     defaultConfig {

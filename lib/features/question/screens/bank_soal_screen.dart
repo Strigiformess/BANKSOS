@@ -15,8 +15,8 @@ import '../../../data/models/question_model.dart';
 import '../../../data/models/category_model.dart';
 import '../../../data/models/bookmark_model.dart';
 import '../../../data/local/hive/hive_service.dart';
-import '../../../features/auth/data/category_remote.dart';
-import '../../../features/auth/data/question_remote.dart';
+import '../../../data/remote/category_remote.dart';
+import '../../../data/remote/question_remote.dart';
 import '../../../routes/app_routes.dart';
 import '../../question/screens/question_detail_screen.dart';
 
@@ -424,31 +424,13 @@ class _BankSoalScreenState extends ConsumerState<BankSoalScreen> {
                     },
                     loading: () =>
                         const Center(child: CircularProgressIndicator()),
-                    error: (err, __) =>
-                        _buildError('Error: ${err.toString()}'),
+                    error: (err, __) => _buildError(
+                      'Error: ${err.toString()}',
+                      () => ref.invalidate(questionProvider),
+                    ),
                   ),
                 ),
               ],
-              ),
-              error: (e, _) => Padding(
-                padding: const EdgeInsets.all(12),
-                child: Text(
-                  'Tidak dapat memuat kategori.\nCek koneksi & konfigurasi database.',
-                    style: AppTextStyles.small.copyWith(color: AppColors.errorRed)),
-              ),
-              data: (categories) => ListView.builder(
-                padding: EdgeInsets.zero,
-                itemCount: categories.length,
-                itemBuilder: (context, i) {
-                  final cat = categories[i];
-                  return _buildCategoryItem(
-                    id: cat.id,
-                    label: cat.nama,
-                    icon: Icons.book_outlined,
-                    isSelected: selectedCategoryId == cat.id,
-                  );
-                },
-              ),
             ),
           ),
         ],

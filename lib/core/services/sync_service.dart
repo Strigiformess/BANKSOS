@@ -92,7 +92,7 @@ class SyncService {
       id: _uuid.v4(),
       type: SyncType.bookmark,
       payload: bookmark.toMap(),
-      createdAt: DateTime.now(),
+      createdAt: DateTime.now(), action: '',
     );
     await queueBox.put(queueItem.id, queueItem);
     debugPrint("📥 Bookmark masuk antrean Offline (Queue ID: ${queueItem.id})");

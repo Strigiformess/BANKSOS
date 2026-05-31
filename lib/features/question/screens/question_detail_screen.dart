@@ -583,7 +583,6 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen>
                   _hasSubmitted && _isCorrect
                       ? 'Kembali ke Home'
                       : 'Kirim Jawaban',
-                  _hasSubmitted && _isCorrect ? 'Kembali ke Bank Soal' : 'Submit Jawaban',
                   style: AppTextStyles.button,
                 ),
               ),
