@@ -17,21 +17,17 @@ class QuestionModelAdapter extends TypeAdapter<QuestionModel> {
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
     return QuestionModel(
-      id: fields[0] as String? ?? '',
-      pertanyaan: fields[1] as String? ?? '',
-      jawaban: fields[2] as String? ?? '',
-      kategoriId: fields[3] as String? ?? '',
-      kategoriNama: fields[4] as String? ?? '',
-      tingkatKesulitan: fields[5] as DifficultyLevel? ?? DifficultyLevel.easy,
-      status: fields[6] as QuestionStatus? ?? QuestionStatus.pending,
-      hints: (fields[7] as List?)?.cast<String>() ?? <String>[],
-      submittedBy: fields[8] as String? ?? '',
+      id: fields[0] as String,
+      pertanyaan: fields[1] as String,
+      jawaban: fields[2] as String,
+      kategoriId: fields[3] as String,
+      kategoriNama: fields[4] == null ? '' : fields[4] as String,
+      tingkatKesulitan: fields[5] as DifficultyLevel,
+      status: fields[6] as QuestionStatus,
+      hints: (fields[7] as List).cast<String>(),
+      submittedBy: fields[8] as String,
       reviewedBy: fields[9] as String?,
       rejectionReason: fields[10] as String?,
-      solveCount: fields[11] as int? ?? 0,
-      createdAt: fields[12] as DateTime? ?? DateTime.now(),
-      updatedAt: fields[13] as DateTime? ?? DateTime.now(),
-      imageUrl: fields[14] as String?,
       solveCount: fields[11] as int,
       createdAt: fields[12] as DateTime,
       updatedAt: fields[13] as DateTime,
@@ -41,7 +37,7 @@ class QuestionModelAdapter extends TypeAdapter<QuestionModel> {
   @override
   void write(BinaryWriter writer, QuestionModel obj) {
     writer
-      ..writeByte(15)
+      ..writeByte(14)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)

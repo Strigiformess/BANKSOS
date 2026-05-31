@@ -20,7 +20,7 @@ class SyncQueueModelAdapter extends TypeAdapter<SyncQueueModel> {
       id: fields[0] as String,
       type: fields[1] as SyncType,
       payload: (fields[2] as Map).cast<String, dynamic>(),
-      action: fields[5] as String? ?? SyncAction.bookmarkAdd.name,
+      action: fields[5] as String,
       createdAt: fields[3] as DateTime,
       retryCount: fields[4] as int,
     );
@@ -36,12 +36,12 @@ class SyncQueueModelAdapter extends TypeAdapter<SyncQueueModel> {
       ..write(obj.type)
       ..writeByte(2)
       ..write(obj.payload)
+      ..writeByte(5)
+      ..write(obj.action)
       ..writeByte(3)
       ..write(obj.createdAt)
       ..writeByte(4)
-      ..write(obj.retryCount)
-      ..writeByte(5)
-      ..write(obj.action);
+      ..write(obj.retryCount);
   }
 
   @override
