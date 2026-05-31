@@ -468,7 +468,7 @@ class _AdminUserManagementScreenState extends State<AdminUserManagementScreen> {
                               child: DataTable(
                                 columnSpacing: 16,
                                 horizontalMargin: 16,
-                                headingRowColor: WidgetStateColor.resolveWith(
+                                headingRowColor: MaterialStateColor.resolveWith(
                                   (_) => AppColors.bgWhite,
                                 ),
                                 columns: const [
@@ -531,7 +531,7 @@ class _AdminUserManagementScreenState extends State<AdminUserManagementScreen> {
                                         Container(
                                           padding: const EdgeInsets.symmetric(
                                               horizontal: 8, vertical: 4),
-                                          decoration: const BoxDecoration(
+                                          decoration: BoxDecoration(
                                             color: AppColors.lightBlue,
                                             borderRadius:
                                                 AppRadius.pill,

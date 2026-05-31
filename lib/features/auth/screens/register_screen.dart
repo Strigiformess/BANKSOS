@@ -1,6 +1,14 @@
 // lib/features/auth/screens/register_screen.dart
-// PIC: Seruni (SL) — UI Layer
-// Tampilan sesuai mockup Figma, fully pakai AppColors/AppTextStyles/AppSpacings/AppRadius
+// PIC: Seruni Libertina Islami (SL)
+// Sprint 1: Halaman registrasi sesuai Figma "Login & Registration"
+//
+// FITUR:
+//   - Tab toggle Login | Register
+//   - Form: Nama Lengkap, NIM, Email, Password, Konfirmasi Password
+//   - Validasi real-time tiap field
+//   - Tombol "Daftar" dinonaktifkan jika form belum valid
+//   - Error banner dari controller
+//   - Link kembali ke halaman Login
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -17,13 +25,15 @@ class RegisterScreen extends ConsumerStatefulWidget {
 }
 
 class _RegisterScreenState extends ConsumerState<RegisterScreen> {
+  // ─── Controllers ──────────────────────────────────────────────────────────
   final _namaCtrl       = TextEditingController();
   final _nimCtrl        = TextEditingController();
   final _emailCtrl      = TextEditingController();
   final _passwordCtrl   = TextEditingController();
   final _konfirmasiCtrl = TextEditingController();
 
-  bool _obscurePassword   = true;
+  // ─── State ────────────────────────────────────────────────────────────────
+  bool _obscurePass      = true;
   bool _obscureKonfirmasi = true;
 
   String? _namaError;
@@ -34,7 +44,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   bool get _isFormValid =>
       _namaError == null && _namaCtrl.text.isNotEmpty &&
-      _nimError == null && _nimCtrl.text.isNotEmpty &&
+      _nimError == null  && _nimCtrl.text.isNotEmpty &&
       _emailError == null && _emailCtrl.text.isNotEmpty &&
       _passwordError == null && _passwordCtrl.text.isNotEmpty &&
       _konfirmasiError == null && _konfirmasiCtrl.text.isNotEmpty;
@@ -49,38 +59,29 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     super.dispose();
   }
 
-  // ─── Validators real-time ─────────────────────────────────────────────────
+  // ─── Validasi ─────────────────────────────────────────────────────────────
 
-  void _validateNama(String value) {
+  void _validateNama(String v) {
     setState(() {
-      if (value.trim().isEmpty) {
-        _namaError = 'Nama lengkap tidak boleh kosong';
-      } else if (value.trim().length < 3) {
-        _namaError = 'Nama minimal 3 karakter';
-      } else {
-        _namaError = null;
-      }
+      if (v.trim().isEmpty)      _namaError = 'Nama lengkap tidak boleh kosong';
+      else if (v.trim().length < 3) _namaError = 'Nama minimal 3 karakter';
+      else                       _namaError = null;
     });
   }
 
-  void _validateNim(String value) {
+  void _validateNim(String v) {
     setState(() {
-      if (value.trim().isEmpty) {
-        _nimError = 'NIM tidak boleh kosong';
-      } else if (!RegExp(r'^\d{9}$').hasMatch(value.trim())) {
-        _nimError = 'NIM harus 9 digit angka';
-      } else {
-        _nimError = null;
-      }
+      if (v.trim().isEmpty)                           _nimError = 'NIM tidak boleh kosong';
+      else if (!RegExp(r'^\d{9}$').hasMatch(v.trim())) _nimError = 'NIM harus 9 digit angka';
+      else                                            _nimError = null;
     });
   }
 
-  void _validateEmail(String value) {
+  void _validateEmail(String v) {
     setState(() {
-      if (value.trim().isEmpty) {
+      if (v.trim().isEmpty) {
         _emailError = 'Email tidak boleh kosong';
-      } else if (!RegExp(r'^[\w\-.]+@([\w\-]+\.)+[\w\-]{2,}$')
-          .hasMatch(value.trim())) {
+      } else if (!RegExp(r'^[\w\-.]+@([\w\-]+\.)+[\w\-]{2,}$').hasMatch(v.trim())) {
         _emailError = 'Format email tidak valid';
       } else {
         _emailError = null;
@@ -88,32 +89,27 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     });
   }
 
-  void _validatePassword(String value) {
+  void _validatePassword(String v) {
     setState(() {
-      if (value.isEmpty) {
-        _passwordError = 'Kata sandi tidak boleh kosong';
-      } else if (value.length < 8) {
-        _passwordError = 'Kata sandi minimal 8 karakter';
-      } else if (!RegExp(r'(?=.*[A-Za-z])(?=.*\d)').hasMatch(value)) {
-        _passwordError = 'Kata sandi harus mengandung huruf dan angka';
+      if (v.isEmpty)          _passwordError = 'Kata sandi tidak boleh kosong';
+      else if (v.length < 8)  _passwordError = 'Kata sandi minimal 8 karakter';
+      else if (!RegExp(r'(?=.*[A-Za-z])(?=.*\d)').hasMatch(v)) {
+        _passwordError = 'Harus mengandung huruf dan angka';
       } else {
         _passwordError = null;
       }
+      // Validasi ulang konfirmasi jika sudah diisi
       if (_konfirmasiCtrl.text.isNotEmpty) {
         _validateKonfirmasi(_konfirmasiCtrl.text);
       }
     });
   }
 
-  void _validateKonfirmasi(String value) {
+  void _validateKonfirmasi(String v) {
     setState(() {
-      if (value.isEmpty) {
-        _konfirmasiError = 'Konfirmasi kata sandi tidak boleh kosong';
-      } else if (value != _passwordCtrl.text) {
-        _konfirmasiError = 'Kata sandi tidak cocok';
-      } else {
-        _konfirmasiError = null;
-      }
+      if (v.isEmpty)                     _konfirmasiError = 'Konfirmasi tidak boleh kosong';
+      else if (v != _passwordCtrl.text)  _konfirmasiError = 'Kata sandi tidak cocok';
+      else                               _konfirmasiError = null;
     });
   }
 
@@ -159,18 +155,19 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             children: [
               const SizedBox(height: AppSpacings.lg),
 
-              // ── Tab Toggle: Login | Register ────────────────────────────
+              // ── Tab Toggle ───────────────────────────────────────────────
               _buildTabToggle(),
 
               const SizedBox(height: AppSpacings.xxxl),
 
-              // ── Header ──────────────────────────────────────────────────
+              // ── Header ───────────────────────────────────────────────────
               Text(
                 'Create Account',
                 textAlign: TextAlign.center,
                 style: AppTextStyles.h1.copyWith(
                   fontSize: 26,
                   color: AppColors.primaryBlue,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
               const SizedBox(height: AppSpacings.sm),
@@ -191,7 +188,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 const SizedBox(height: AppSpacings.lg),
               ],
 
-              // ── Nama Lengkap ─────────────────────────────────────────────
+              // ── Field: Nama Lengkap ──────────────────────────────────────
               _buildLabel('Nama Lengkap'),
               const SizedBox(height: AppSpacings.xs),
               _buildTextField(
@@ -200,12 +197,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 icon: Icons.person_outline,
                 errorText: _namaError,
                 onChanged: _validateNama,
-                textInputAction: TextInputAction.next,
+                action: TextInputAction.next,
               ),
 
               const SizedBox(height: AppSpacings.md),
 
-              // ── NIM ──────────────────────────────────────────────────────
+              // ── Field: NIM ───────────────────────────────────────────────
               _buildLabel('NIM'),
               const SizedBox(height: AppSpacings.xs),
               _buildTextField(
@@ -215,12 +212,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 errorText: _nimError,
                 onChanged: _validateNim,
                 keyboardType: TextInputType.number,
-                textInputAction: TextInputAction.next,
+                action: TextInputAction.next,
               ),
 
               const SizedBox(height: AppSpacings.md),
 
-              // ── Email ────────────────────────────────────────────────────
+              // ── Field: Email ─────────────────────────────────────────────
               _buildLabel('Email Address'),
               const SizedBox(height: AppSpacings.xs),
               _buildTextField(
@@ -230,28 +227,27 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 errorText: _emailError,
                 onChanged: _validateEmail,
                 keyboardType: TextInputType.emailAddress,
-                textInputAction: TextInputAction.next,
+                action: TextInputAction.next,
               ),
 
               const SizedBox(height: AppSpacings.md),
 
-              // ── Password ─────────────────────────────────────────────────
+              // ── Field: Password ──────────────────────────────────────────
               _buildLabel('Password'),
               const SizedBox(height: AppSpacings.xs),
               _buildPasswordField(
                 controller: _passwordCtrl,
                 hint: 'Min. 8 karakter, huruf + angka',
                 errorText: _passwordError,
-                obscure: _obscurePassword,
+                obscure: _obscurePass,
                 onChanged: _validatePassword,
-                onToggle: () =>
-                    setState(() => _obscurePassword = !_obscurePassword),
-                textInputAction: TextInputAction.next,
+                onToggle: () => setState(() => _obscurePass = !_obscurePass),
+                action: TextInputAction.next,
               ),
 
               const SizedBox(height: AppSpacings.md),
 
-              // ── Konfirmasi Password ──────────────────────────────────────
+              // ── Field: Konfirmasi Password ───────────────────────────────
               _buildLabel('Confirm Password'),
               const SizedBox(height: AppSpacings.xs),
               _buildPasswordField(
@@ -260,24 +256,19 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 errorText: _konfirmasiError,
                 obscure: _obscureKonfirmasi,
                 onChanged: _validateKonfirmasi,
-                onToggle: () =>
-                    setState(() => _obscureKonfirmasi = !_obscureKonfirmasi),
-                textInputAction: TextInputAction.done,
+                onToggle: () => setState(() => _obscureKonfirmasi = !_obscureKonfirmasi),
+                action: TextInputAction.done,
                 onSubmitted: (_) => _onRegister(),
               ),
 
               const SizedBox(height: AppSpacings.xxl),
 
               // ── Tombol Daftar ────────────────────────────────────────────
-              // Pakai ElevatedButton dari AppTheme.lightTheme (auto-styled)
               ElevatedButton(
-                onPressed: (!_isFormValid || authState.isLoading)
-                    ? null
-                    : _onRegister,
+                onPressed: (!_isFormValid || authState.isLoading) ? null : _onRegister,
                 child: authState.isLoading
                     ? const SizedBox(
-                        height: 22,
-                        width: 22,
+                        height: 22, width: 22,
                         child: CircularProgressIndicator(
                           color: Colors.white,
                           strokeWidth: 2.5,
@@ -288,14 +279,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
               const SizedBox(height: AppSpacings.xxl),
 
-              // ── Link ke Login ────────────────────────────────────────────
+              // ── Link Login ───────────────────────────────────────────────
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
                     'Sudah punya akun? ',
-                    style: AppTextStyles.body.copyWith(
-                        color: AppColors.textGrey),
+                    style: AppTextStyles.body.copyWith(color: AppColors.textGrey),
                   ),
                   GestureDetector(
                     onTap: () {
@@ -320,7 +310,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     );
   }
 
-  // ─── Tab Toggle ───────────────────────────────────────────────────────────
+  // ─── Helper Widgets ───────────────────────────────────────────────────────
 
   Widget _buildTabToggle() {
     return Container(
@@ -343,9 +333,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 alignment: Alignment.center,
                 child: Text(
                   'Login',
-                  style: AppTextStyles.body.copyWith(
-                    color: AppColors.textGrey,
-                  ),
+                  style: AppTextStyles.body.copyWith(color: AppColors.textGrey),
                 ),
               ),
             ),
@@ -371,8 +359,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     );
   }
 
-  // ─── Widget Helpers ───────────────────────────────────────────────────────
-
   Widget _buildLabel(String label) {
     return Text(
       label,
@@ -390,18 +376,17 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     required String? errorText,
     required ValueChanged<String> onChanged,
     TextInputType keyboardType = TextInputType.text,
-    TextInputAction textInputAction = TextInputAction.next,
+    TextInputAction action = TextInputAction.next,
   }) {
     return TextFormField(
       controller: controller,
       keyboardType: keyboardType,
-      textInputAction: textInputAction,
+      textInputAction: action,
       onChanged: onChanged,
       style: AppTextStyles.body,
       decoration: InputDecoration(
         hintText: hint,
         errorText: errorText,
-        // AppTheme.lightTheme sudah atur border, fill, padding
         prefixIcon: Icon(icon, color: AppColors.textGrey, size: 20),
       ),
     );
@@ -414,29 +399,23 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     required bool obscure,
     required ValueChanged<String> onChanged,
     required VoidCallback onToggle,
-    TextInputAction textInputAction = TextInputAction.next,
+    TextInputAction action = TextInputAction.next,
     ValueChanged<String>? onSubmitted,
   }) {
     return TextFormField(
       controller: controller,
       obscureText: obscure,
-      textInputAction: textInputAction,
+      textInputAction: action,
       onChanged: onChanged,
       onFieldSubmitted: onSubmitted,
       style: AppTextStyles.body,
       decoration: InputDecoration(
         hintText: hint,
         errorText: errorText,
-        prefixIcon: const Icon(
-          Icons.lock_outline,
-          color: AppColors.textGrey,
-          size: 20,
-        ),
+        prefixIcon: const Icon(Icons.lock_outline, color: AppColors.textGrey, size: 20),
         suffixIcon: IconButton(
           icon: Icon(
-            obscure
-                ? Icons.visibility_off_outlined
-                : Icons.visibility_outlined,
+            obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined,
             color: AppColors.textGrey,
             size: 20,
           ),

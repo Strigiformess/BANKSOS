@@ -1,6 +1,15 @@
 // lib/features/auth/screens/login_screen.dart
-// PIC: Seruni (SL) — UI Layer
-// Tampilan sesuai mockup Figma, fully pakai AppColors/AppTextStyles/AppSpacings/AppRadius
+// PIC: Seruni Libertina Islami (SL)
+// Sprint 1: Halaman login sesuai Figma "Login & Registration"
+//
+// FITUR:
+//   - Tab toggle Login | Register
+//   - Form email & password dengan validasi real-time
+//   - Tombol "Masuk" dengan loading state
+//   - Tombol Google Account (placeholder)
+//   - Link ke halaman register
+//   - Error banner dari controller
+//   - Redirect otomatis ke dashboard sesuai role setelah login
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -19,10 +28,10 @@ class LoginScreen extends ConsumerStatefulWidget {
 }
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
-  final _formKey      = GlobalKey<FormState>();
-  final _emailCtrl    = TextEditingController();
-  final _passwordCtrl = TextEditingController();
-  bool _obscurePassword = true;
+  final _formKey        = GlobalKey<FormState>();
+  final _emailCtrl      = TextEditingController();
+  final _passwordCtrl   = TextEditingController();
+  bool  _obscurePass    = true;
 
   @override
   void dispose() {
@@ -30,6 +39,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     _passwordCtrl.dispose();
     super.dispose();
   }
+
+  // ─── Aksi ─────────────────────────────────────────────────────────────────
 
   Future<void> _onLogin() async {
     if (!_formKey.currentState!.validate()) return;
@@ -62,6 +73,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     );
   }
 
+  // ─── Build ────────────────────────────────────────────────────────────────
+
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authControllerProvider);
@@ -78,32 +91,31 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               children: [
                 const SizedBox(height: AppSpacings.lg),
 
-                // ── Tab Toggle: Login | Register ──────────────────────────
+                // ── Tab Toggle: Login | Register ────────────────────────────
                 _buildTabToggle(),
 
                 const SizedBox(height: AppSpacings.xxxl),
 
-                // ── Header ────────────────────────────────────────────────
+                // ── Header ──────────────────────────────────────────────────
                 Text(
                   'Welcome Back',
                   textAlign: TextAlign.center,
                   style: AppTextStyles.h1.copyWith(
                     fontSize: 26,
                     color: AppColors.primaryBlue,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
                 const SizedBox(height: AppSpacings.sm),
                 Text(
                   'Log in to continue your academic journey.',
                   textAlign: TextAlign.center,
-                  style: AppTextStyles.body.copyWith(
-                    color: AppColors.textGrey,
-                  ),
+                  style: AppTextStyles.body.copyWith(color: AppColors.textGrey),
                 ),
 
                 const SizedBox(height: AppSpacings.xxxl),
 
-                // ── Error Banner ──────────────────────────────────────────
+                // ── Error Banner ─────────────────────────────────────────────
                 if (authState.errorMessage != null) ...[
                   AppMessageBanner(
                     type: BannerType.error,
@@ -112,14 +124,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   const SizedBox(height: AppSpacings.lg),
                 ],
 
-                // ── Email Address ─────────────────────────────────────────
-                Text(
-                  'Email Address',
-                  style: AppTextStyles.small.copyWith(
-                    color: AppColors.textDark,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
+                // ── Field: Email ─────────────────────────────────────────────
+                _buildFieldLabel('Email Address'),
                 const SizedBox(height: AppSpacings.xs),
                 TextFormField(
                   controller: _emailCtrl,
@@ -134,13 +140,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       size: 20,
                     ),
                   ),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Email tidak boleh kosong';
-                    }
-                    final emailRegex =
-                        RegExp(r'^[\w\-.]+@([\w\-]+\.)+[\w\-]{2,}$');
-                    if (!emailRegex.hasMatch(value.trim())) {
+                  validator: (v) {
+                    if (v == null || v.trim().isEmpty) return 'Email tidak boleh kosong';
+                    if (!RegExp(r'^[\w\-.]+@([\w\-]+\.)+[\w\-]{2,}$').hasMatch(v.trim())) {
                       return 'Format email tidak valid';
                     }
                     return null;
@@ -149,20 +151,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                 const SizedBox(height: AppSpacings.lg),
 
-                // ── Password label + Forgot ───────────────────────────────
+                // ── Field: Password ──────────────────────────────────────────
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      'Password',
-                      style: AppTextStyles.small.copyWith(
-                        color: AppColors.textDark,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
+                    _buildFieldLabel('Password'),
                     GestureDetector(
                       onTap: () {
-                        // TODO: forgot password
+                        // TODO: implementasi lupa password
                       },
                       child: Text(
                         'Forgot password?',
@@ -177,7 +173,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 const SizedBox(height: AppSpacings.xs),
                 TextFormField(
                   controller: _passwordCtrl,
-                  obscureText: _obscurePassword,
+                  obscureText: _obscurePass,
                   textInputAction: TextInputAction.done,
                   onFieldSubmitted: (_) => _onLogin(),
                   style: AppTextStyles.body,
@@ -190,37 +186,30 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                     suffixIcon: IconButton(
                       icon: Icon(
-                        _obscurePassword
+                        _obscurePass
                             ? Icons.visibility_off_outlined
                             : Icons.visibility_outlined,
                         color: AppColors.textGrey,
                         size: 20,
                       ),
-                      onPressed: () => setState(
-                          () => _obscurePassword = !_obscurePassword),
+                      onPressed: () => setState(() => _obscurePass = !_obscurePass),
                     ),
                   ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Kata sandi tidak boleh kosong';
-                    }
-                    if (value.length < 6) {
-                      return 'Kata sandi minimal 6 karakter';
-                    }
+                  validator: (v) {
+                    if (v == null || v.isEmpty) return 'Kata sandi tidak boleh kosong';
+                    if (v.length < 6) return 'Kata sandi minimal 6 karakter';
                     return null;
                   },
                 ),
 
                 const SizedBox(height: AppSpacings.xxl),
 
-                // ── Tombol Masuk ──────────────────────────────────────────
-                // Pakai ElevatedButton dari AppTheme.lightTheme (auto-styled)
+                // ── Tombol Masuk ─────────────────────────────────────────────
                 ElevatedButton(
                   onPressed: authState.isLoading ? null : _onLogin,
                   child: authState.isLoading
                       ? const SizedBox(
-                          height: 22,
-                          width: 22,
+                          height: 22, width: 22,
                           child: CircularProgressIndicator(
                             color: Colors.white,
                             strokeWidth: 2.5,
@@ -231,35 +220,28 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                 const SizedBox(height: AppSpacings.xl),
 
-                // ── Divider: or continue with ─────────────────────────────
-                const Row(
+                // ── Divider ──────────────────────────────────────────────────
+                Row(
                   children: [
-                    Expanded(child: Divider()),
+                    const Expanded(child: Divider()),
                     Padding(
-                      padding: EdgeInsets.symmetric(
-                          horizontal: AppSpacings.md),
-                      child: Text(
-                        'or continue with',
-                        style: AppTextStyles.caption,
-                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: AppSpacings.md),
+                      child: Text('or continue with', style: AppTextStyles.caption),
                     ),
-                    Expanded(child: Divider()),
+                    const Expanded(child: Divider()),
                   ],
                 ),
 
                 const SizedBox(height: AppSpacings.lg),
 
-                // ── Google Button ─────────────────────────────────────────
-                // Pakai OutlinedButton dari AppTheme.lightTheme (auto-styled)
+                // ── Tombol Google ────────────────────────────────────────────
                 OutlinedButton(
                   onPressed: () {
                     // TODO: Google Sign In
                   },
-                  // Override foreground color agar teks tetap gelap
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.textDark,
-                    side: const BorderSide(
-                        color: AppColors.borderGrey, width: 1),
+                    side: const BorderSide(color: AppColors.borderGrey),
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -278,14 +260,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                 const SizedBox(height: AppSpacings.xxl),
 
-                // ── Link Register ─────────────────────────────────────────
+                // ── Link Register ─────────────────────────────────────────────
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
                       'Belum punya akun? ',
-                      style: AppTextStyles.body.copyWith(
-                          color: AppColors.textGrey),
+                      style: AppTextStyles.body.copyWith(color: AppColors.textGrey),
                     ),
                     GestureDetector(
                       onTap: _goToRegister,
@@ -308,13 +289,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     );
   }
 
-  // ─── Tab Toggle ───────────────────────────────────────────────────────────
+  // ─── Helper Widgets ───────────────────────────────────────────────────────
 
   Widget _buildTabToggle() {
     return Container(
       height: 44,
       decoration: BoxDecoration(
-        // Pakai warna dari AppColors
         color: AppColors.borderGrey.withOpacity(0.35),
         borderRadius: AppRadius.pill,
       ),
@@ -345,9 +325,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 alignment: Alignment.center,
                 child: Text(
                   'Register',
-                  style: AppTextStyles.body.copyWith(
-                    color: AppColors.textGrey,
-                  ),
+                  style: AppTextStyles.body.copyWith(color: AppColors.textGrey),
                 ),
               ),
             ),
@@ -356,9 +334,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       ),
     );
   }
+
+  Widget _buildFieldLabel(String label) {
+    return Text(
+      label,
+      style: AppTextStyles.small.copyWith(
+        color: AppColors.textDark,
+        fontWeight: FontWeight.w500,
+      ),
+    );
+  }
 }
 
-// ─── Google Icon ──────────────────────────────────────────────────────────
+// ─── Google Icon Placeholder ──────────────────────────────────────────────────
 
 class _GoogleIcon extends StatelessWidget {
   const _GoogleIcon();
@@ -366,8 +354,7 @@ class _GoogleIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const SizedBox(
-      width: 20,
-      height: 20,
+      width: 20, height: 20,
       child: CustomPaint(painter: _GoogleLogoPainter()),
     );
   }
@@ -378,7 +365,7 @@ class _GoogleLogoPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final textPainter = TextPainter(
+    final tp = TextPainter(
       text: const TextSpan(
         text: 'G',
         style: TextStyle(
@@ -389,16 +376,13 @@ class _GoogleLogoPainter extends CustomPainter {
       ),
       textDirection: TextDirection.ltr,
     );
-    textPainter.layout();
-    textPainter.paint(
+    tp.layout();
+    tp.paint(
       canvas,
-      Offset(
-        size.width / 2 - textPainter.width / 2,
-        size.height / 2 - textPainter.height / 2,
-      ),
+      Offset(size.width / 2 - tp.width / 2, size.height / 2 - tp.height / 2),
     );
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant CustomPainter _) => false;
 }
