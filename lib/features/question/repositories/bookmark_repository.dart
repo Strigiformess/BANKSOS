@@ -15,9 +15,11 @@
 
 import 'package:uuid/uuid.dart';
 
+import '../../../core/services/sync_manager.dart';
 import '../../../data/local/hive/hive_service.dart';
 import '../../../data/models/bookmark_model.dart';
 import '../../../data/models/question_model.dart';
+import '../../../data/models/sync_queue_model.dart';
 import '../../../core/services/session_service.dart';
 import '../../../core/services/connectivity_service.dart';
 import '../../../features/auth/data/bookmark_remote.dart';
@@ -111,9 +113,18 @@ class BookmarkRepository implements IBookmarkRepository {
         final synced = bookmark.copyWith(isSynced: true);
         await box.put(synced.id, synced);
       } catch (_) {
-        // Gagal kirim ke server — tidak apa-apa, akan di-sync nanti
-        // Tidak perlu rollback Hive karena offline-first
+        await SyncManager.instance.enqueueBookmarkAction(
+          userId: userId,
+          questionId: question.id,
+          action: SyncAction.bookmarkAdd.name,
+        );
       }
+    } else {
+      await SyncManager.instance.enqueueBookmarkAction(
+        userId: userId,
+        questionId: question.id,
+        action: SyncAction.bookmarkAdd.name,
+      );
     }
 
     return const BookmarkResult(
@@ -165,9 +176,18 @@ class BookmarkRepository implements IBookmarkRepository {
           questionId: question.id,
         );
       } catch (_) {
-        // Gagal hapus dari server — tidak kritis, data di Hive sudah dihapus
-        // SyncManager bisa handle perbedaan ini di Sprint 5
+        await SyncManager.instance.enqueueBookmarkAction(
+          userId: userId,
+          questionId: question.id,
+          action: SyncAction.bookmarkRemove.name,
+        );
       }
+    } else {
+      await SyncManager.instance.enqueueBookmarkAction(
+        userId: userId,
+        questionId: question.id,
+        action: SyncAction.bookmarkRemove.name,
+      );
     }
 
     return const BookmarkResult(
