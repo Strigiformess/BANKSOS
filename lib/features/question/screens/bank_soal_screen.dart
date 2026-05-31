@@ -12,6 +12,7 @@ import '../../../data/models/category_model.dart';
 import '../../../data/local/hive/hive_service.dart';
 import '../../../features/auth/data/category_remote.dart';
 import '../../../features/auth/data/question_remote.dart';
+import '../../../routes/app_routes.dart';
 import '../../question/screens/question_detail_screen.dart';
 
 // ─── Providers 
@@ -54,10 +55,20 @@ final questionProvider =
   final categoryId = ref.watch(selectedCategoryIdProvider);
   final hive = HiveService.instance.questionsBox;
 
-  List<QuestionModel> all = hive.values.toList();
+  final allLocal = hive.values.toList();
+  final isOnline = await ConnectivityService.instance.isOnline;
 
-  if (all.isEmpty && categoryId != null) {
-    final isOnline = await ConnectivityService.instance.isOnline;
+  if (categoryId != null) {
+    final localForCategory = allLocal
+        .where((q) => q.kategoriId == categoryId)
+        .toList();
+
+    if (localForCategory.isNotEmpty) {
+      return localForCategory
+          .where((q) => q.status == QuestionStatus.published)
+          .toList();
+    }
+
     if (isOnline) {
       final rawList = await QuestionRemote()
           .getPublishedQuestionsByCategory(categoryId);
@@ -65,19 +76,17 @@ final questionProvider =
       for (final q in fetched) {
         await hive.put(q.id, q);
       }
-      all = fetched;
+      return fetched
+          .where((q) => q.status == QuestionStatus.published)
+          .toList();
     }
+
+    return [];
   }
 
-  if (categoryId != null) {
-    all = all
-        .where((q) =>
-            q.kategoriId == categoryId &&
-            q.status == QuestionStatus.published)
-        .toList();
-  } else {
-    all = all.where((q) => q.status == QuestionStatus.published).toList();
-  }
+  final all = allLocal
+      .where((q) => q.status == QuestionStatus.published)
+      .toList();
 
   return all;
 });
@@ -107,7 +116,6 @@ class _BankSoalScreenState extends ConsumerState<BankSoalScreen> {
 
   bool   _isDownloading    = false;
   double _downloadProgress = 0;
-  String _downloadStatus   = '';
 
   @override
   void dispose() {
@@ -115,7 +123,7 @@ class _BankSoalScreenState extends ConsumerState<BankSoalScreen> {
     super.dispose();
   }
 
-  // ─── Download untuk offline 
+  // ─── Download untuk offline dengan batch write yang proper ──────────────────
 
   Future<void> _downloadForOffline(
       String categoryId, String categoryName) async {
@@ -134,7 +142,6 @@ class _BankSoalScreenState extends ConsumerState<BankSoalScreen> {
     setState(() {
       _isDownloading    = true;
       _downloadProgress = 0;
-      _downloadStatus   = 'Mengambil soal $categoryName...';
     });
 
     try {
@@ -144,14 +151,19 @@ class _BankSoalScreenState extends ConsumerState<BankSoalScreen> {
 
       setState(() {
         _downloadProgress = 0.6;
-        _downloadStatus   = 'Menyimpan ${rawList.length} soal...';
       });
 
       final hive = HiveService.instance.questionsBox;
+      
+      // ✅ FIX: Batch write untuk menghindari corrupt data & lock file
+      final questions = <String, QuestionModel>{};
       for (final raw in rawList) {
         final question = QuestionModel.fromMap(raw);
-        await hive.put(question.id, question);
+        questions[question.id] = question;
       }
+      
+      // Simpan semua sekaligus (atomic operation)
+      await hive.putAll(questions);
 
       setState(() => _downloadProgress = 1.0);
       ref.invalidate(questionProvider);
@@ -181,7 +193,6 @@ class _BankSoalScreenState extends ConsumerState<BankSoalScreen> {
         setState(() {
           _isDownloading    = false;
           _downloadProgress = 0;
-          _downloadStatus   = '';
         });
       }
     }
@@ -220,14 +231,7 @@ class _BankSoalScreenState extends ConsumerState<BankSoalScreen> {
   Widget build(BuildContext context) {
     final categoriesAsync    = ref.watch(categoryProvider);
     final questionsAsync     = ref.watch(questionProvider);
-    final connectivityAsync  = ref.watch(connectivityProvider);
     final selectedCategoryId = ref.watch(selectedCategoryIdProvider);
-
-    final isOffline = connectivityAsync.when(
-      data: (result) => result == ConnectivityResult.none,
-      loading: () => false,
-      error:   (_, __) => false,
-    );
 
     return Scaffold(
       appBar: AppBar(
@@ -252,178 +256,178 @@ class _BankSoalScreenState extends ConsumerState<BankSoalScreen> {
                     .toList();
                 final categoryName =
                     match.isNotEmpty ? match.first.nama : 'Soal';
-                return IconButton(
-                  icon: _isDownloading
-                      ? SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            value: _downloadProgress,
-                            color: AppColors.textLight,
-                            strokeWidth: 2,
-                          ),
-                        )
-                      : const Icon(Icons.download_outlined),
-                  tooltip: 'Unduh untuk Offline',
-                  onPressed: _isDownloading
-                      ? null
-                      : () => _downloadForOffline(
-                            selectedCategoryId,
-                            categoryName,
-                          ),
+                return Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.home_outlined),
+                      tooltip: 'Beranda',
+                      onPressed: () => Navigator.pushNamedAndRemoveUntil(
+                        context,
+                        AppRoutes.dashboardMahasiswa,
+                        (route) => false,
+                      ),
+                    ),
+                    IconButton(
+                      icon: _isDownloading
+                          ? SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                value: _downloadProgress,
+                                color: AppColors.textLight,
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : const Icon(Icons.download_outlined),
+                      tooltip: 'Unduh untuk Offline',
+                      onPressed: _isDownloading
+                          ? null
+                          : () => _downloadForOffline(
+                                selectedCategoryId,
+                                categoryName,
+                              ),
+                    ),
+                  ],
                 );
               },
               loading: () => const SizedBox.shrink(),
-              error:   (_, __) => const SizedBox.shrink(),
+              error: (_, __) => const SizedBox.shrink(),
             ),
         ],
       ),
-      body: Column(
+      body: Row(
         children: [
-          // ── Banner Offline — pakai OfflineBanner dari app_widgets ───────
-          if (isOffline) const OfflineBanner(),
-
-          // ── Progress Bar Unduh 
-          if (_isDownloading) ...[
-            LinearProgressIndicator(
-              value: _downloadProgress,
-              backgroundColor: AppColors.lightBlue,
-              color: AppColors.primaryBlue,
-            ),
-            Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-              child: Row(
-                children: [
-                  Text(_downloadStatus, style: AppTextStyles.small),
-                  const Spacer(),
-                  Text(
-                    '${(_downloadProgress * 100).toInt()}%',
-                    style: AppTextStyles.smallSemibold
-                        .copyWith(color: AppColors.primaryBlue),
+          // ─── Sidebar Kategori ────────────────────────────────────────────────
+          if (_isSidebarOpen)
+            categoriesAsync.when(
+              data: (categories) => Container(
+                width: 200,
+                decoration: BoxDecoration(
+                  border: Border(
+                    right: BorderSide(
+                      color: AppColors.borderGrey.withOpacity(0.5),
+                    ),
                   ),
-                ],
-              ),
-            ),
-          ],
-
-          // ── Konten Utama: Sidebar + Daftar Soal 
-          Expanded(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // ── Sidebar Kategori ───────────────────────────────────
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 250),
-                  curve: Curves.easeInOut,
-                  width: _isSidebarOpen ? 150 : 0,
-                  child: _isSidebarOpen
-                      ? _buildSidebar(categoriesAsync, selectedCategoryId)
-                      : const SizedBox.shrink(),
+                  color: AppColors.bgWhite,
                 ),
+                child: ListView(
+                  padding: EdgeInsets.zero,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Text(
+                        'Kategori',
+                        style:
+                            AppTextStyles.small.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    ...List.generate(
+                      categories.length,
+                      (i) {
+                        final cat = categories[i];
+                        return _buildCategoryItem(
+                          id: cat.id,
+                          label: cat.nama,
+                          icon: Icons.book_outlined,
+                          isSelected: selectedCategoryId == cat.id,
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              loading: () =>
+                  const Center(child: CircularProgressIndicator()),
+              error: (err, __) => Center(child: Text('Error: $err')),
+            ),
 
-                if (_isSidebarOpen)
-                  const VerticalDivider(width: 1, thickness: 1),
-
-                // ── Kolom Kanan ────────────────────────────────────────
-                Expanded(
+          // ─── Main Content Area ───────────────────────────────────────────────
+          Expanded(
+            child: Column(
+              children: [
+                // ─── Search & Filter Bar ──────────────────────────────────────
+                Padding(
+                  padding: const EdgeInsets.all(12),
                   child: Column(
                     children: [
                       // Search bar
-                      Padding(
-                        padding:
-                            const EdgeInsets.fromLTRB(12, 10, 12, 4),
-                        child: TextField(
-                          controller: _searchCtrl,
-                          decoration: InputDecoration(
-                            hintText: 'Cari soal...',
-                            isDense: true,
-                            prefixIcon: const Icon(
-                                Icons.search_outlined,
-                                size: 20),
-                            suffixIcon: _searchQuery.isNotEmpty
-                                ? IconButton(
-                                    icon: const Icon(Icons.clear,
-                                        size: 18),
-                                    onPressed: () {
-                                      _searchCtrl.clear();
-                                      setState(
-                                          () => _searchQuery = '');
-                                    },
-                                  )
-                                : null,
+                      TextField(
+                        controller: _searchCtrl,
+                        onChanged: (value) =>
+                            setState(() => _searchQuery = value),
+                        decoration: InputDecoration(
+                          hintText: 'Cari soal...',
+                          prefixIcon: const Icon(Icons.search_outlined),
+                          suffixIcon: _searchQuery.isNotEmpty
+                              ? IconButton(
+                                  icon: const Icon(Icons.clear_outlined),
+                                  onPressed: () {
+                                    _searchCtrl.clear();
+                                    setState(() => _searchQuery = '');
+                                  },
+                                )
+                              : null,
+                          border: OutlineInputBorder(
+                            borderRadius: AppRadius.mdAll,
                           ),
-                          onChanged: (v) =>
-                              setState(() => _searchQuery = v),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 12,
+                          ),
                         ),
                       ),
+                      const SizedBox(height: 8),
 
-                      // Filter Chip — pakai AppDifficultyChips ──────────
-                      AppDifficultyChips(
-                        selected: _selectedDifficulty,
-                        onChanged: (val) =>
-                            setState(() => _selectedDifficulty = val),
-                      ),
-
-                      const Divider(height: 1),
-
-                      // Daftar Soal
-                      Expanded(
-                        child: questionsAsync.when(
-                          loading: () =>
-                              const AppLoadingIndicator(),
-                          error: (e, _) => _buildError(e.toString()),
-                          data: (questions) {
-                            final filtered =
-                                _applyFilters(questions);
-                            if (filtered.isEmpty) {
-                              return _buildEmpty(
-                                  selectedCategoryId);
-                            }
-                            return _buildQuestionList(filtered);
-                          },
+                      // Filter kesulitan
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: DifficultyFilter.values.map((filter) {
+                            final filterLabels = {
+                              DifficultyFilter.all: 'Semua',
+                              DifficultyFilter.easy: 'Mudah',
+                              DifficultyFilter.medium: 'Sedang',
+                              DifficultyFilter.hard: 'Sulit',
+                            };
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 8),
+                              child: FilterChip(
+                                label: Text(filterLabels[filter] ?? filter.name),
+                                selected:
+                                    _selectedDifficulty == filter,
+                                onSelected: (_) {
+                                  setState(() =>
+                                      _selectedDifficulty = filter);
+                                },
+                              ),
+                            );
+                          }).toList(),
                         ),
                       ),
                     ],
                   ),
                 ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
-  // ─── Sidebar Kategori 
-
-  Widget _buildSidebar(
-    AsyncValue<List<CategoryModel>> categoriesAsync,
-    String? selectedCategoryId,
-  ) {
-    return Container(
-      color: AppColors.bgLight,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 12, 12, 6),
-            child: Text('Mata Kuliah', style: AppTextStyles.captionBold),
-          ),
-          _buildCategoryItem(
-            id: null,
-            label: 'Semua',
-            icon: Icons.grid_view_outlined,
-            isSelected: selectedCategoryId == null,
-          ),
-          const Divider(height: 8, indent: 12, endIndent: 12),
-          Expanded(
-            child: categoriesAsync.when(
-              loading: () => const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(16),
-                  child: CircularProgressIndicator(strokeWidth: 2),
+                // ─── Daftar Soal ─────────────────────────────────────────────
+                Expanded(
+                  child: questionsAsync.when(
+                    data: (questions) {
+                      final filtered = _applyFilters(questions);
+                      if (filtered.isEmpty) {
+                        return _buildEmpty(selectedCategoryId);
+                      }
+                      return _buildQuestionList(filtered);
+                    },
+                    loading: () =>
+                        const Center(child: CircularProgressIndicator()),
+                    error: (err, __) =>
+                        _buildError('Error: ${err.toString()}'),
+                  ),
                 ),
+              ],
               ),
               error: (e, _) => Padding(
                 padding: const EdgeInsets.all(12),
