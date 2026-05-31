@@ -1,5 +1,14 @@
 // lib/features/question/screens/question_detail_screen.dart
+// Sprint 6 UPDATE — Revaldi (RP): Integrasi AnswerAnimationController
+//
+// Perubahan dari Sprint 3 → Sprint 6:
+//   - ShakeWidget menggantikan AnimatedBuilder shake manual
+//   - CorrectAnswerCardAnimated menggantikan container hijau statis
+//   - WrongAnswerBanner menggantikan container merah statis
+//   - Warna background scaffold menggunakan context.colors (dark mode ready)
+//   - Input border menggunakan tema, bukan hardcoded color
 
+import 'package:banksos/features/question/repositories/bookmark_repository.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart'; // Tambahan untuk UI Reactive
@@ -10,9 +19,11 @@ import '../../../core/services/sync_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/local/hive/hive_service.dart';
 import '../../../data/models/bookmark_model.dart';
+import '../../../core/theme/app_theme_extensions.dart';
 import '../../../data/models/question_model.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import '../repositories/progress_repository.dart';
+import '../services/answer_animation_service.dart';
 import '../services/hint_service.dart';
 
 class QuestionDetailScreen extends StatefulWidget {
@@ -24,63 +35,67 @@ class QuestionDetailScreen extends StatefulWidget {
     required this.question,
     this.progressRepository,
   });
+  
+  get bookmarkRepository => null;
 
   @override
   State<QuestionDetailScreen> createState() => _QuestionDetailScreenState();
 }
 
 class _QuestionDetailScreenState extends State<QuestionDetailScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   final TextEditingController _answerController = TextEditingController();
 
-  // ─── State UI ────────────────────────────────────────────────────────────
+  // ─── State ───────────────────────────────────────────────────────────────
   late final HintService _hintService;
   bool _isCorrect = false;
   bool _hasSubmitted = false;
-  bool _isShaking = false;
   bool _isSavingProgress = false;
 
+  // ─── Sprint 3: Bookmark ──────────────────────────────────────────────────
+  bool _isBookmarked = false;
+  bool _isTogglingBookmark = false;
+  late final BookmarkRepository _bookmarkRepository;
   late final IProgressRepository _progressRepository;
 
-  late AnimationController _shakeController;
-  late Animation<double> _shakeAnimation;
+  // ─── Sprint 6: Animasi (Revaldi) ─────────────────────────────────────────
+  late final AnswerAnimationController _animCtrl;
 
   @override
   void initState() {
     super.initState();
 
     _hintService = HintService();
+    _bookmarkRepository = widget.bookmarkRepository ?? BookmarkRepository();
     _progressRepository = widget.progressRepository ?? ProgressRepository();
 
-    _shakeController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 400),
-    );
-    _shakeAnimation = Tween<double>(begin: 0, end: 12).animate(
-      CurvedAnimation(parent: _shakeController, curve: Curves.elasticIn),
-    );
-    _shakeController.addStatusListener((status) {
-      if (status == AnimationStatus.completed) _shakeController.reverse();
-    });
+    // Inisialisasi animation controller (Sprint 6)
+    _animCtrl = AnswerAnimationController(vsync: this);
 
+    _checkBookmarkStatus();
     _checkExistingProgress();
   }
 
   @override
   void dispose() {
     _answerController.dispose();
-    _shakeController.dispose();
+    _animCtrl.dispose(); // Sprint 6: dispose animation controller
     super.dispose();
   }
 
-  // ─── Integrasi Progress Checking ──────────────────────────────────────────
+  // ─── Progress ────────────────────────────────────────────────────────────
+
   void _checkExistingProgress() {
     final solved = _progressRepository.isSolved(widget.question.id);
     if (solved) {
       setState(() {
         _isCorrect = true;
         _hasSubmitted = true;
-        _answerController.text = widget.question.jawaban; 
+        _answerController.text = widget.question.jawaban;
+      });
+      // Langsung mainkan animasi benar jika sudah pernah solved
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _animCtrl.playCorrect();
       });
     }
   }
@@ -123,6 +138,43 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen>
   }
 
   // ─── Submit ───────────────────────────────────────────────────────────────
+  // ─── Bookmark ────────────────────────────────────────────────────────────
+
+  void _checkBookmarkStatus() {
+    setState(() {
+      _isBookmarked = _bookmarkRepository.isBookmarked(widget.question.id);
+    });
+  }
+
+  Future<void> _toggleBookmark() async {
+    if (_isTogglingBookmark) return;
+    setState(() => _isTogglingBookmark = true);
+
+    final result =
+        await _bookmarkRepository.toggleBookmark(widget.question);
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result.message ??
+              (result.isNowBookmarked
+                  ? 'Soal disimpan ke Bookmark'
+                  : 'Bookmark dihapus')),
+          backgroundColor:
+              result.isNowBookmarked ? AppColors.successGreen : null,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 1),
+        ),
+      );
+      setState(() {
+        _isBookmarked = result.isNowBookmarked;
+        _isTogglingBookmark = false;
+      });
+    }
+  }
+
+  // ─── Submit jawaban ───────────────────────────────────────────────────────
+
   Future<void> _submitAnswer() async {
     if (_isSavingProgress) return;
 
@@ -131,40 +183,38 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen>
 
     final correct = widget.question.checkAnswer(userAnswer);
 
+    setState(() {
+      _isCorrect = correct;
+      _hasSubmitted = true;
+      _isSavingProgress = true;
+    });
+
+    // ── Sprint 6: Mainkan animasi sesuai hasil ────────────────────────────
     if (correct) {
-      setState(() {
-        _isCorrect = true;
-        _hasSubmitted = true;
-        _isSavingProgress = true;
-      });
+      await _animCtrl.playCorrect();
     } else {
-      setState(() {
-        _isCorrect = false;
-        _hasSubmitted = true;
-        _isShaking = true;
-        _isSavingProgress = true;
-      });
-      _shakeController.forward();
-      Future.delayed(const Duration(milliseconds: 500), () {
-        if (mounted) setState(() => _isShaking = false);
-      });
+      await _animCtrl.playWrong();
     }
 
+    // Simpan progress
     try {
-      await _saveProgress(isCorrect: correct);
+      await _progressRepository.recordAttempt(
+        questionId: widget.question.id,
+        categoryId: widget.question.kategoriId,
+        isCorrect: correct,
+      );
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Progress belum berhasil disimpan. Coba lagi nanti.'),
+            content: Text(
+                'Progress belum berhasil disimpan. Coba lagi nanti.'),
             behavior: SnackBarBehavior.floating,
           ),
         );
       }
     } finally {
-      if (mounted) {
-        setState(() => _isSavingProgress = false);
-      }
+      if (mounted) setState(() => _isSavingProgress = false);
     }
   }
 
@@ -178,10 +228,14 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen>
       return match != null ? match.group(1)! : id;
     }
     final currentUserId = rawUserId.isNotEmpty ? cleanId(rawUserId) : '';
+    // Sprint 6: gunakan adaptive colors agar dark mode bekerja
+    final colors = context.colors;
 
     return Scaffold(
-      backgroundColor:
-          _hasSubmitted && _isCorrect ? AppColors.easyBg : AppColors.bgWhite,
+      // Sprint 6: tidak hardcode warna, gunakan adaptive
+      backgroundColor: _hasSubmitted && _isCorrect
+          ? colors.correctAnswerBg
+          : colors.scaffoldBg,
       appBar: AppBar(
         title: Text(
           widget.question.kategoriNama,
@@ -190,9 +244,11 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen>
         // ─── Bagian AppBar di file question_detail_screen.dart (Cari bagian "actions: [") ───
 
         actions: [
+          // Badge kesulitan
           Container(
             margin: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
             decoration: BoxDecoration(
               color: _getDifficultyColor(),
               borderRadius: AppRadius.pill,
@@ -254,7 +310,7 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen>
               stream: ConnectivityService.instance.onConnectivityChanged,
               builder: (context, snapshot) {
                 final isOffline = snapshot.hasData
-                    ? snapshot.data.toString().contains('none')
+                    ? snapshot.data == ConnectivityResult.none
                     : false;
                 return isOffline
                     ? const OfflineBanner()
@@ -262,18 +318,23 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen>
               },
             ),
 
-            // ── Kotak Pertanyaan
+            // ── Kotak Pertanyaan ─────────────────────────────────────────
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: AppColors.lightBlue,
+                // Sprint 6: adaptive, bukan hardcode lightBlue
+                color: context.isDark
+                    ? AppColors.primaryBlue.withOpacity(0.15)
+                    : AppColors.lightBlue,
                 borderRadius: AppRadius.lgAll,
               ),
               child: Text(
                 widget.question.pertanyaan,
                 style: AppTextStyles.h2.copyWith(
-                  color: AppColors.primaryBlue,
+                  color: context.isDark
+                      ? const Color(0xFF90C4F0)
+                      : AppColors.primaryBlue,
                   height: 1.5,
                 ),
               ),
@@ -281,8 +342,9 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen>
 
             const SizedBox(height: 16),
 
-            // ── Placeholder Jawaban
-            Text('Petunjuk panjang jawaban:', style: AppTextStyles.small),
+            // ── Placeholder Jawaban ──────────────────────────────────────
+            Text('Petunjuk panjang jawaban:',
+                style: AppTextStyles.small),
             const SizedBox(height: 4),
             Text(
               _buildAnswerPlaceholder(),
@@ -295,20 +357,22 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen>
 
             const SizedBox(height: 20),
 
-            // ── Panel Hint
+            // ── Panel Hint ───────────────────────────────────────────────
             if (_hintService.hasHints(widget.question)) ...[
               GestureDetector(
-                onTap: () => setState(() => _hintService.toggleHints()),
+                onTap: () =>
+                    setState(() => _hintService.toggleHints()),
                 child: Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
+                      horizontal: 16, vertical: 12),
                   decoration: BoxDecoration(
-                    color: AppColors.mediumBg,
+                    color: context.isDark
+                        ? const Color(0xFF2A2000)
+                        : AppColors.mediumBg,
                     borderRadius: AppRadius.mdAll,
                     border: Border.all(
-                        color: AppColors.mediumAmber.withOpacity(0.4)),
+                        color:
+                            AppColors.mediumAmber.withOpacity(0.4)),
                   ),
                   child: Row(
                     children: [
@@ -320,19 +384,6 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen>
                         style: AppTextStyles.bodySemibold
                             .copyWith(color: AppColors.mediumText),
                       ),
-                      if (!_hintService.hasBeenViewed)
-                        Container(
-                          margin: const EdgeInsets.only(left: 8),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: AppColors.mediumAmber,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text('Baru',
-                              style: AppTextStyles.small
-                                  .copyWith(color: Colors.white)),
-                        ),
                       const Spacer(),
                       Icon(
                         _hintService.isExpanded
@@ -350,10 +401,13 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen>
                   width: double.infinity,
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: AppColors.mediumBg,
+                    color: context.isDark
+                        ? const Color(0xFF2A2000)
+                        : AppColors.mediumBg,
                     borderRadius: AppRadius.mdAll,
                     border: Border.all(
-                        color: AppColors.mediumAmber.withOpacity(0.4)),
+                        color:
+                            AppColors.mediumAmber.withOpacity(0.4)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -362,22 +416,23 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen>
                         .asMap()
                         .entries
                         .map(
-                          (entry) => Padding(
+                          (e) => Padding(
                             padding: const EdgeInsets.only(bottom: 6),
                             child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                              crossAxisAlignment:
+                                  CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  '${entry.key + 1}. ',
-                                  style: AppTextStyles.bodySemibold
-                                      .copyWith(color: AppColors.mediumText),
-                                ),
+                                Text('${e.key + 1}. ',
+                                    style: AppTextStyles.bodySemibold
+                                        .copyWith(
+                                            color:
+                                                AppColors.mediumText)),
                                 Expanded(
-                                  child: Text(
-                                    entry.value,
-                                    style: AppTextStyles.body
-                                        .copyWith(color: AppColors.mediumText),
-                                  ),
+                                  child: Text(e.value,
+                                      style: AppTextStyles.body
+                                          .copyWith(
+                                              color: AppColors
+                                                  .mediumText)),
                                 ),
                               ],
                             ),
@@ -390,24 +445,20 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen>
               const SizedBox(height: 20),
             ],
 
-            // ── Input Jawaban + Shake
-            AnimatedBuilder(
-              animation: _shakeAnimation,
-              builder: (context, child) => Transform.translate(
-                offset: Offset(_isShaking ? _shakeAnimation.value : 0, 0),
-                child: child,
-              ),
+            // ── Input Jawaban + Sprint 6 ShakeWidget ─────────────────────
+            ShakeWidget(
+              controller: _animCtrl,
               child: TextField(
                 controller: _answerController,
                 enabled: !(_hasSubmitted && _isCorrect),
                 textInputAction: TextInputAction.done,
                 onSubmitted: (_) => _submitAnswer(),
+                style: AppTextStyles.body.copyWith(
+                  color: colors.primaryText,
+                ),
                 decoration: InputDecoration(
                   hintText: 'Ketik jawabanmu di sini...',
-                  filled: true,
-                  fillColor: _hasSubmitted && !_isCorrect
-                      ? AppColors.hardBg
-                      : AppColors.bgLight,
+                  // Sprint 6: border warna dari tema (tidak hardcode)
                   enabledBorder: OutlineInputBorder(
                     borderRadius: AppRadius.mdAll,
                     borderSide: BorderSide(
@@ -415,71 +466,42 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen>
                           ? (_isCorrect
                               ? AppColors.successGreen
                               : AppColors.errorRed)
-                          : AppColors.borderGrey,
+                          : colors.borderColor,
+                      width: _hasSubmitted ? 1.5 : 1.0,
                     ),
                   ),
                   border: OutlineInputBorder(
                     borderRadius: AppRadius.mdAll,
                     borderSide: BorderSide(
-                      color: _hasSubmitted
-                          ? (_isCorrect
-                              ? AppColors.successGreen
-                              : AppColors.errorRed)
-                          : AppColors.borderGrey,
+                      color: colors.borderColor,
                     ),
                   ),
+                  filled: true,
+                  fillColor: _hasSubmitted && !_isCorrect
+                      ? colors.wrongAnswerBg
+                      : colors.inputBg,
                 ),
               ),
             ),
 
             const SizedBox(height: 12),
 
-            // ── Feedback Benar ────────────────────────────────────────────
-            if (_hasSubmitted && _isCorrect)
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppColors.easyBg,
-                  borderRadius: AppRadius.mdAll,
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.check_circle,
-                        color: AppColors.successGreen),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Benar! Progres disimpan.',
-                      style: AppTextStyles.bodySemibold
-                          .copyWith(color: AppColors.easyText),
-                    ),
-                  ],
-                ),
-              ),
+            // ── Sprint 6: Animasi Benar ──────────────────────────────────
+            CorrectAnswerCardAnimated(
+              controller: _animCtrl,
+              visible: _hasSubmitted && _isCorrect,
+              message: 'Progres disimpan.',
+            ),
 
-            // ── Feedback Salah ────────────────────────────────────────────
-            if (_hasSubmitted && !_isCorrect)
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppColors.hardBg,
-                  borderRadius: AppRadius.mdAll,
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.cancel, color: AppColors.errorRed),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Jawaban salah, coba lagi.',
-                      style: AppTextStyles.bodySemibold
-                          .copyWith(color: AppColors.hardText),
-                    ),
-                  ],
-                ),
-              ),
+            // ── Sprint 6: Animasi Salah ──────────────────────────────────
+            WrongAnswerBanner(
+              controller: _animCtrl,
+              visible: _hasSubmitted && !_isCorrect,
+            ),
 
             const SizedBox(height: 20),
 
-            // ── Tombol Kirim / Kembali ────────────────────────────────────
+            // ── Tombol Submit / Kembali ──────────────────────────────────
             SizedBox(
               width: double.infinity,
               height: 50,

@@ -1,5 +1,6 @@
 // lib/main.dart
 // Updated Sprint 4 — Integrasi menyeluruh dengan penanganan Error, Routing, & SyncQueue
+// Sprint 5 UPDATE — tambah route admin: kelola user & kelola soal
 
 import 'package:banksos/core/diagnostics/master_backend_suite.dart';
 import 'package:flutter/material.dart';
@@ -25,7 +26,10 @@ import 'features/dashboard/screens/dashboard_reviewer_screen.dart';
 import 'features/dashboard/screens/dashboard_admin_screen.dart';
 import 'features/question/screens/bank_soal_screen.dart';
 
-// Sprint 4 Screens
+// Bank Soal
+import 'features/question/screens/bank_soal_screen.dart';
+
+// Sprint 4
 import 'features/kontribusi/screens/kontribusi_screen.dart';
 import 'features/kontribusi/screens/submit_soal_screen.dart';
 import 'features/review/screens/review_queue_screen.dart';
@@ -35,6 +39,9 @@ import 'features/admin/screens/admin_user_management_screen.dart';
 import 'features/admin/screens/admin_question_management_screen.dart';
 import 'features/bookmarks/screens/bookmarks_screen.dart';
 import 'features/riwayat/screens/riwayat_screen.dart';
+// Sprint 5 — Panel Admin (Revaldi: RBAC guard)
+import 'features/admin/screens/admin_kelola_user_screen.dart';
+import 'features/admin/screens/admin_kelola_soal_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -105,7 +112,7 @@ class BanksosApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.system, // ikuti preferensi sistem Android
+      themeMode: ThemeMode.system,
       home: const LoginScreen(),
       routes: {
         AppRoutes.login:              (_) => const LoginScreen(),
@@ -118,7 +125,6 @@ class BanksosApp extends StatelessWidget {
         AppRoutes.questionDetail:     (_) => const _PlaceholderScreen(title: 'Question Detail'),
         AppRoutes.bookmarks:          (_) => const _PlaceholderScreen(title: 'Bookmark'),
         AppRoutes.riwayat:            (_) => const _PlaceholderScreen(title: 'Riwayat'),
-        
         // Sprint 4
         AppRoutes.kontribusi:         (_) => const KontribusiScreen(),
         AppRoutes.reviewQueue:        (_) => const ReviewQueueScreen(),
@@ -127,6 +133,9 @@ class BanksosApp extends StatelessWidget {
         // Sprint 5 - Admin routes
         AppRoutes.adminUserManagement:     (_) => const AdminUserManagementScreen(),
         AppRoutes.adminQuestionManagement: (_) => const AdminQuestionManagementScreen(),
+        // Sprint 5 — Panel Admin (guard di controller level, Revaldi)
+        AppRoutes.adminKelolaUser:    (_) => const AdminKelolaUserScreen(),
+        AppRoutes.adminKelolasoal:   (_) => const AdminKelolasoalScreen(),
       },
     );
   }
@@ -143,7 +152,7 @@ class _PlaceholderScreen extends StatelessWidget {
       appBar: AppBar(title: Text(title)),
       body: Center(
         child: Text(
-          '$title\n(Sedang Dalam Pengembangan)',
+          '$title\n(Coming Soon)',
           textAlign: TextAlign.center,
           style: const TextStyle(color: Colors.grey, fontSize: 16),
         ),

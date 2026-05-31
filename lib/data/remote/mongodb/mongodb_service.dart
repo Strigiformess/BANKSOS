@@ -22,7 +22,9 @@ class MongoDBService {
       _db = await Db.create(uri);
       
       // 2. Coba buka koneksi
-      await _db!.open();
+      await _db!.open().timeout(
+        const Duration(seconds: 10),
+      );
       _isConnected = true;
       print('MongoDB terhubung: ${DbConfig.dbName}');
     } catch (e) {

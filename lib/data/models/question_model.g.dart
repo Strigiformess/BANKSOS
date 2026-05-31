@@ -31,7 +31,6 @@ class QuestionModelAdapter extends TypeAdapter<QuestionModel> {
       solveCount: fields[11] as int,
       createdAt: fields[12] as DateTime,
       updatedAt: fields[13] as DateTime,
-      imageUrl: fields[14] as String?,
     );
   }
 
@@ -66,9 +65,7 @@ class QuestionModelAdapter extends TypeAdapter<QuestionModel> {
       ..writeByte(12)
       ..write(obj.createdAt)
       ..writeByte(13)
-      ..write(obj.updatedAt)
-      ..writeByte(14)
-      ..write(obj.imageUrl);
+      ..write(obj.updatedAt);
   }
 
   @override
