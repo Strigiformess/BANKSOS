@@ -15,7 +15,7 @@ class DashboardReviewerScreen extends StatelessWidget {
     final session = SessionService.instance;
     
     // TODO: Hubungkan ini ke State Management (misal: review_controller) untuk update real-time
-    final int pendingCount = 3; 
+    const int pendingCount = 3; 
 
     return Scaffold(
       appBar: AppBar(

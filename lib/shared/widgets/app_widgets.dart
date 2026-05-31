@@ -489,7 +489,7 @@ class AppMenuCard extends StatelessWidget {
               if (badge != null)
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                  decoration: BoxDecoration(
+                  decoration: const BoxDecoration(
                     color: AppColors.errorRed,
                     borderRadius: AppRadius.pill,
                   ),

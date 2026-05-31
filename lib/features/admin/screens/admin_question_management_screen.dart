@@ -15,7 +15,6 @@ import 'package:mongo_dart/mongo_dart.dart' show ObjectId, where, modify;
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/guard/rbac_guard.dart';
-import '../../../core/services/session_service.dart';
 import '../../../core/services/connectivity_service.dart';
 import '../../../data/models/question_model.dart';
 import '../../../data/models/category_model.dart';
@@ -48,7 +47,7 @@ class _AdminQuestionManagementScreenState
 
   QuestionStatusFilter _statusFilter = QuestionStatusFilter.all;
   String? _categoryIdFilter;
-  DifficultyFilter _difficultyFilter = DifficultyFilter.all;
+  final DifficultyFilter _difficultyFilter = DifficultyFilter.all;
 
   bool _isLoading = true;
   bool _isProcessing = false;
@@ -445,7 +444,7 @@ class _AdminQuestionManagementScreenState
                               child: DataTable(
                                 columnSpacing: 12,
                                 horizontalMargin: 16,
-                                headingRowColor: MaterialStateColor.resolveWith(
+                                headingRowColor: WidgetStateColor.resolveWith(
                                   (_) => AppColors.bgWhite,
                                 ),
                                 columns: const [

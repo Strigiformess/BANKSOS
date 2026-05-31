@@ -1,16 +1,10 @@
-import 'package:flutter/foundation.dart';
 import '../../../data/remote/mongodb/mongodb_service.dart';
 import '../../../data/local/hive/hive_service.dart';
-import '../../features/auth/data/auth_remote.dart';
-import '../../data/remote/question_remote.dart';
-import '../../data/remote/category_remote.dart';
-import '../../data/remote/review_remote.dart';
-import '../../data/remote/bookmark_remote.dart';
-import '../../data/remote/progress_remote.dart';
+import '../../../data/remote/review_remote.dart';
 
 class MasterBackendSuite {
   static Future<void> runMasterSuite() async {
-    print("\n" + "🔥" * 30);
+    print("\n${"🔥" * 30}");
     print("🚀 MEMULAI MASTER INTEGRATION SUITE (All Modules)");
     print("🔥" * 30);
 
@@ -58,7 +52,7 @@ class MasterBackendSuite {
     });
 
     // 3. SUMMARY
-    print("\n" + "=" * 40);
+    print("\n${"=" * 40}");
     print("📊 HASIL AKHIR MASTER SUITE");
     print("=" * 40);
     results.forEach((key, value) {

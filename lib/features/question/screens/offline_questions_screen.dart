@@ -27,12 +27,12 @@ class OfflineQuestionsScreen extends ConsumerWidget {
       body: questionsAsync.when(
         data: (questions) {
           if (questions.isEmpty) {
-            return Center(
+            return const Center(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
+                padding: EdgeInsets.symmetric(horizontal: 24),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
-                  children: const [
+                  children: [
                     Icon(Icons.wifi_off_outlined,
                         size: 64, color: AppColors.primaryBlue),
                     SizedBox(height: 16),
