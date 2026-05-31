@@ -551,7 +551,7 @@ class _DashboardMahasiswaScreenState
     final menus = [
       {'icon': Icons.menu_book_rounded, 'label': 'Bank Soal', 'route': AppRoutes.bankSoal},
       {'icon': Icons.bookmark_rounded, 'label': 'Bookmark', 'route': AppRoutes.bookmarks},
-      {'icon': Icons.bar_chart_rounded, 'label': 'Statistik', 'route': null},
+      {'icon': Icons.bar_chart_rounded, 'label': 'Statistik', 'route': AppRoutes.statistik},
       {'icon': Icons.wifi_off_rounded, 'label': 'Offline', 'route': AppRoutes.offlineSoal},
     ];
 
@@ -569,7 +569,6 @@ class _DashboardMahasiswaScreenState
             final i = entry.key;
             final m = entry.value;
             final route = m['route'] as String?;
-            final isFirst = i == 0; // Item pertama di-highlight biru seperti Figma
 
             return GestureDetector(
               onTap: route != null ? () => Navigator.pushNamed(context, route) : null,
@@ -579,12 +578,11 @@ class _DashboardMahasiswaScreenState
                     width: 56,
                     height: 56,
                     decoration: BoxDecoration(
-                      color: isFirst ? AppColors.primaryBlue : AppColors.bgWhite,
+                      color: AppColors.bgWhite,
                       borderRadius: AppRadius.lgAll,
                       boxShadow: [
-                        if (!isFirst)
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.03),
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.03),
                             blurRadius: 8,
                             offset: const Offset(0, 4),
                           ),
@@ -592,7 +590,7 @@ class _DashboardMahasiswaScreenState
                     ),
                     child: Icon(
                       m['icon'] as IconData,
-                      color: isFirst ? Colors.white : AppColors.primaryBlue,
+                      color: AppColors.primaryBlue,
                       size: 26,
                     ),
                   ),
@@ -981,7 +979,7 @@ class _DashboardMahasiswaScreenState
       {'icon': Icons.home_filled, 'label': 'Home'},
       {'icon': Icons.menu_book_rounded, 'label': 'Bank'},
       {'icon': Icons.add, 'label': 'Upload', 'isCenter': true},
-      {'icon': Icons.emoji_events_rounded, 'label': 'Rewards'},
+      {'icon': Icons.bar_chart_rounded, 'label': 'Stats'},
       {'icon': Icons.person_rounded, 'label': 'Profile'},
     ];
 
@@ -1011,6 +1009,7 @@ class _DashboardMahasiswaScreenState
               setState(() => _selectedNavIndex = i);
               if (i == 1) Navigator.pushNamed(context, AppRoutes.bankSoal);
               if (i == 2) Navigator.pushNamed(context, AppRoutes.kontribusi);
+              if (i == 3) Navigator.pushNamed(context, AppRoutes.statistik);
               if (i == 4) Navigator.pushNamed(context, AppRoutes.profile);
             },
             child: isSelected && !isCenter

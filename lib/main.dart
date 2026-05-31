@@ -47,6 +47,8 @@ import 'features/admin/screens/admin_user_management_screen.dart';
 import 'features/admin/screens/admin_question_management_screen.dart';
 import 'features/bookmarks/screens/bookmarks_screen.dart';
 import 'features/riwayat/screens/riwayat_screen.dart';
+import 'features/profile/screens/profile_screen.dart';
+import 'features/statistics/screens/statistics_screen.dart';
 
 import 'features/admin/screens/admin_kelola_user_screen.dart';
 import 'features/admin/screens/admin_kelola_soal_screen.dart';
@@ -199,6 +201,7 @@ class BanksosApp extends StatelessWidget {
         AppRoutes.dashboardAdmin:     (_) => const DashboardAdminScreen(),
         AppRoutes.bankSoal:           (_) => const BankSoalScreen(),
         AppRoutes.profile:            (_) => const ProfileScreen(),
+        AppRoutes.statistik:          (_) => const StatisticsScreen(),
         
         AppRoutes.offlineSoal:        (_) => const OfflineQuestionsScreen(),
 
