@@ -6,12 +6,17 @@
 class AppRoutes {
   AppRoutes._();
 
+  // Auth
   static const String splash             = '/splash';
   static const String login              = '/login';
   static const String register           = '/register';
+
+  // Dashboard
   static const String dashboardMahasiswa = '/dashboard-mahasiswa';
   static const String dashboardReviewer  = '/dashboard-reviewer';
   static const String dashboardAdmin     = '/dashboard-admin';
+  
+  // Menu Umum
   static const String bankSoal           = '/bank-soal';
   static const String kerjakanSoal       = '/kerjakan-soal';
   static const String offlineSoal        = '/offline-soal';
@@ -22,6 +27,8 @@ class AppRoutes {
   static const String bookmarks          = '/bookmarks';
   static const String riwayat            = '/riwayat';
   static const String profile            = '/profile';
+  static const String statistik          = '/statistik';   // ← TAMBAHKAN INI
+
 
   // Sprint 5 — Panel Admin
   static const String adminKelolaUser    = '/admin/kelola-user';
