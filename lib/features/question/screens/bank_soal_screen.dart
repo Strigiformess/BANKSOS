@@ -307,7 +307,7 @@ class _BankSoalScreenState extends ConsumerState<BankSoalScreen> {
                 decoration: BoxDecoration(
                   border: Border(
                     right: BorderSide(
-                      color: AppColors.borderGrey.withOpacity(0.5),
+                      color: AppColors.borderGrey.withValues(alpha: 0.5),
                     ),
                   ),
                   color: AppColors.bgWhite,
@@ -371,7 +371,7 @@ class _BankSoalScreenState extends ConsumerState<BankSoalScreen> {
                                   },
                                 )
                               : null,
-                          border: OutlineInputBorder(
+                          border: const OutlineInputBorder(
                             borderRadius: AppRadius.mdAll,
                           ),
                           contentPadding: const EdgeInsets.symmetric(
@@ -458,7 +458,7 @@ class _BankSoalScreenState extends ConsumerState<BankSoalScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
           color: isSelected
-              ? AppColors.primaryBlue.withOpacity(0.08)
+              ? AppColors.primaryBlue.withValues(alpha: 0.08)
               : Colors.transparent,
           border: isSelected
               ? const Border(
@@ -548,7 +548,7 @@ class _BankSoalScreenState extends ConsumerState<BankSoalScreen> {
             const Icon(Icons.cloud_off_outlined,
                 size: 48, color: AppColors.errorRed),
             const SizedBox(height: 12),
-            Text(
+            const Text(
               "Gagal memuat data dari server.",
               style: AppTextStyles.small,
               textAlign: TextAlign.center,
@@ -608,7 +608,7 @@ class _QuestionCard extends StatelessWidget {
                 children: [
                   Container(
                     width: 24, height: 24,
-                    decoration: BoxDecoration(color: AppColors.lightBlue, borderRadius: AppRadius.smAll),
+                    decoration: const BoxDecoration(color: AppColors.lightBlue, borderRadius: AppRadius.smAll),
                     alignment: Alignment.center,
                     child: Text('$nomor', style: AppTextStyles.captionBold.copyWith(color: AppColors.primaryBlue)),
                   ),
@@ -647,7 +647,7 @@ class _QuestionCard extends StatelessWidget {
                           icon: Icon(
                             isBookmarked ? Icons.bookmark : Icons.bookmark_border_outlined,
                             size: 20,
-                            color: isBookmarked ? Colors.amberAccent : AppColors.textGrey.withOpacity(0.5),
+                            color: isBookmarked ? Colors.amberAccent : AppColors.textGrey.withValues(alpha: 0.5),
                           ),
                           padding: EdgeInsets.zero,
                           constraints: const BoxConstraints(),

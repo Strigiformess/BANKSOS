@@ -4,7 +4,7 @@ import '../../../data/remote/review_remote.dart';
 
 class MasterBackendSuite {
   static Future<void> runMasterSuite() async {
-    print("\n" + "🔥" * 30);
+    print("\n${"🔥" * 30}");
     print("🚀 MEMULAI MASTER INTEGRATION SUITE (All Modules)");
     print("🔥" * 30);
 
@@ -52,7 +52,7 @@ class MasterBackendSuite {
     });
 
     // 3. SUMMARY
-    print("\n" + "=" * 40);
+    print("\n${"=" * 40}");
     print("📊 HASIL AKHIR MASTER SUITE");
     print("=" * 40);
     results.forEach((key, value) {

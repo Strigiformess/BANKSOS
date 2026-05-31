@@ -461,7 +461,7 @@ class _UserCard extends StatelessWidget {
                 const Spacer(),
 
                 if (isSelf)
-                  Text('(Akun saya)',
+                  const Text('(Akun saya)',
                       style: AppTextStyles.caption)
                 else if (isProcessing)
                   const SizedBox(

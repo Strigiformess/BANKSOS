@@ -15,8 +15,6 @@ import '../../../routes/app_routes.dart';
 // ─── TAMBAHAN IMPORT ────────────────────────────────────────────────────────
 import '../../../data/local/hive/hive_service.dart';
 import '../../../data/models/question_model.dart';
-import '../../../features/riwayat/screens/riwayat_screen.dart';
-import '../../../features/bookmarks/screens/bookmarks_screen.dart';
 
 class DashboardMahasiswaScreen extends ConsumerStatefulWidget {
   const DashboardMahasiswaScreen({super.key});
@@ -285,7 +283,7 @@ class _DashboardMahasiswaScreenState
               value: 0.75,
               minHeight: 8,
               backgroundColor: Colors.white.withOpacity(0.2),
-              valueColor: AlwaysStoppedAnimation<Color>(AppColors.successGreen),
+              valueColor: const AlwaysStoppedAnimation<Color>(AppColors.successGreen),
             ),
           ),
         ],
@@ -760,7 +758,7 @@ class _DashboardMahasiswaScreenState
                           Container(
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
+                            decoration: const BoxDecoration(
                               color: AppColors.bgBlue,
                               borderRadius: AppRadius.pill,
                             ),
@@ -842,7 +840,7 @@ class _DashboardMahasiswaScreenState
                   Container(
                     width: 40,
                     height: 40,
-                    decoration: BoxDecoration(
+                    decoration: const BoxDecoration(
                       color: AppColors.bgBlue,
                       borderRadius: AppRadius.mdAll,
                     ),
@@ -1067,7 +1065,7 @@ class _DashboardMahasiswaScreenState
                 ? Container(
                     padding: const EdgeInsets.symmetric(
                         horizontal: AppSpacings.lg, vertical: AppSpacings.sm),
-                    decoration: BoxDecoration(
+                    decoration: const BoxDecoration(
                       color: AppColors.primaryBlue,
                       borderRadius: AppRadius.pill,
                     ),

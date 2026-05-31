@@ -47,7 +47,7 @@ class _AdminQuestionManagementScreenState
 
   QuestionStatusFilter _statusFilter = QuestionStatusFilter.all;
   String? _categoryIdFilter;
-  DifficultyFilter _difficultyFilter = DifficultyFilter.all;
+  final DifficultyFilter _difficultyFilter = DifficultyFilter.all;
 
   bool _isLoading = true;
   bool _isProcessing = false;
@@ -444,7 +444,7 @@ class _AdminQuestionManagementScreenState
                               child: DataTable(
                                 columnSpacing: 12,
                                 horizontalMargin: 16,
-                                headingRowColor: MaterialStateColor.resolveWith(
+                                headingRowColor: WidgetStateColor.resolveWith(
                                   (_) => AppColors.bgWhite,
                                 ),
                                 columns: const [

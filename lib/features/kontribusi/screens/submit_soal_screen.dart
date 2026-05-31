@@ -311,7 +311,7 @@ class _SubmitSoalScreenState extends ConsumerState<SubmitSoalScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(
                     horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   color: AppColors.bgBlue,
                   borderRadius: AppRadius.mdAll,
                 ),
@@ -383,7 +383,7 @@ class _SubmitSoalScreenState extends ConsumerState<SubmitSoalScreen> {
                       width: 28,
                       height: 28,
                       margin: const EdgeInsets.only(top: 12, right: 8),
-                      decoration: BoxDecoration(
+                      decoration: const BoxDecoration(
                         color: AppColors.lightBlue,
                         shape: BoxShape.circle,
                       ),
@@ -502,7 +502,7 @@ class _SubmitSoalScreenState extends ConsumerState<SubmitSoalScreen> {
     }
 
     return DropdownButtonFormField<CategoryModel>(
-      value: _selectedKategori,
+      initialValue: _selectedKategori,
       decoration: const InputDecoration(
         hintText: 'Pilih mata kuliah',
         prefixIcon: Icon(

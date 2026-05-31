@@ -10,7 +10,6 @@ import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import '../../../data/models/user_model.dart';
 import '../../../data/models/user_progress_model.dart';
-import '../../../data/local/hive/hive_service.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -212,7 +211,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 bottom: -10,
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                  decoration: BoxDecoration(
+                  decoration: const BoxDecoration(
                     color: AppColors.primaryBlue,
                     borderRadius: AppRadius.pill,
                   ),
@@ -274,7 +273,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
           const SizedBox(width: 12),
-          Expanded(
+          const Expanded(
             child: _StatCard(
               icon: Icons.local_fire_department_outlined,
               iconColor: AppColors.warningYellow,
@@ -295,7 +294,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Settings', style: AppTextStyles.h2),
+          const Text('Settings', style: AppTextStyles.h2),
           const SizedBox(height: 12),
           _SettingsItem(
             icon: Icons.manage_accounts_outlined,
