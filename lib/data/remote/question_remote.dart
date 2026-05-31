@@ -15,6 +15,15 @@ class QuestionRemote {
       where.eq('kategori_id', ObjectId.parse(id)).eq('status', 'published')
     ).toList();
   }
+  
+  /// Mengambil SEMUA daftar soal tanpa filter kategori (Untuk Auto-Download)
+  Future<List<Map<String, dynamic>>> getPublishedQuestions() async {
+    if (!_db.isConnected) throw Exception('Koneksi internet diperlukan.');
+    
+    return await _db.questions.find(
+      where.eq('status', 'published')
+    ).toList();
+  }
 
   /// SUBMIT SOAL (Logika Backend Terpusat)
   Future<void> submitQuestion(Map<String, dynamic> data) async {
