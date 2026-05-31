@@ -1,5 +1,5 @@
 import 'package:mongo_dart/mongo_dart.dart';
-import '../../../data/remote/mongodb/mongodb_service.dart';
+import 'mongodb/mongodb_service.dart';
 
 class CategoryRemote {
   final _db = MongoDBService.instance;

@@ -115,11 +115,14 @@ class OfflineQuestionService {
       }
 
       // Filter by kesulitan jika diminta
-      final filtered = tingkatKesulitan != null
-          ? questions
-              .where((q) => q.tingkatKesulitan == tingkatKesulitan)
-              .toList()
-          : questions;
+      final List<QuestionModel> filtered;
+      if (tingkatKesulitan != null) {
+        filtered = questions
+              .where((q) => q.tingkatKesulitan.name == tingkatKesulitan)
+              .toList();
+      } else {
+        filtered = questions;
+      }
 
       return QuestionLoadResult(
         questions: filtered,

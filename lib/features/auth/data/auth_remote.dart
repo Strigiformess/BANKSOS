@@ -1,3 +1,4 @@
+// lib/features/auth/data/auth_remote.dart
 import 'package:bcrypt/bcrypt.dart';
 import 'package:mongo_dart/mongo_dart.dart';
 
@@ -10,7 +11,6 @@ class AuthRemote {
   /// LOGIN USER
   /// Cari user berdasarkan email + verifikasi bcrypt.
   Future<UserModel> loginUser(String email, String password) async {
-    // Pastikan MongoDB sudah connect (Validasi Offline)
     if (!_db.isConnected) {
       throw Exception('Tidak dapat masuk. Pastikan Anda terhubung ke internet.');
     }
@@ -18,15 +18,14 @@ class AuthRemote {
     final col = _db.users;
     final normalizedEmail = email.toLowerCase().trim();
 
-    // 1. Cari user berdasarkan email saja
+    // 1. Cari user berdasarkan email
     final result = await col.findOne(where.eq('email', normalizedEmail));
 
-    // Jika user tidak ditemukan
     if (result == null) {
       throw Exception('Email atau kata sandi salah.');
     }
 
-    // 2. Verifikasi Password Hash menggunakan Bcrypt
+    // 2. Verifikasi Password menggunakan Bcrypt
     final String storedHash = result['password_hash'] as String;
     final bool isMatch = BCrypt.checkpw(password, storedHash);
     
@@ -34,10 +33,8 @@ class AuthRemote {
       throw Exception('Email atau kata sandi salah.');
     }
 
-    // Convert MongoDB document → UserModel
     final user = UserModel.fromMap(result);
 
-    // Cek status akun
     if (user.status == UserStatus.inactive) {
       throw Exception('Akun kamu dinonaktifkan. Hubungi admin.');
     }
@@ -53,7 +50,6 @@ class AuthRemote {
     required String email,
     required String password,
   }) async {
-    // Pastikan MongoDB sudah connect (Validasi Offline)
     if (!_db.isConnected) {
       throw Exception('Pendaftaran membutuhkan koneksi internet.');
     }
@@ -61,13 +57,13 @@ class AuthRemote {
     final col = _db.users;
     final normalizedEmail = email.toLowerCase().trim();
 
-    // 1. Cek apakah email sudah dipakai
+    // 1. Cek duplikasi email
     final existing = await col.findOne(where.eq('email', normalizedEmail));
     if (existing != null) {
       throw Exception('Email sudah terdaftar. Silakan login.');
     }
 
-    // 2. Hash password menggunakan Bcrypt (Sesuai SRS Document)
+    // 2. Hash password menggunakan Bcrypt
     final String hashedPw = BCrypt.hashpw(password, BCrypt.gensalt());
 
     final now = DateTime.now();
@@ -92,7 +88,7 @@ class AuthRemote {
       throw Exception('Gagal mendaftar. Coba beberapa saat lagi.');
     }
 
-    // 5. Kembalikan data yang baru di-insert sebagai UserModel
+    // 5. Kembalikan data yang baru di-insert
     return UserModel.fromMap(doc);
   }
 }

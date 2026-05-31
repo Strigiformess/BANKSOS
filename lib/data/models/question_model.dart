@@ -61,7 +61,7 @@ class QuestionModel extends HiveObject {
 
   /// Nama kategori mata kuliah (disimpan lokal agar tidak perlu
   /// join saat akses offline).
-  @HiveField(4)
+  @HiveField(4, defaultValue: '')
   final String kategoriNama;
 
   /// Tingkat kesulitan: easy | medium | hard.
@@ -225,11 +225,11 @@ class QuestionModel extends HiveObject {
   }
 
   static String _parseObjectId(dynamic value) {
-  if (value == null) return '';
-  final raw = value.toString();
-  // Kalau formatnya ObjectId("abc123..."), ambil isinya saja
-  final match = RegExp(r'ObjectId\("([a-f0-9]{24})"\)').firstMatch(raw);
-  if (match != null) return match.group(1)!;
-  return raw; // sudah string biasa, langsung pakai
-} 
+    if (value == null) return '';
+    final raw = value.toString();
+    // Kalau formatnya ObjectId("abc123..."), ambil isinya saja
+    final match = RegExp(r'ObjectId\("([a-f0-9]{24})"\)').firstMatch(raw);
+    if (match != null) return match.group(1)!;
+    return raw; // sudah string biasa, langsung pakai
+  }
 }

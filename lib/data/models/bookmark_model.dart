@@ -8,7 +8,7 @@ part 'bookmark_model.g.dart';
 ///
 /// Pengguna dapat mem-bookmark soal yang ingin dikerjakan
 /// atau dipelajari kembali di kemudian hari.
-@HiveType(typeId: 4)
+@HiveType(typeId: 5)
 class BookmarkModel extends HiveObject {
   /// ID unik bookmark dari MongoDB (_id).
   @HiveField(0)

@@ -552,7 +552,7 @@ class _DashboardMahasiswaScreenState
       {'icon': Icons.menu_book_rounded, 'label': 'Bank Soal', 'route': AppRoutes.bankSoal},
       {'icon': Icons.bookmark_rounded, 'label': 'Bookmark', 'route': AppRoutes.bookmarks},
       {'icon': Icons.bar_chart_rounded, 'label': 'Statistik', 'route': null},
-      {'icon': Icons.wifi_off_rounded, 'label': 'Offline', 'route': null},
+      {'icon': Icons.wifi_off_rounded, 'label': 'Offline', 'route': AppRoutes.offlineSoal},
     ];
 
     return Column(

@@ -1,5 +1,6 @@
 // lib/core/services/session_service.dart
 
+import 'package:bcrypt/bcrypt.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 import '../../core/constants/hive_boxes.dart';
@@ -19,13 +20,16 @@ class SessionService {
 
   // ─── Key konstanta ───────────────────────────────────────────────────────
 
-  static const String _keyUserId  = 'userId';
-  static const String _keyEmail   = 'email';
-  static const String _keyNama    = 'nama';
-  static const String _keyNim     = 'nim';
-  static const String _keyRole    = 'role';
-  static const String _keyStatus  = 'status';
-  static const String _keyLoginAt = 'loginAt';
+  static const String _keyUserId        = 'userId';
+  static const String _keyEmail         = 'email';
+  static const String _keyNama          = 'nama';
+  static const String _keyNim           = 'nim';
+  static const String _keyRole          = 'role';
+  static const String _keyStatus        = 'status';
+  static const String _keyLoginAt       = 'loginAt';
+  static const String _keyOfflineToken  = 'offlineToken';
+  static const String _keyTokenExpiry   = 'offlineTokenExpiry';
+  static const String _keyPasswordHash  = 'passwordHash';
 
   Box get _box => Hive.box(HiveBoxes.session);
 
@@ -39,9 +43,11 @@ class SessionService {
     String? nim,
     required String role,
     required String status,
-    
+    String? offlineToken,
+    DateTime? offlineTokenExpiry,
+    String? passwordHash,
   }) async {
-    await _box.putAll({
+    final data = {
       _keyUserId  : userId,
       _keyEmail   : email,
       _keyNama    : nama,
@@ -49,7 +55,19 @@ class SessionService {
       _keyRole    : role,
       _keyStatus  : status,
       _keyLoginAt : DateTime.now().toIso8601String(),
-    });
+    };
+
+    if (offlineToken != null) {
+      data[_keyOfflineToken] = offlineToken;
+    }
+    if (offlineTokenExpiry != null) {
+      data[_keyTokenExpiry] = offlineTokenExpiry.toIso8601String();
+    }
+    if (passwordHash != null) {
+      data[_keyPasswordHash] = passwordHash;
+    }
+
+    await _box.putAll(data);
   }
 
   // ─── Baca sesi ───────────────────────────────────────────────────────────
@@ -67,15 +85,38 @@ class SessionService {
 
   /// Mengembalikan seluruh data sesi sebagai Map.
   /// Berguna untuk di-pass ke controller atau provider.
+  String? get offlineToken => _box.get(_keyOfflineToken) as String?;
+
+  DateTime? get offlineTokenExpiry {
+    final value = _box.get(_keyTokenExpiry) as String?;
+    if (value == null) return null;
+    return DateTime.tryParse(value);
+  }
+
+  String? get passwordHash => _box.get(_keyPasswordHash) as String?;
+
+  bool get isOfflineTokenValid {
+    final expiry = offlineTokenExpiry;
+    return expiry != null && DateTime.now().isBefore(expiry);
+  }
+
+  bool verifyOfflinePassword(String password) {
+    final hash = passwordHash;
+    if (hash == null || hash.isEmpty) return false;
+    return BCrypt.checkpw(password, hash);
+  }
+
   Map<String, String?> getSessionData() {
     return {
-      'userId'  : userId,
-      'email'   : email,
-      'nama'    : nama,
-      'nim'     : nim,
-      'role'    : role,
-      'status'  : status,
-      'loginAt' : loginAt,
+      'userId'         : userId,
+      'email'          : email,
+      'nama'           : nama,
+      'nim'            : nim,
+      'role'           : role,
+      'status'         : status,
+      'loginAt'        : loginAt,
+      'offlineToken'   : offlineToken,
+      'tokenExpiry'    : offlineTokenExpiry?.toIso8601String(),
     };
   }
 
@@ -98,6 +139,9 @@ class SessionService {
       _keyRole,
       _keyStatus,
       _keyLoginAt,
+      _keyOfflineToken,
+      _keyTokenExpiry,
+      _keyPasswordHash,
     ]);
   }
 }

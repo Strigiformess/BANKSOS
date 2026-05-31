@@ -14,6 +14,7 @@ class AppRoutes {
   static const String dashboardAdmin     = '/dashboard-admin';
   static const String bankSoal           = '/bank-soal';
   static const String kerjakanSoal       = '/kerjakan-soal';
+  static const String offlineSoal        = '/offline-soal';
   static const String submitSoal         = '/submit-soal';
   static const String questionDetail     = '/question-detail';
   static const String kontribusi         = '/kontribusi';

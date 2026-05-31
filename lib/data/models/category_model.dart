@@ -1,4 +1,4 @@
-  import 'package:hive/hive.dart';
+import 'package:hive/hive.dart';
 
 part 'category_model.g.dart';
 
@@ -33,10 +33,10 @@ class CategoryModel extends HiveObject {
 
   factory CategoryModel.fromMap(Map<String, dynamic> map) {
     return CategoryModel(
-       id: _parseObjectId(map['_id']),
-    nama: map['nama'] ?? '',
-    deskripsi: map['deskripsi'] ?? '',
-    isActive: map['is_active'] ?? true,
+      id: _parseObjectId(map['_id']),
+      nama: map['nama'] ?? '',
+      deskripsi: map['deskripsi'] ?? '',
+      isActive: map['is_active'] ?? true,
     );
   }
 

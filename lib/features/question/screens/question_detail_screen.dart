@@ -2,30 +2,36 @@
 // Sprint 6 UPDATE — Revaldi (RP): Integrasi AnswerAnimationController
 // Update: Label Kesulitan & Bookmark dipindahkan ke dalam kartu pertanyaan sesuai mockup
 
+import 'package:banksos/features/question/repositories/bookmark_repository.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
+import 'package:hive_flutter/hive_flutter.dart'; // Tambahan untuk UI Reactive
 
 import '../../../core/services/connectivity_service.dart';
+import '../../../core/services/session_service.dart';
+import '../../../core/services/sync_service.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../data/local/hive/hive_service.dart';
+import '../../../data/models/bookmark_model.dart';
 import '../../../core/theme/app_theme_extensions.dart';
 import '../../../data/models/question_model.dart';
+import '../../../routes/app_routes.dart';
 import '../../../shared/widgets/app_widgets.dart';
-import '../repositories/bookmark_repository.dart';
 import '../repositories/progress_repository.dart';
 import '../services/answer_animation_service.dart';
 import '../services/hint_service.dart';
 
 class QuestionDetailScreen extends StatefulWidget {
   final QuestionModel question;
-  final BookmarkRepository? bookmarkRepository;
   final IProgressRepository? progressRepository;
 
   const QuestionDetailScreen({
     super.key,
     required this.question,
-    this.bookmarkRepository,
     this.progressRepository,
   });
+  
+  get bookmarkRepository => null;
 
   @override
   State<QuestionDetailScreen> createState() => _QuestionDetailScreenState();
@@ -277,6 +283,15 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen>
           ? colors.correctAnswerBg
           : colors.scaffoldBg,
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          tooltip: 'Kembali ke Home',
+          onPressed: () => Navigator.pushNamedAndRemoveUntil(
+            context,
+            AppRoutes.dashboardMahasiswa,
+            (route) => false,
+          ),
+        ),
         title: Text(
           widget.question.kategoriNama,
           style: AppTextStyles.appBarTitle.copyWith(fontSize: 16),
@@ -287,7 +302,7 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Banner offline
+            // Banner offline — KEBAL TERHADAP BUG KONEKSI
             StreamBuilder<ConnectivityResult>(
               stream: ConnectivityService.instance.onConnectivityChanged,
               builder: (context, snapshot) {
@@ -553,7 +568,11 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen>
               height: 50,
               child: ElevatedButton(
                 onPressed: _hasSubmitted && _isCorrect
-                    ? () => Navigator.pop(context)
+                    ? () => Navigator.pushNamedAndRemoveUntil(
+                          context,
+                          AppRoutes.dashboardMahasiswa,
+                          (route) => false,
+                        )
                     : (_isSavingProgress ? null : _submitAnswer),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: _hasSubmitted && _isCorrect
@@ -561,6 +580,9 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen>
                       : AppColors.primaryBlue,
                 ),
                 child: Text(
+                  _hasSubmitted && _isCorrect
+                      ? 'Kembali ke Home'
+                      : 'Kirim Jawaban',
                   _hasSubmitted && _isCorrect ? 'Kembali ke Bank Soal' : 'Submit Jawaban',
                   style: AppTextStyles.button,
                 ),
