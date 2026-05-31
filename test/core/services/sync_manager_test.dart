@@ -9,7 +9,6 @@ import 'package:banksos/core/constants/hive_boxes.dart';
 import 'package:banksos/core/services/sync_manager.dart';
 import 'package:banksos/data/models/sync_queue_model.dart';
 // INFO: Pastikan mengimport HiveService agar kita bisa mengontrol box-nya jika diperlukan
-import 'package:banksos/data/local/hive/hive_service.dart';
 
 const _testHivePath = 'test/hive_sync_test_db';
 

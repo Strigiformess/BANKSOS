@@ -33,6 +33,7 @@ class SyncService {
     final cleanUserId = _cleanId(userId);
     final cleanQuestionId = _cleanId(questionId);
 
+    // 1. Ambil data bookmark yang cocok di database lokal Hive
     final existingItems = hive.values.where((b) => 
         _cleanId(b.questionId) == cleanQuestionId && 
         _cleanId(b.userId) == cleanUserId).toList();
@@ -41,23 +42,43 @@ class SyncService {
     final isOnline = await ConnectivityService.instance.isOnline;
 
     if (isAlreadyBookmarked) {
-      // LOGIKA HAPUS BOOKMARK LAMA / BARU
+      // ─── LOGIKA HAPUS BOOKMARK ───────────────────────────────────────────
       final bookmark = existingItems.first;
       
-      // MENGGUNAKAN FUNGSI DELETE BAWAAN HIVEOBJECT (ANTI GAGAL)
+      // Hapus data dari Hive lokal terlebih dahulu
       await bookmark.delete();
       
+      // Buat item antrean untuk aksi hapus (remove)
+      final queueItem = SyncQueueModel(
+        id: _uuid.v4(),
+        type: SyncType.bookmark,
+        payload: {
+          'user_id': cleanUserId,
+          'question_id': cleanQuestionId,
+          'action': 'remove', // payload String untuk backend MongoDB
+        },
+        // Wajib diisi! Menggunakan Enum SyncAction untuk skema lokal
+        action: SyncAction.bookmarkRemove.name, 
+        createdAt: DateTime.now(),
+      );
+
       if (isOnline) {
         try {
           // await BookmarkRemote().removeBookmark(userId: cleanUserId, questionId: cleanQuestionId);
           debugPrint("✅ Bookmark dihapus dari Cloud");
         } catch (e) {
-          debugPrint("⚠️ Gagal hapus di Cloud: $e");
+          debugPrint("⚠️ Gagal hapus langsung di Cloud, masuk antrean: $e");
+          await queueBox.put(queueItem.id, queueItem);
         }
+      } else {
+        debugPrint("📴 Offline: Antrean hapus bookmark disimpan lokal");
+        await queueBox.put(queueItem.id, queueItem);
       }
-      return false; // Status sekarang: Dihapus
+      
+      return false; // Status saat ini: Sudah Dihapus (ikon kosong)
+
     } else {
-      // LOGIKA TAMBAH BOOKMARK
+      // ─── LOGIKA TAMBAH BOOKMARK ──────────────────────────────────────────
       final newId = _uuid.v4().replaceAll('-', '').substring(0, 24); 
       final bookmark = BookmarkModel(
         id: newId,
@@ -67,35 +88,38 @@ class SyncService {
         isSynced: isOnline,
       );
 
-      // Simpan ke memori UI lokal 
+      // Simpan data baru ke Hive lokal
       await hive.put(newId, bookmark);
+
+      // Buat item antrean untuk aksi tambah (add)
+      final queueItem = SyncQueueModel(
+        id: _uuid.v4(),
+        type: SyncType.bookmark,
+        payload: {
+          'user_id': cleanUserId,
+          'question_id': cleanQuestionId,
+          'action': 'add', 
+        },
+        // Wajib diisi! Menggunakan Enum SyncAction untuk skema lokal
+        action: SyncAction.bookmarkAdd.name, 
+        createdAt: DateTime.now(),
+      );
 
       if (isOnline) {
         try {
           // await BookmarkRemote().addBookmark(userId: cleanUserId, questionId: cleanQuestionId);
           debugPrint("✅ Bookmark sukses dikirim ke Cloud");
         } catch (e) {
-          await _queueForSync(bookmark, queueBox);
+          debugPrint("⚠️ Gagal kirim langsung ke Cloud, masuk antrean: $e");
+          await queueBox.put(queueItem.id, queueItem);
         }
       } else {
-        await _queueForSync(bookmark, queueBox);
+        debugPrint("📴 Offline: Antrean tambah bookmark disimpan lokal");
+        await queueBox.put(queueItem.id, queueItem);
       }
-      return true; // Status sekarang: Disimpan
+      
+      return true; // Status saat ini: Sukses Disimpan (ikon penuh)
     }
-  }
-
-  Future<void> _queueForSync(BookmarkModel bookmark, dynamic queueBox) async {
-    bookmark = bookmark.copyWith(isSynced: false);
-    await bookmark.save(); // Simpan perubahan status isSynced ke Hive
-
-    final queueItem = SyncQueueModel(
-      id: _uuid.v4(),
-      type: SyncType.bookmark,
-      payload: bookmark.toMap(),
-      createdAt: DateTime.now(),
-    );
-    await queueBox.put(queueItem.id, queueItem);
-    debugPrint("📥 Bookmark masuk antrean Offline (Queue ID: ${queueItem.id})");
   }
 
   // ─── 2. FASE LOKAL KE CLOUD (BACKGROUND WORKER) ────────────────────────────

@@ -11,7 +11,7 @@ import 'core/theme/app_theme.dart';
 import 'data/local/hive/hive_service.dart';
 import 'data/models/question_model.dart';
 import 'data/remote/mongodb/mongodb_service.dart';
-import 'features/auth/data/question_remote.dart';
+import 'data/remote/question_remote.dart';
 import 'core/services/connectivity_service.dart';
 import 'core/services/sync_service.dart';
 import 'core/services/sync_manager.dart';
@@ -105,9 +105,6 @@ Future<void> main() async {
   } catch (e) {
     debugPrint('⚠️ Auto-download questions failed: $e');
   }
-  await HiveService.init();
-  await MongoDBService.instance.init();
-  await ConnectivityService.instance.init();
 
   // Sprint 5/6: Mulai SyncManager — proses antrian offline saat app buka
   SyncManager.instance.startListening();
