@@ -579,7 +579,7 @@ class _AdminQuestionManagementScreenState
 
                                                   if (question.status !=
                                                       QuestionStatus
-                                                          .archived) {
+                                                            .archived) {
                                                     items.add(
                                                       const PopupMenuItem(
                                                         value: 'archive',

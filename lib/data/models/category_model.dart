@@ -5,7 +5,7 @@ part 'category_model.g.dart';
 /// Model kategori mata kuliah.
 /// Berkorespondensi dengan collection "categories" di MongoDB
 /// dan HiveBox "categories_box" untuk akses offline.
-@HiveType(typeId: 4) // <--- UBAH DI SINI: Dari 2 menjadi 4
+@HiveType(typeId: 7)
 class CategoryModel extends HiveObject {
   /// ID unik kategori dari MongoDB (_id).
   @HiveField(0)

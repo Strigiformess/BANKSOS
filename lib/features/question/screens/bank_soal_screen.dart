@@ -15,27 +15,42 @@ import '../../../data/models/question_model.dart';
 import '../../../data/models/category_model.dart';
 import '../../../data/models/bookmark_model.dart';
 import '../../../data/local/hive/hive_service.dart';
-import '../../../data/remote/category_remote.dart';
-import '../../../data/remote/question_remote.dart';
+import '../../../features/auth/data/category_remote.dart';
+import '../../../features/auth/data/question_remote.dart';
+import '../../../routes/app_routes.dart';
 import '../../question/screens/question_detail_screen.dart';
 
-// ─── Providers ────────────────────────────────────────────────────────────────
+// ─── Providers 
 
 final categoryProvider = FutureProvider<List<CategoryModel>>((ref) async {
   final hive = HiveService.instance.categoriesBox;
+  
+  // 1. Jika ada data lokal, langsung pakai
   if (hive.isNotEmpty) {
     return hive.values.where((c) => c.isActive).toList();
   }
 
+  // 2. Cek koneksi internet
   final isOnline = await ConnectivityService.instance.isOnline;
   if (!isOnline) return [];
 
-  final rawList = await CategoryRemote().getActiveCategories();
-  final categories = rawList.map((m) => CategoryModel.fromMap(m)).toList();
-  for (final cat in categories) {
-    await hive.put(cat.id, cat);
+  // 3. Ambil dari remote dengan try-catch agar tidak crash jika DB offline
+  try {
+    final rawList = await CategoryRemote().getActiveCategories();
+    final categories = rawList.map((m) => CategoryModel.fromMap(m)).toList();
+    
+    for (final cat in categories) {
+      await hive.put(cat.id, cat);
+    }
+    return categories;
+  } catch (e) {
+    // Log error untuk debugging internal
+    debugPrint('Error mengambil kategori dari remote: $e');
+    
+    // Alih-alih membiarkan aplikasi crash/error screen, 
+    // kembalikan list kosong atau lempar pesan yang lebih spesifik
+    return []; 
   }
-  return categories;
 });
 
 final selectedCategoryIdProvider = StateProvider<String?>((ref) => null);
@@ -45,10 +60,20 @@ final questionProvider =
   final categoryId = ref.watch(selectedCategoryIdProvider);
   final hive = HiveService.instance.questionsBox;
 
-  List<QuestionModel> all = hive.values.toList();
+  final allLocal = hive.values.toList();
+  final isOnline = await ConnectivityService.instance.isOnline;
 
-  if (all.isEmpty && categoryId != null) {
-    final isOnline = await ConnectivityService.instance.isOnline;
+  if (categoryId != null) {
+    final localForCategory = allLocal
+        .where((q) => q.kategoriId == categoryId)
+        .toList();
+
+    if (localForCategory.isNotEmpty) {
+      return localForCategory
+          .where((q) => q.status == QuestionStatus.published)
+          .toList();
+    }
+
     if (isOnline) {
       final rawList = await QuestionRemote()
           .getPublishedQuestionsByCategory(categoryId);
@@ -56,19 +81,17 @@ final questionProvider =
       for (final q in fetched) {
         await hive.put(q.id, q);
       }
-      all = fetched;
+      return fetched
+          .where((q) => q.status == QuestionStatus.published)
+          .toList();
     }
+
+    return [];
   }
 
-  if (categoryId != null) {
-    all = all
-        .where((q) =>
-            q.kategoriId == categoryId &&
-            q.status == QuestionStatus.published)
-        .toList();
-  } else {
-    all = all.where((q) => q.status == QuestionStatus.published).toList();
-  }
+  final all = allLocal
+      .where((q) => q.status == QuestionStatus.published)
+      .toList();
 
   return all;
 });
@@ -97,13 +120,14 @@ class _BankSoalScreenState extends ConsumerState<BankSoalScreen> {
 
   bool   _isDownloading    = false;
   double _downloadProgress = 0;
-  String _downloadStatus   = '';
 
   @override
   void dispose() {
     _searchCtrl.dispose();
     super.dispose();
   }
+
+  // ─── Download untuk offline dengan batch write yang proper ──────────────────
 
   Future<void> _downloadForOffline(
       String categoryId, String categoryName) async {
@@ -123,7 +147,6 @@ class _BankSoalScreenState extends ConsumerState<BankSoalScreen> {
     setState(() {
       _isDownloading    = true;
       _downloadProgress = 0;
-      _downloadStatus   = 'Mengambil soal $categoryName...';
     });
 
     try {
@@ -133,14 +156,19 @@ class _BankSoalScreenState extends ConsumerState<BankSoalScreen> {
 
       setState(() {
         _downloadProgress = 0.6;
-        _downloadStatus   = 'Menyimpan ${rawList.length} soal...';
       });
 
       final hive = HiveService.instance.questionsBox;
+      
+      // ✅ FIX: Batch write untuk menghindari corrupt data & lock file
+      final questions = <String, QuestionModel>{};
       for (final raw in rawList) {
         final question = QuestionModel.fromMap(raw);
-        await hive.put(question.id, question);
+        questions[question.id] = question;
       }
+      
+      // Simpan semua sekaligus (atomic operation)
+      await hive.putAll(questions);
 
       setState(() => _downloadProgress = 1.0);
       ref.invalidate(questionProvider);
@@ -170,7 +198,6 @@ class _BankSoalScreenState extends ConsumerState<BankSoalScreen> {
         setState(() {
           _isDownloading    = false;
           _downloadProgress = 0;
-          _downloadStatus   = '';
         });
       }
     }
@@ -205,15 +232,7 @@ class _BankSoalScreenState extends ConsumerState<BankSoalScreen> {
   Widget build(BuildContext context) {
     final categoriesAsync    = ref.watch(categoryProvider);
     final questionsAsync     = ref.watch(questionProvider);
-    final connectivityAsync  = ref.watch(connectivityProvider);
     final selectedCategoryId = ref.watch(selectedCategoryIdProvider);
-
-    // FIX: Kebal terhadap perubahan tipe data ConnectivityResult
-    final isOffline = connectivityAsync.when(
-      data: (result) => result.toString().contains('none'),
-      loading: () => false,
-      error:  (_, __) => false,
-    );
 
     return Scaffold(
       appBar: AppBar(
@@ -238,191 +257,185 @@ class _BankSoalScreenState extends ConsumerState<BankSoalScreen> {
                     .toList();
                 final categoryName =
                     match.isNotEmpty ? match.first.nama : 'Soal';
-                return IconButton(
-                  icon: _isDownloading
-                      ? SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            value: _downloadProgress,
-                            color: AppColors.textLight,
-                            strokeWidth: 2,
-                          ),
-                        )
-                      : const Icon(Icons.download_outlined),
-                  tooltip: 'Unduh untuk Offline',
-                  onPressed: _isDownloading
-                      ? null
-                      : () => _downloadForOffline(
-                            selectedCategoryId,
-                            categoryName,
-                          ),
+                return Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.home_outlined),
+                      tooltip: 'Beranda',
+                      onPressed: () => Navigator.pushNamedAndRemoveUntil(
+                        context,
+                        AppRoutes.dashboardMahasiswa,
+                        (route) => false,
+                      ),
+                    ),
+                    IconButton(
+                      icon: _isDownloading
+                          ? SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                value: _downloadProgress,
+                                color: AppColors.textLight,
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : const Icon(Icons.download_outlined),
+                      tooltip: 'Unduh untuk Offline',
+                      onPressed: _isDownloading
+                          ? null
+                          : () => _downloadForOffline(
+                                selectedCategoryId,
+                                categoryName,
+                              ),
+                    ),
+                  ],
                 );
               },
               loading: () => const SizedBox.shrink(),
-              error:  (_, __) => const SizedBox.shrink(),
+              error: (_, __) => const SizedBox.shrink(),
             ),
         ],
       ),
-      body: Column(
+      body: Row(
         children: [
-          if (isOffline) const OfflineBanner(),
-
-          if (_isDownloading) ...[
-            LinearProgressIndicator(
-              value: _downloadProgress,
-              backgroundColor: AppColors.lightBlue,
-              color: AppColors.primaryBlue,
-            ),
-            Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-              child: Row(
-                children: [
-                  Text(_downloadStatus, style: AppTextStyles.small),
-                  const Spacer(),
-                  Text(
-                    '${(_downloadProgress * 100).toInt()}%',
-                    style: AppTextStyles.smallSemibold
-                        .copyWith(color: AppColors.primaryBlue),
+          // ─── Sidebar Kategori ────────────────────────────────────────────────
+          if (_isSidebarOpen)
+            categoriesAsync.when(
+              data: (categories) => Container(
+                width: 200,
+                decoration: BoxDecoration(
+                  border: Border(
+                    right: BorderSide(
+                      color: AppColors.borderGrey.withOpacity(0.5),
+                    ),
                   ),
-                ],
-              ),
-            ),
-          ],
-
-          Expanded(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 250),
-                  curve: Curves.easeInOut,
-                  width: _isSidebarOpen ? 150 : 0,
-                  child: _isSidebarOpen
-                      ? _buildSidebar(categoriesAsync, selectedCategoryId)
-                      : const SizedBox.shrink(),
+                  color: AppColors.bgWhite,
                 ),
-
-                if (_isSidebarOpen)
-                  const VerticalDivider(width: 1, thickness: 1),
-
-                Expanded(
-                  child: Column(
-                    children: [
-                      Padding(
-                        padding:
-                            const EdgeInsets.fromLTRB(12, 10, 12, 4),
-                        child: TextField(
-                          controller: _searchCtrl,
-                          decoration: InputDecoration(
-                            hintText: 'Cari soal...',
-                            isDense: true,
-                            prefixIcon: const Icon(
-                                Icons.search_outlined,
-                                size: 20),
-                            suffixIcon: _searchQuery.isNotEmpty
-                                ? IconButton(
-                                    icon: const Icon(Icons.clear,
-                                        size: 18),
-                                    onPressed: () {
-                                      _searchCtrl.clear();
-                                      setState(
-                                          () => _searchQuery = '');
-                                    },
-                                  )
-                                : null,
-                          ),
-                          onChanged: (v) =>
-                              setState(() => _searchQuery = v),
+                child: ListView(
+                  padding: EdgeInsets.zero,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Text(
+                        'Kategori',
+                        style:
+                            AppTextStyles.small.copyWith(
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
+                    ),
+                    ...List.generate(
+                      categories.length,
+                      (i) {
+                        final cat = categories[i];
+                        return _buildCategoryItem(
+                          id: cat.id,
+                          label: cat.nama,
+                          icon: Icons.book_outlined,
+                          isSelected: selectedCategoryId == cat.id,
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              loading: () =>
+                  const Center(child: CircularProgressIndicator()),
+              error: (err, __) => Center(child: Text('Error: $err')),
+            ),
 
-                      AppDifficultyChips(
-                        selected: _selectedDifficulty,
-                        onChanged: (val) =>
-                            setState(() => _selectedDifficulty = val),
+          // ─── Main Content Area ───────────────────────────────────────────────
+          Expanded(
+            child: Column(
+              children: [
+                // ─── Search & Filter Bar ──────────────────────────────────────
+                Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    children: [
+                      // Search bar
+                      TextField(
+                        controller: _searchCtrl,
+                        onChanged: (value) =>
+                            setState(() => _searchQuery = value),
+                        decoration: InputDecoration(
+                          hintText: 'Cari soal...',
+                          prefixIcon: const Icon(Icons.search_outlined),
+                          suffixIcon: _searchQuery.isNotEmpty
+                              ? IconButton(
+                                  icon: const Icon(Icons.clear_outlined),
+                                  onPressed: () {
+                                    _searchCtrl.clear();
+                                    setState(() => _searchQuery = '');
+                                  },
+                                )
+                              : null,
+                          border: OutlineInputBorder(
+                            borderRadius: AppRadius.mdAll,
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 12,
+                          ),
+                        ),
                       ),
+                      const SizedBox(height: 8),
 
-                      const Divider(height: 1),
-
-                      Expanded(
-                        child: questionsAsync.when(
-                          loading: () =>
-                              const AppLoadingIndicator(),
-                          error: (e, _) {
-                            debugPrint("❌ ERROR ASLI SOAL: $e");
-                            return _buildError(e.toString(), () => ref.invalidate(questionProvider));
-                          },
-                          data: (questions) {
-                            final filtered =
-                                _applyFilters(questions);
-                            if (filtered.isEmpty) {
-                              return _buildEmpty(
-                                  selectedCategoryId);
-                            }
-                            return _buildQuestionList(filtered);
-                          },
+                      // Filter kesulitan
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: DifficultyFilter.values.map((filter) {
+                            final filterLabels = {
+                              DifficultyFilter.all: 'Semua',
+                              DifficultyFilter.easy: 'Mudah',
+                              DifficultyFilter.medium: 'Sedang',
+                              DifficultyFilter.hard: 'Sulit',
+                            };
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 8),
+                              child: FilterChip(
+                                label: Text(filterLabels[filter] ?? filter.name),
+                                selected:
+                                    _selectedDifficulty == filter,
+                                onSelected: (_) {
+                                  setState(() =>
+                                      _selectedDifficulty = filter);
+                                },
+                              ),
+                            );
+                          }).toList(),
                         ),
                       ),
                     ],
+                  ),
+                ),
+
+                // ─── Daftar Soal ─────────────────────────────────────────────
+                Expanded(
+                  child: questionsAsync.when(
+                    data: (questions) {
+                      final filtered = _applyFilters(questions);
+                      if (filtered.isEmpty) {
+                        return _buildEmpty(selectedCategoryId);
+                      }
+                      return _buildQuestionList(filtered);
+                    },
+                    loading: () =>
+                        const Center(child: CircularProgressIndicator()),
+                    error: (err, __) =>
+                        _buildError('Error: ${err.toString()}'),
                   ),
                 ),
               ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSidebar(
-    AsyncValue<List<CategoryModel>> categoriesAsync,
-    String? selectedCategoryId,
-  ) {
-    return Container(
-      color: AppColors.bgLight,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 12, 12, 6),
-            child: Text('Mata Kuliah', style: AppTextStyles.captionBold),
-          ),
-          _buildCategoryItem(
-            id: null,
-            label: 'Semua',
-            icon: Icons.grid_view_outlined,
-            isSelected: selectedCategoryId == null,
-          ),
-          const Divider(height: 8, indent: 12, endIndent: 12),
-          Expanded(
-            child: categoriesAsync.when(
-              loading: () => const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(16),
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
               ),
-              error: (e, _) {
-                debugPrint("❌ ERROR ASLI KATEGORI: $e");
-                return Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text('Gagal memuat',
-                          style: AppTextStyles.small
-                              .copyWith(color: AppColors.errorRed)),
-                      const SizedBox(height: 8),
-                      InkWell(
-                        onTap: () => ref.invalidate(categoryProvider),
-                        child: const Icon(Icons.refresh, color: AppColors.primaryBlue, size: 24),
-                      ),
-                    ],
-                  ),
-                );
-              },
+              error: (e, _) => Padding(
+                padding: const EdgeInsets.all(12),
+                child: Text(
+                  'Tidak dapat memuat kategori.\nCek koneksi & konfigurasi database.',
+                    style: AppTextStyles.small.copyWith(color: AppColors.errorRed)),
+              ),
               data: (categories) => ListView.builder(
                 padding: EdgeInsets.zero,
                 itemCount: categories.length,

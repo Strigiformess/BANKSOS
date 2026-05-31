@@ -15,7 +15,9 @@ import '../../../routes/app_routes.dart';
 // ─── TAMBAHAN IMPORT ────────────────────────────────────────────────────────
 import '../../../data/local/hive/hive_service.dart';
 import '../../../data/models/question_model.dart';
-
+import '../../../features/riwayat/screens/riwayat_screen.dart';
+import '../../../features/bookmarks/screens/bookmarks_screen.dart';
+import '../../../shared/widgets/sync_status_banner.dart'; // Widget untuk status sync offline (Sprint 5/6)
 
 class DashboardMahasiswaScreen extends ConsumerStatefulWidget {
   const DashboardMahasiswaScreen({super.key});
@@ -51,6 +53,7 @@ class _DashboardMahasiswaScreenState
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildTopBar(nama),
+                    const SyncStatusBanner(),
                     const SizedBox(height: AppSpacings.lg),
                     Padding(
                       padding: const EdgeInsets.symmetric(
@@ -549,7 +552,7 @@ class _DashboardMahasiswaScreenState
       {'icon': Icons.menu_book_rounded, 'label': 'Bank Soal', 'route': AppRoutes.bankSoal},
       {'icon': Icons.bookmark_rounded, 'label': 'Bookmark', 'route': AppRoutes.bookmarks},
       {'icon': Icons.bar_chart_rounded, 'label': 'Statistik', 'route': null},
-      {'icon': Icons.wifi_off_rounded, 'label': 'Offline', 'route': null},
+      {'icon': Icons.wifi_off_rounded, 'label': 'Offline', 'route': AppRoutes.offlineSoal},
     ];
 
     return Column(

@@ -14,14 +14,13 @@ class AppRoutes {
   static const String dashboardAdmin     = '/dashboard-admin';
   static const String bankSoal           = '/bank-soal';
   static const String kerjakanSoal       = '/kerjakan-soal';
+  static const String offlineSoal        = '/offline-soal';
   static const String submitSoal         = '/submit-soal';
   static const String questionDetail     = '/question-detail';
   static const String kontribusi         = '/kontribusi';
   static const String reviewQueue        = '/review-queue';
   static const String bookmarks          = '/bookmarks';
   static const String riwayat            = '/riwayat';
-  static const String adminUserManagement      = '/admin-user-management';
-  static const String adminQuestionManagement  = '/admin-question-management';
 
   // Sprint 5 — Panel Admin
   static const String adminKelolaUser    = '/admin/kelola-user';

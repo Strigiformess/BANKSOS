@@ -1,18 +1,20 @@
 // lib/main.dart
-// Updated Sprint 4 — Integrasi menyeluruh dengan penanganan Error, Routing, & SyncQueue
-// Sprint 5 UPDATE — tambah route admin: kelola user & kelola soal
 
 import 'package:banksos/core/diagnostics/master_backend_suite.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
 import 'core/theme/app_theme.dart';
 import 'data/local/hive/hive_service.dart';
+import 'data/models/question_model.dart';
 import 'data/remote/mongodb/mongodb_service.dart';
+import 'features/auth/data/question_remote.dart';
 import 'core/services/connectivity_service.dart';
 import 'core/services/sync_service.dart';
+import 'core/services/sync_manager.dart';
 import 'routes/app_routes.dart';
 
 // Auth
@@ -28,6 +30,11 @@ import 'features/question/screens/bank_soal_screen.dart';
 
 // Bank Soal
 import 'features/question/screens/bank_soal_screen.dart';
+import 'features/question/screens/offline_questions_screen.dart';
+
+// Sprint 3 
+import 'features/bookmarks/screens/bookmarks_screen.dart';
+import 'features/riwayat/screens/riwayat_screen.dart';
 
 // Sprint 4
 import 'features/kontribusi/screens/kontribusi_screen.dart';
@@ -39,66 +46,137 @@ import 'features/admin/screens/admin_user_management_screen.dart';
 import 'features/admin/screens/admin_question_management_screen.dart';
 import 'features/bookmarks/screens/bookmarks_screen.dart';
 import 'features/riwayat/screens/riwayat_screen.dart';
-// Sprint 5 — Panel Admin (Revaldi: RBAC guard)
+
 import 'features/admin/screens/admin_kelola_user_screen.dart';
 import 'features/admin/screens/admin_kelola_soal_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  await dotenv.load(fileName: '.env');
+
+  // ─── Clean corrupted boxes BEFORE init ─────────────────────────────────────
+  // Jika questions_box corrupt, hapus terlebih dahulu
+  await _preCleanCorruptedBoxes();
+
+  // ─── Hive initialization dengan error handling ────────────────────────────
   try {
-    // 1. Muat Environment
-    await dotenv.load(fileName: '.env');
-    
-    // 2. Init Penyimpanan Lokal (Hive)
     await HiveService.init();
-
-    // 3. Init Database & Koneksi Internet
-    MongoDBService.instance.init();
-    await ConnectivityService.instance.init();
-
-    // 4. INIT SINKRONISASI LATAR BELAKANG (SPRINT 3)
-    // Jalankan satu kali saat aplikasi baru dibuka
-    SyncService.instance.flushQueue(); 
-    
-    // Jalankan otomatis setiap kali HP kembali mendapatkan sinyal internet
-    ConnectivityService.instance.onConnectivityChanged.listen((status) {
-      // Jika statusnya bukan 'none' (artinya ada internet), tembakkan antrean!
-      if (status != ConnectivityResult.none) {
-        SyncService.instance.flushQueue();
-      }
-    });
-
-    await MasterBackendSuite.runMasterSuite();
-
-    // 5. JIKA SEMUA SUKSES, baru jalankan aplikasi utama
-    runApp(
-      const ProviderScope(
-        child: BanksosApp(),
-      ),
-    );
-    
   } catch (e) {
-    debugPrint("❌ FATAL ERROR SAAT STARTUP: $e");
+    debugPrint('❌ Fatal error initializing Hive: $e');
+    // Attempt emergency recovery (tanpa menghapus questions_box)
+    try {
+      debugPrint('🆘 Attempting emergency recovery...');
+      await HiveService.instance.nukeNonPersistentData();
+      await HiveService.init();
+      debugPrint('✅ Emergency recovery successful');
+    } catch (recoveryError) {
+      debugPrint('❌ Emergency recovery failed: $recoveryError');
+      // Tetap jalankan app (Hive akan fail di runtime, but at least error visible)
+    }
+  }
+
+  // ─── MongoDB initialization ────────────────────────────────────────────────
+  try {
+    await MongoDBService.instance.init();
+  } catch (e) {
+    debugPrint('⚠️ MongoDB init failed (offline mode): $e');
+    // Tidak fatal, app bisa jalan di mode offline
+  }
+
+  // ─── Connectivity service ────────────────────────────────────────────────────
+  try {
+    await ConnectivityService.instance.init();
+  } catch (e) {
+    debugPrint('⚠️ Connectivity service init failed: $e');
+  }
+
+  // ─── Sinkronisasi offline data saat online tersedia
+  try {
+    await SyncManager.instance.init();
+  } catch (e) {
+    debugPrint('⚠️ SyncManager init failed: $e');
+  }
+
+  // ─── Auto download semua soal sekali saat pertama kali app dijalankan
+  try {
+    await _downloadAllQuestionsIfNeeded();
+  } catch (e) {
+    debugPrint('⚠️ Auto-download questions failed: $e');
+  }
+  await HiveService.init();
+  await MongoDBService.instance.init();
+  await ConnectivityService.instance.init();
+
+  // Sprint 5/6: Mulai SyncManager — proses antrian offline saat app buka
+  SyncManager.instance.startListening();
+
+  runApp(
+    const ProviderScope(
+      child: BanksosApp(),
+    ),
+  );
+}
+
+Future<void> _downloadAllQuestionsIfNeeded() async {
+  final hive = HiveService.instance.questionsBox;
+  final isOnline = await ConnectivityService.instance.isOnline;
+
+  if (!isOnline) {
+    debugPrint('⚠️ Auto-download skipped: no internet connection');
+    return;
+  }
+
+  if (hive.isNotEmpty) {
+    debugPrint('✅ questions_box already contains ${hive.length} items; auto-download skipped');
+    return;
+  }
+
+  try {
+    debugPrint('⬇️ Starting auto-download of all published questions...');
+    final rawList = await QuestionRemote().getPublishedQuestions();
+    if (rawList.isEmpty) {
+      debugPrint('⚠️ No published questions returned from remote.');
+      return;
+    }
+
+    final questions = <String, QuestionModel>{};
+    for (final raw in rawList) {
+      final question = QuestionModel.fromMap(raw);
+      questions[question.id] = question;
+    }
+
+    await hive.putAll(questions);
+    debugPrint('✅ Auto-download complete: saved ${questions.length} questions to Hive');
+  } catch (e) {
+    debugPrint('⚠️ Auto-download failed: $e');
+  }
+}
+
+/// Pre-clean questions_box jika ada error saat baca data
+/// Ini cleanup SEBELUM init Hive, jadi nggak perlu register adapter dulu
+Future<void> _preCleanCorruptedBoxes() async {
+  try {
+    await Hive.initFlutter();
+    HiveService.registerAdapters();
     
-    // 6. JIKA GAGAL, tahan aplikasi di layar error
-    runApp(
-      MaterialApp(
-        debugShowCheckedModeBanner: false,
-        home: Scaffold(
-          body: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Center(
-              child: Text(
-                "Aplikasi gagal dimuat karena kesalahan sistem:\n\n$e\n\nPastikan file .env sudah didaftarkan di pubspec.yaml dan tipe data Adapter tidak ada yang bentrok.",
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.red, fontSize: 14),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
+    // Coba cek apakah questions_box bisa dibuka dengan adapter yang sudah terdaftar
+    try {
+      final box = await Hive.openBox<QuestionModel>('questions_box');
+      await box.close();
+      debugPrint('✅ questions_box check OK');
+    } catch (e) {
+      // Jika error saat membuka box, hapus dan biarkan HiveService.init membuat ulang
+      debugPrint('⚠️ questions_box corrupt or unreadable, deleting...');
+      try {
+        await Hive.deleteBoxFromDisk('questions_box');
+        debugPrint('✅ Corrupted questions_box deleted, will recreate on init');
+      } catch (deleteError) {
+        debugPrint('⚠️ Could not delete questions_box: $deleteError (will retry on init)');
+      }
+    }
+  } catch (e) {
+    debugPrint('⚠️ Pre-clean check failed: $e (will retry on init)');
   }
 }
 
@@ -122,20 +200,26 @@ class BanksosApp extends StatelessWidget {
         AppRoutes.dashboardReviewer:  (_) => const DashboardReviewerScreen(),
         AppRoutes.dashboardAdmin:     (_) => const DashboardAdminScreen(),
         AppRoutes.bankSoal:           (_) => const BankSoalScreen(),
+        AppRoutes.offlineSoal:        (_) => const OfflineQuestionsScreen(),
         AppRoutes.questionDetail:     (_) => const _PlaceholderScreen(title: 'Question Detail'),
         AppRoutes.bookmarks:          (_) => const _PlaceholderScreen(title: 'Bookmark'),
         AppRoutes.riwayat:            (_) => const _PlaceholderScreen(title: 'Riwayat'),
+        
+        // Update rute Sprint 4 ke screen yang sebenarnya
+        // AppRoutes.questionDetail:     (_) => const _PlaceholderScreen(title: 'Question Detail'),
+
+        // FIX Sprint 6: route yang sebelumnya placeholder, sekarang pakai screen asli
+        AppRoutes.bookmarks:          (_) => const BookmarksScreen(),
+        AppRoutes.riwayat:            (_) => const RiwayatScreen(),
+
         // Sprint 4
         AppRoutes.kontribusi:         (_) => const KontribusiScreen(),
         AppRoutes.reviewQueue:        (_) => const ReviewQueueScreen(),
         AppRoutes.submitSoal:         (_) => const SubmitSoalScreen(),
 
-        // Sprint 5 - Admin routes
-        AppRoutes.adminUserManagement:     (_) => const AdminUserManagementScreen(),
-        AppRoutes.adminQuestionManagement: (_) => const AdminQuestionManagementScreen(),
-        // Sprint 5 — Panel Admin (guard di controller level, Revaldi)
+        // Sprint 5 — Panel Admin
         AppRoutes.adminKelolaUser:    (_) => const AdminKelolaUserScreen(),
-        AppRoutes.adminKelolasoal:   (_) => const AdminKelolasoalScreen(),
+        AppRoutes.adminKelolasoal:    (_) => const AdminKelolasoalScreen(),
       },
     );
   }
