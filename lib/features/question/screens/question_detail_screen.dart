@@ -9,6 +9,7 @@ import '../../../core/services/connectivity_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_theme_extensions.dart';
 import '../../../data/models/question_model.dart';
+import '../../../routes/app_routes.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import '../repositories/bookmark_repository.dart';
 import '../repositories/progress_repository.dart';
@@ -277,6 +278,15 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen>
           ? colors.correctAnswerBg
           : colors.scaffoldBg,
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          tooltip: 'Kembali ke Home',
+          onPressed: () => Navigator.pushNamedAndRemoveUntil(
+            context,
+            AppRoutes.dashboardMahasiswa,
+            (route) => false,
+          ),
+        ),
         title: Text(
           widget.question.kategoriNama,
           style: AppTextStyles.appBarTitle.copyWith(fontSize: 16),
@@ -553,7 +563,11 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen>
               height: 50,
               child: ElevatedButton(
                 onPressed: _hasSubmitted && _isCorrect
-                    ? () => Navigator.pop(context)
+                    ? () => Navigator.pushNamedAndRemoveUntil(
+                          context,
+                          AppRoutes.dashboardMahasiswa,
+                          (route) => false,
+                        )
                     : (_isSavingProgress ? null : _submitAnswer),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: _hasSubmitted && _isCorrect
@@ -561,6 +575,9 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen>
                       : AppColors.primaryBlue,
                 ),
                 child: Text(
+                  _hasSubmitted && _isCorrect
+                      ? 'Kembali ke Home'
+                      : 'Kirim Jawaban',
                   _hasSubmitted && _isCorrect ? 'Kembali ke Bank Soal' : 'Submit Jawaban',
                   style: AppTextStyles.button,
                 ),
