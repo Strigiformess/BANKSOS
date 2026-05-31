@@ -6,9 +6,9 @@
 class AppRoutes {
   AppRoutes._();
 
+  static const String splash             = '/splash';
   static const String login              = '/login';
   static const String register           = '/register';
-  static const String splash             = '/splash';
   static const String dashboardMahasiswa = '/dashboard-mahasiswa';
   static const String dashboardReviewer  = '/dashboard-reviewer';
   static const String dashboardAdmin     = '/dashboard-admin';
@@ -21,6 +21,7 @@ class AppRoutes {
   static const String reviewQueue        = '/review-queue';
   static const String bookmarks          = '/bookmarks';
   static const String riwayat            = '/riwayat';
+  static const String profile            = '/profile';
 
   // Sprint 5 — Panel Admin
   static const String adminKelolaUser    = '/admin/kelola-user';

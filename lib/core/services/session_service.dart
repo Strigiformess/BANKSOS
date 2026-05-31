@@ -23,6 +23,7 @@ class SessionService {
   static const String _keyUserId        = 'userId';
   static const String _keyEmail         = 'email';
   static const String _keyNama          = 'nama';
+  static const String _keyNim           = 'nim';
   static const String _keyRole          = 'role';
   static const String _keyStatus        = 'status';
   static const String _keyLoginAt       = 'loginAt';
@@ -39,6 +40,7 @@ class SessionService {
     required String userId,
     required String email,
     required String nama,
+    String? nim,
     required String role,
     required String status,
     String? offlineToken,
@@ -49,6 +51,7 @@ class SessionService {
       _keyUserId  : userId,
       _keyEmail   : email,
       _keyNama    : nama,
+      _keyNim     : nim,
       _keyRole    : role,
       _keyStatus  : status,
       _keyLoginAt : DateTime.now().toIso8601String(),
@@ -75,6 +78,7 @@ class SessionService {
   String? get userId  => _box.get(_keyUserId)  as String?;
   String? get email   => _box.get(_keyEmail)   as String?;
   String? get nama    => _box.get(_keyNama)    as String?;
+  String? get nim     => _box.get(_keyNim)     as String?;
   String? get role    => _box.get(_keyRole)    as String?;
   String? get status  => _box.get(_keyStatus)  as String?;
   String? get loginAt => _box.get(_keyLoginAt) as String?;
@@ -107,6 +111,7 @@ class SessionService {
       'userId'         : userId,
       'email'          : email,
       'nama'           : nama,
+      'nim'            : nim,
       'role'           : role,
       'status'         : status,
       'loginAt'        : loginAt,
