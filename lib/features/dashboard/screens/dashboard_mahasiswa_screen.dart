@@ -17,6 +17,7 @@ import '../../../data/local/hive/hive_service.dart';
 import '../../../data/models/question_model.dart';
 import '../../../features/riwayat/screens/riwayat_screen.dart';
 import '../../../features/bookmarks/screens/bookmarks_screen.dart';
+import '../../../shared/widgets/sync_status_banner.dart'; // Widget untuk status sync offline (Sprint 5/6)
 
 class DashboardMahasiswaScreen extends ConsumerStatefulWidget {
   const DashboardMahasiswaScreen({super.key});
@@ -52,6 +53,7 @@ class _DashboardMahasiswaScreenState
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildTopBar(nama),
+                    const SyncStatusBanner(),
                     const SizedBox(height: AppSpacings.lg),
                     Padding(
                       padding: const EdgeInsets.symmetric(
