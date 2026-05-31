@@ -1060,6 +1060,7 @@ class _DashboardMahasiswaScreenState
               setState(() => _selectedNavIndex = i);
               if (i == 1) Navigator.pushNamed(context, AppRoutes.bankSoal);
               if (i == 2) Navigator.pushNamed(context, AppRoutes.kontribusi);
+              if (i == 4) Navigator.pushNamed(context, AppRoutes.profile);
             },
             child: isSelected && !isCenter
                 // Tampilan saat Item Biasa Terpilih (Pill Biru seperti di Figma)

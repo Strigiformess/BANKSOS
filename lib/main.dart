@@ -77,6 +77,15 @@ Future<void> main() async {
       SyncService.instance.flushQueue();
     }
   });
+  // ─── Auto download semua soal sekali saat pertama kali app dijalankan
+  try {
+    await _downloadAllQuestionsIfNeeded();
+  } catch (e) {
+    debugPrint('⚠️ Auto-download questions failed: $e');
+  }
+
+  // Sprint 5/6: Mulai SyncManager — proses antrian offline saat app buka
+  SyncManager.instance.startListening();
 
   runApp(
     const ProviderScope(
@@ -106,6 +115,7 @@ class BanksosApp extends StatelessWidget {
         AppRoutes.dashboardAdmin:     (_) => const DashboardAdminScreen(),
         AppRoutes.bankSoal:           (_) => const BankSoalScreen(),
         AppRoutes.offlineSoal:        (_) => const OfflineQuestionsScreen(),
+        AppRoutes.profile:            (_) => const ProfileScreen(),
         AppRoutes.bookmarks:          (_) => const BookmarksScreen(),
         AppRoutes.riwayat:            (_) => const RiwayatScreen(),
         AppRoutes.kontribusi:         (_) => const KontribusiScreen(),
