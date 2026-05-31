@@ -112,7 +112,7 @@ class _DashboardAdminScreenState extends State<DashboardAdminScreen> {
 
             const SizedBox(height: 28),
 
-            Text('Panel Kontrol', style: AppTextStyles.h3),
+            const Text('Panel Kontrol', style: AppTextStyles.h3),
             const SizedBox(height: 12),
 
             // ── Menu Admin ────────────────────────────────────────────────

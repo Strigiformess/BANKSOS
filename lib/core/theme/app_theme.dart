@@ -149,10 +149,10 @@ class AppDecorations {
     border: Border.fromBorderSide(BorderSide(color: AppColors.borderGrey, width: 0.5)),
   );
 
-  static BoxDecoration cardElevated = BoxDecoration(
+  static BoxDecoration cardElevated = const BoxDecoration(
     color: AppColors.bgWhite,
     borderRadius: AppRadius.lgAll,
-    boxShadow: const [BoxShadow(color: Color(0x0D000000), blurRadius: 8, offset: Offset(0, 2))],
+    boxShadow: [BoxShadow(color: Color(0x0D000000), blurRadius: 8, offset: Offset(0, 2))],
   );
 
   static const BoxDecoration input = BoxDecoration(
@@ -269,7 +269,7 @@ class AppTheme {
           disabledBackgroundColor: AppColors.borderGrey,
           disabledForegroundColor: Colors.white60,
           minimumSize: const Size(double.infinity, 52),
-          shape: RoundedRectangleBorder(borderRadius: AppRadius.mdAll),
+          shape: const RoundedRectangleBorder(borderRadius: AppRadius.mdAll),
           textStyle: AppTextStyles.button,
           elevation: 0,
         ),
@@ -280,7 +280,7 @@ class AppTheme {
           foregroundColor: AppColors.primaryBlue,
           side: const BorderSide(color: AppColors.primaryBlue, width: 1.5),
           minimumSize: const Size(double.infinity, 52),
-          shape: RoundedRectangleBorder(borderRadius: AppRadius.mdAll),
+          shape: const RoundedRectangleBorder(borderRadius: AppRadius.mdAll),
           textStyle: AppTextStyles.button.copyWith(color: AppColors.primaryBlue),
         ),
       ),
@@ -296,24 +296,24 @@ class AppTheme {
         filled: true,
         fillColor: AppColors.bgWhite,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        border:             OutlineInputBorder(borderRadius: AppRadius.mdAll, borderSide: const BorderSide(color: AppColors.borderGrey)),
-        enabledBorder:      OutlineInputBorder(borderRadius: AppRadius.mdAll, borderSide: const BorderSide(color: AppColors.borderGrey)),
-        focusedBorder:      OutlineInputBorder(borderRadius: AppRadius.mdAll, borderSide: const BorderSide(color: AppColors.primaryBlue, width: 2)),
-        errorBorder:        OutlineInputBorder(borderRadius: AppRadius.mdAll, borderSide: const BorderSide(color: AppColors.errorRed)),
-        focusedErrorBorder: OutlineInputBorder(borderRadius: AppRadius.mdAll, borderSide: const BorderSide(color: AppColors.errorRed, width: 2)),
+        border:             const OutlineInputBorder(borderRadius: AppRadius.mdAll, borderSide: BorderSide(color: AppColors.borderGrey)),
+        enabledBorder:      const OutlineInputBorder(borderRadius: AppRadius.mdAll, borderSide: BorderSide(color: AppColors.borderGrey)),
+        focusedBorder:      const OutlineInputBorder(borderRadius: AppRadius.mdAll, borderSide: BorderSide(color: AppColors.primaryBlue, width: 2)),
+        errorBorder:        const OutlineInputBorder(borderRadius: AppRadius.mdAll, borderSide: BorderSide(color: AppColors.errorRed)),
+        focusedErrorBorder: const OutlineInputBorder(borderRadius: AppRadius.mdAll, borderSide: BorderSide(color: AppColors.errorRed, width: 2)),
         errorStyle: AppTextStyles.bodyError,
         hintStyle:  AppTextStyles.body.copyWith(color: AppColors.textGrey.withOpacity(0.6)),
         labelStyle: AppTextStyles.small.copyWith(color: AppColors.textGrey),
       ),
 
-      cardTheme: CardThemeData(
+      cardTheme: const CardThemeData(
         elevation: 0,
         color: AppColors.bgWhite,
         shape: RoundedRectangleBorder(
           borderRadius: AppRadius.lgAll,
-          side: const BorderSide(color: AppColors.borderGrey, width: 0.5),
+          side: BorderSide(color: AppColors.borderGrey, width: 0.5),
         ),
-        margin: const EdgeInsets.symmetric(vertical: 4),
+        margin: EdgeInsets.symmetric(vertical: 4),
       ),
 
       chipTheme: ChipThemeData(
@@ -398,7 +398,7 @@ class AppTheme {
           disabledBackgroundColor: darkBorder,
           disabledForegroundColor: Colors.white30,
           minimumSize: const Size(double.infinity, 52),
-          shape: RoundedRectangleBorder(borderRadius: AppRadius.mdAll),
+          shape: const RoundedRectangleBorder(borderRadius: AppRadius.mdAll),
           textStyle: AppTextStyles.button,
           elevation: 0,
         ),
@@ -409,7 +409,7 @@ class AppTheme {
           foregroundColor: darkPrimary,
           side: const BorderSide(color: darkPrimary, width: 1.5),
           minimumSize: const Size(double.infinity, 52),
-          shape: RoundedRectangleBorder(borderRadius: AppRadius.mdAll),
+          shape: const RoundedRectangleBorder(borderRadius: AppRadius.mdAll),
         ),
       ),
 
@@ -424,11 +424,11 @@ class AppTheme {
         filled: true,
         fillColor: darkInput,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        border:             OutlineInputBorder(borderRadius: AppRadius.mdAll, borderSide: const BorderSide(color: darkBorder)),
-        enabledBorder:      OutlineInputBorder(borderRadius: AppRadius.mdAll, borderSide: const BorderSide(color: darkBorder)),
-        focusedBorder:      OutlineInputBorder(borderRadius: AppRadius.mdAll, borderSide: const BorderSide(color: darkPrimary, width: 2)),
-        errorBorder:        OutlineInputBorder(borderRadius: AppRadius.mdAll, borderSide: const BorderSide(color: AppColors.errorRed)),
-        focusedErrorBorder: OutlineInputBorder(borderRadius: AppRadius.mdAll, borderSide: const BorderSide(color: AppColors.errorRed, width: 2)),
+        border:             const OutlineInputBorder(borderRadius: AppRadius.mdAll, borderSide: BorderSide(color: darkBorder)),
+        enabledBorder:      const OutlineInputBorder(borderRadius: AppRadius.mdAll, borderSide: BorderSide(color: darkBorder)),
+        focusedBorder:      const OutlineInputBorder(borderRadius: AppRadius.mdAll, borderSide: BorderSide(color: darkPrimary, width: 2)),
+        errorBorder:        const OutlineInputBorder(borderRadius: AppRadius.mdAll, borderSide: BorderSide(color: AppColors.errorRed)),
+        focusedErrorBorder: const OutlineInputBorder(borderRadius: AppRadius.mdAll, borderSide: BorderSide(color: AppColors.errorRed, width: 2)),
         errorStyle: AppTextStyles.bodyError,
         hintStyle:  AppTextStyles.body.copyWith(color: darkSubtext),
         labelStyle: AppTextStyles.small.copyWith(color: darkSubtext),
@@ -436,14 +436,14 @@ class AppTheme {
         suffixIconColor: darkSubtext,
       ),
 
-      cardTheme: CardThemeData(
+      cardTheme: const CardThemeData(
         elevation: 0,
         color: darkCard,
         shape: RoundedRectangleBorder(
           borderRadius: AppRadius.lgAll,
-          side: const BorderSide(color: darkBorder, width: 0.5),
+          side: BorderSide(color: darkBorder, width: 0.5),
         ),
-        margin: const EdgeInsets.symmetric(vertical: 4),
+        margin: EdgeInsets.symmetric(vertical: 4),
         surfaceTintColor: Colors.transparent,
       ),
 
@@ -478,18 +478,18 @@ class AppTheme {
         contentTextStyle: AppTextStyles.body.copyWith(color: darkText),
       ),
 
-      listTileTheme: ListTileThemeData(
+      listTileTheme: const ListTileThemeData(
         tileColor: Colors.transparent,
         textColor: darkText,
         iconColor: darkSubtext,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         minVerticalPadding: 10,
       ),
 
       dialogTheme: DialogThemeData(
         backgroundColor: darkCard,
         surfaceTintColor: Colors.transparent,
-        shape: RoundedRectangleBorder(borderRadius: AppRadius.lgAll),
+        shape: const RoundedRectangleBorder(borderRadius: AppRadius.lgAll),
         titleTextStyle: AppTextStyles.h2.copyWith(color: darkText),
         contentTextStyle: AppTextStyles.body.copyWith(color: darkSubtext),
       ),

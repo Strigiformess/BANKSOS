@@ -232,18 +232,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 const SizedBox(height: AppSpacings.xl),
 
                 // ── Divider: or continue with ─────────────────────────────
-                Row(
+                const Row(
                   children: [
-                    const Expanded(child: Divider()),
+                    Expanded(child: Divider()),
                     Padding(
-                      padding: const EdgeInsets.symmetric(
+                      padding: EdgeInsets.symmetric(
                           horizontal: AppSpacings.md),
                       child: Text(
                         'or continue with',
                         style: AppTextStyles.caption,
                       ),
                     ),
-                    const Expanded(child: Divider()),
+                    Expanded(child: Divider()),
                   ],
                 ),
 
@@ -324,7 +324,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           // Tab Login — aktif
           Expanded(
             child: Container(
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 color: AppColors.primaryBlue,
                 borderRadius: AppRadius.pill,
               ),

@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:uuid/uuid.dart';
 
 import '../../data/local/hive/hive_service.dart';
 import '../../data/models/question_model.dart';
@@ -11,8 +10,6 @@ import '../../data/remote/bookmark_remote.dart';
 import '../../data/remote/progress_remote.dart';
 import '../services/connectivity_service.dart';
 import '../services/session_service.dart';
-import '../../core/constants/app_constants.dart';
-import '../../data/remote/mongodb/mongodb_service.dart';
 
 /// Manager sinkronisasi data offline.
 ///
@@ -39,6 +36,17 @@ import '../../data/remote/mongodb/mongodb_service.dart';
 //
 // Cara tambah item ke antrian (dari repository lain):
 //   await SyncManager.instance.enqueue(SyncQueueModel(...));
+
+//import 'dart:async';
+
+//import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:uuid/uuid.dart';
+
+import '../../core/constants/app_constants.dart';
+//import '../../core/services/connectivity_service.dart';
+//import '../../data/local/hive/hive_service.dart';
+//import '../../data/models/sync_queue_model.dart';
+import '../../data/remote/mongodb/mongodb_service.dart';
 
 // ─── Enum hasil sync tiap item ────────────────────────────────────────────────
 
@@ -173,8 +181,7 @@ class SyncManager {
     final byCategory = <String, List<UserProgressModel>>{};
 
     for (final progress in unsynced) {
-      final QuestionModel? question =
-          _hive.questionsBox.get(progress.questionId);
+      final QuestionModel? question = _hive.questionsBox.get(progress.questionId);
       final categoryId = question?.kategoriId ?? '';
       if (categoryId.isEmpty) continue;
 
@@ -226,9 +233,11 @@ class SyncManager {
 
     await _hive.syncQueueBox.put(queueItem.id, queueItem);
   }
-
+}
   // ─── Dependency ─────────────────────────────────────────────────────────────
 
+  final ConnectivityService _connectivity = ConnectivityService.instance;
+  final HiveService _hive = HiveService.instance;
   final MongoDBService _db = MongoDBService.instance;
 
   // ─── State internal ─────────────────────────────────────────────────────────
@@ -295,7 +304,6 @@ class SyncManager {
         'attempt_count': attemptCount,
         'solved_at': solvedAt?.toIso8601String(),
       },
-      action: SyncAction.progressSync.name,
       createdAt: DateTime.now(),
     );
     await enqueue(item);
@@ -314,12 +322,8 @@ class SyncManager {
       payload: {
         'user_id': userId,
         'question_id': questionId,
-        'payload': {
-          'user_id': userId,
-          'question_id': questionId,
-        },
+        'action': isAdd ? 'add' : 'remove',
       },
-      action: isAdd ? SyncAction.bookmarkAdd.name : SyncAction.bookmarkRemove.name,
       createdAt: DateTime.now(),
     );
     await enqueue(item);
@@ -410,12 +414,12 @@ class SyncManager {
   // ─── Private: sync progress ke MongoDB ───────────────────────────────────
 
   Future<void> _syncProgress(Map<String, dynamic> payload) async {
-    final userId = payload['user_id'] as String?;
+    final userId    = payload['user_id']    as String?;
     final questionId = payload['question_id'] as String?;
     final categoryId = payload['category_id'] as String?;
-    final isSolved = payload['is_solved'] as bool? ?? false;
+    final isSolved  = payload['is_solved']  as bool? ?? false;
     final attemptCount = payload['attempt_count'] as int? ?? 1;
-    final solvedAtStr = payload['solved_at'] as String?;
+    final solvedAtStr  = payload['solved_at']  as String?;
 
     if (userId == null || questionId == null || categoryId == null) {
       throw Exception('Payload progress tidak lengkap: $payload');
@@ -451,9 +455,9 @@ class SyncManager {
   // ─── Private: sync bookmark ke MongoDB ───────────────────────────────────
 
   Future<void> _syncBookmark(Map<String, dynamic> payload) async {
-    final userId = payload['user_id'] as String?;
+    final userId     = payload['user_id']     as String?;
     final questionId = payload['question_id'] as String?;
-    final action = payload['action'] as String?; // 'add' | 'remove'
+    final action     = payload['action']      as String?; // 'add' | 'remove'
 
     if (userId == null || questionId == null || action == null) {
       throw Exception('Payload bookmark tidak lengkap: $payload');

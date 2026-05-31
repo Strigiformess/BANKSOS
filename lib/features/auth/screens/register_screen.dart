@@ -353,7 +353,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           // Tab Register — aktif
           Expanded(
             child: Container(
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 color: AppColors.primaryBlue,
                 borderRadius: AppRadius.pill,
               ),

@@ -5,14 +5,10 @@
 import 'package:banksos/features/question/repositories/bookmark_repository.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
-import 'package:hive_flutter/hive_flutter.dart'; // Tambahan untuk UI Reactive
+// Tambahan untuk UI Reactive
 
 import '../../../core/services/connectivity_service.dart';
-import '../../../core/services/session_service.dart';
-import '../../../core/services/sync_service.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../../data/local/hive/hive_service.dart';
-import '../../../data/models/bookmark_model.dart';
 import '../../../core/theme/app_theme_extensions.dart';
 import '../../../data/models/question_model.dart';
 import '../../../routes/app_routes.dart';
@@ -582,7 +578,7 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen>
                 child: Text(
                   _hasSubmitted && _isCorrect
                       ? 'Kembali ke Home'
-                      : 'Submit Jawaban',
+                      : 'Kirim Jawaban',
                   style: AppTextStyles.button,
                 ),
               ),

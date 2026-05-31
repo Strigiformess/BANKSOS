@@ -389,7 +389,7 @@ class _ReviewQueueScreenState extends State<ReviewQueueScreen> {
                       Container(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 12, vertical: 4),
-                        decoration: BoxDecoration(
+                        decoration: const BoxDecoration(
                           color: AppColors.pendingBg,
                           borderRadius: AppRadius.pill,
                         ),
@@ -439,7 +439,7 @@ class _ReviewQueueScreenState extends State<ReviewQueueScreen> {
                                   Container(
                                     padding: const EdgeInsets.symmetric(
                                         horizontal: 8, vertical: 4),
-                                    decoration: BoxDecoration(
+                                    decoration: const BoxDecoration(
                                       color: AppColors.bgLight,
                                       borderRadius: AppRadius.smAll,
                                     ),

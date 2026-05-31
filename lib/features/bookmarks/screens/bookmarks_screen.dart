@@ -100,7 +100,7 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
                   alignment: Alignment.centerRight,
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
+                    decoration: const BoxDecoration(
                       color: AppColors.lightBlue,
                       borderRadius: AppRadius.pill,
                     ),

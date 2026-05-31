@@ -7,6 +7,7 @@ import 'connectivity_service.dart';
 import '../../data/local/hive/hive_service.dart';
 import '../../data/models/bookmark_model.dart';
 import '../../data/models/sync_queue_model.dart';
+import '../../../data/remote/bookmark_remote.dart';
 
 class SyncService {
   SyncService._();
@@ -55,16 +56,15 @@ class SyncService {
         payload: {
           'user_id': cleanUserId,
           'question_id': cleanQuestionId,
-          'action': 'remove', // payload String untuk backend MongoDB
+          'action': 'remove', 
         },
-        // Wajib diisi! Menggunakan Enum SyncAction untuk skema lokal
         action: SyncAction.bookmarkRemove.name, 
         createdAt: DateTime.now(),
       );
 
       if (isOnline) {
         try {
-          // await BookmarkRemote().removeBookmark(userId: cleanUserId, questionId: cleanQuestionId);
+          await BookmarkRemote().removeBookmark(userId: cleanUserId, questionId: cleanQuestionId);
           debugPrint("✅ Bookmark dihapus dari Cloud");
         } catch (e) {
           debugPrint("⚠️ Gagal hapus langsung di Cloud, masuk antrean: $e");
@@ -100,14 +100,13 @@ class SyncService {
           'question_id': cleanQuestionId,
           'action': 'add', 
         },
-        // Wajib diisi! Menggunakan Enum SyncAction untuk skema lokal
         action: SyncAction.bookmarkAdd.name, 
         createdAt: DateTime.now(),
       );
 
       if (isOnline) {
         try {
-          // await BookmarkRemote().addBookmark(userId: cleanUserId, questionId: cleanQuestionId);
+          await BookmarkRemote().addBookmark(userId: cleanUserId, questionId: cleanQuestionId);
           debugPrint("✅ Bookmark sukses dikirim ke Cloud");
         } catch (e) {
           debugPrint("⚠️ Gagal kirim langsung ke Cloud, masuk antrean: $e");
@@ -141,15 +140,25 @@ class SyncService {
 
       try {
         if (item.type == SyncType.bookmark) {
-          // await BookmarkRemote().addBookmark(userId: item.payload['user_id'], questionId: item.payload['question_id']);
-          debugPrint("✅ Sync sukses: Bookmark (Queue ID: ${item.id})");
-          success = true;
+          final userId = item.payload['user_id'];
+          final questionId = item.payload['question_id'];
+          final action = item.payload['action'];
 
-          final bookmarkId = item.payload['_id'];
-          final localBookmark = HiveService.instance.bookmarksBox.values.where((b) => b.id == bookmarkId).firstOrNull;
-          if (localBookmark != null) {
-            await localBookmark.copyWith(isSynced: true).save();
+          if (action == 'add') {
+            await BookmarkRemote().addBookmark(userId: userId, questionId: questionId);
+            
+            // Cari data lokal dan tandai isSynced = true
+            final localBookmark = HiveService.instance.bookmarksBox.values.where((b) => 
+                _cleanId(b.questionId) == questionId && _cleanId(b.userId) == userId).firstOrNull;
+            if (localBookmark != null) {
+              await localBookmark.copyWith(isSynced: true).save();
+            }
+          } else if (action == 'remove') {
+            await BookmarkRemote().removeBookmark(userId: userId, questionId: questionId);
           }
+
+          debugPrint("✅ Sync sukses: Bookmark $action (Queue ID: ${item.id})");
+          success = true;
         }
       } catch (e) {
         debugPrint("❌ Sync gagal untuk item ${item.id}: $e");

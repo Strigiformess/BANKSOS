@@ -201,7 +201,7 @@ class _RiwayatScreenState extends State<RiwayatScreen> {
                     color: AppColors.primaryBlue,
                   ),
                 ),
-                Text('progress', style: AppTextStyles.caption),
+                const Text('progress', style: AppTextStyles.caption),
               ],
             ),
         ],
@@ -355,7 +355,7 @@ class _RiwayatCard extends StatelessWidget {
               Container(
                 width: 40,
                 height: 40,
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   color: AppColors.easyBg,
                   borderRadius: AppRadius.mdAll,
                 ),
@@ -414,7 +414,7 @@ class _RiwayatCard extends StatelessWidget {
                           Container(
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 8, vertical: 2),
-                            decoration: BoxDecoration(
+                            decoration: const BoxDecoration(
                               color: AppColors.bgBlue,
                               borderRadius: AppRadius.pill,
                             ),
