@@ -1,125 +1,75 @@
 // lib/features/question/screens/bank_soal_screen.dart
-// FINAL SPRINT 3: Terintegrasi penuh, Anti-RenderFlex Bug & Anti Status Offline Palsu
+// PIC: Seruni Libertina Islami
+// Collab: Revaldi untuk State Management
+// Sprint 2 & 3: Halaman Bank Soal - UI Horizontal Chips 100% Figma Match & Clean
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import '../../../core/services/connectivity_service.dart';
-import '../../../core/services/session_service.dart';
-import '../../../core/services/sync_service.dart';
 import '../../../data/models/question_model.dart';
 import '../../../data/models/category_model.dart';
-import '../../../data/models/bookmark_model.dart';
 import '../../../data/local/hive/hive_service.dart';
 import '../../../data/remote/category_remote.dart';
 import '../../../data/remote/question_remote.dart';
-import '../../../routes/app_routes.dart';
 import '../../question/screens/question_detail_screen.dart';
 
-// ─── Providers 
-
+// ─── PROVIDERS ─────────────────────────────────────────────────────────────
 final categoryProvider = FutureProvider<List<CategoryModel>>((ref) async {
   final hive = HiveService.instance.categoriesBox;
+  if (hive.isNotEmpty) return hive.values.where((c) => c.isActive).toList();
   
-  // 1. Jika ada data lokal, langsung pakai
-  if (hive.isNotEmpty) {
-    return hive.values.where((c) => c.isActive).toList();
-  }
-
-  // 2. Cek koneksi internet
   final isOnline = await ConnectivityService.instance.isOnline;
   if (!isOnline) return [];
 
-  // 3. Ambil dari remote dengan try-catch agar tidak crash jika DB offline
   try {
     final rawList = await CategoryRemote().getActiveCategories();
     final categories = rawList.map((m) => CategoryModel.fromMap(m)).toList();
-    
-    for (final cat in categories) {
-      await hive.put(cat.id, cat);
-    }
+    for (final cat in categories) { await hive.put(cat.id, cat); }
     return categories;
   } catch (e) {
-    // Log error untuk debugging internal
-    debugPrint('Error mengambil kategori dari remote: $e');
-    
-    // Alih-alih membiarkan aplikasi crash/error screen, 
-    // kembalikan list kosong atau lempar pesan yang lebih spesifik
+    debugPrint('Fetch Category Error: $e');
     return []; 
   }
 });
 
 final selectedCategoryIdProvider = StateProvider<String?>((ref) => null);
 
-final questionProvider =
-    FutureProvider.autoDispose<List<QuestionModel>>((ref) async {
+final questionProvider = FutureProvider.autoDispose<List<QuestionModel>>((ref) async {
   final categoryId = ref.watch(selectedCategoryIdProvider);
   final hive = HiveService.instance.questionsBox;
-
   final allLocal = hive.values.toList();
   final isOnline = await ConnectivityService.instance.isOnline;
 
   if (categoryId != null) {
-    final localForCategory = allLocal
-        .where((q) => q.kategoriId == categoryId)
-        .toList();
-
+    final localForCategory = allLocal.where((q) => q.kategoriId == categoryId).toList();
     if (localForCategory.isNotEmpty) {
-      return localForCategory
-          .where((q) => q.status == QuestionStatus.published)
-          .toList();
+      return localForCategory.where((q) => q.status == QuestionStatus.published).toList();
     }
-
     if (isOnline) {
-      final rawList = await QuestionRemote()
-          .getPublishedQuestionsByCategory(categoryId);
+      final rawList = await QuestionRemote().getPublishedQuestionsByCategory(categoryId);
       final fetched = rawList.map((m) => QuestionModel.fromMap(m)).toList();
-      for (final q in fetched) {
-        await hive.put(q.id, q);
-      }
-      return fetched
-          .where((q) => q.status == QuestionStatus.published)
-          .toList();
+      for (final q in fetched) { await hive.put(q.id, q); }
+      return fetched.where((q) => q.status == QuestionStatus.published).toList();
     }
-
     return [];
   }
-
-  final all = allLocal
-      .where((q) => q.status == QuestionStatus.published)
-      .toList();
-
-  return all;
+  return allLocal.where((q) => q.status == QuestionStatus.published).toList();
 });
 
-final connectivityProvider =
-    StreamProvider<ConnectivityResult>((ref) {
-  return ConnectivityService.instance.onConnectivityChanged;
-});
-
-// ─── Screen ───────────────────────────────────────────────────────────────────
-
+// ─── SCREEN ────────────────────────────────────────────────────────────────
 class BankSoalScreen extends ConsumerStatefulWidget {
   const BankSoalScreen({super.key});
-
   @override
   ConsumerState<BankSoalScreen> createState() => _BankSoalScreenState();
 }
 
 class _BankSoalScreenState extends ConsumerState<BankSoalScreen> {
-  bool _isSidebarOpen = true;
-
   DifficultyFilter _selectedDifficulty = DifficultyFilter.all;
-
   final _searchCtrl = TextEditingController();
   String _searchQuery = '';
-
-  bool   _isDownloading    = false;
-  double _downloadProgress = 0;
 
   @override
   void dispose() {
@@ -127,579 +77,189 @@ class _BankSoalScreenState extends ConsumerState<BankSoalScreen> {
     super.dispose();
   }
 
-  // ─── Download untuk offline dengan batch write yang proper ──────────────────
-
-  Future<void> _downloadForOffline(
-      String categoryId, String categoryName) async {
-    final isOnline = await ConnectivityService.instance.isOnline;
-    if (!context.mounted) return;
-    if (!isOnline) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Tidak ada koneksi internet. Unduh gagal.'),
-          backgroundColor: AppColors.errorRed,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      return;
-    }
-
-    setState(() {
-      _isDownloading    = true;
-      _downloadProgress = 0;
-    });
-
-    try {
-      setState(() => _downloadProgress = 0.3);
-      final rawList = await QuestionRemote()
-          .getPublishedQuestionsByCategory(categoryId);
-
-      setState(() {
-        _downloadProgress = 0.6;
-      });
-
-      final hive = HiveService.instance.questionsBox;
-      
-      // ✅ FIX: Batch write untuk menghindari corrupt data & lock file
-      final questions = <String, QuestionModel>{};
-      for (final raw in rawList) {
-        final question = QuestionModel.fromMap(raw);
-        questions[question.id] = question;
-      }
-      
-      // Simpan semua sekaligus (atomic operation)
-      await hive.putAll(questions);
-
-      setState(() => _downloadProgress = 1.0);
-      ref.invalidate(questionProvider);
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-                '${rawList.length} soal $categoryName berhasil diunduh.'),
-            backgroundColor: AppColors.successGreen,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Gagal mengunduh: $e'),
-            backgroundColor: AppColors.errorRed,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isDownloading    = false;
-          _downloadProgress = 0;
-        });
-      }
-    }
-  }
-
   List<QuestionModel> _applyFilters(List<QuestionModel> questions) {
     var filtered = questions;
-
     if (_selectedDifficulty != DifficultyFilter.all) {
       final levelMap = {
-        DifficultyFilter.easy:   DifficultyLevel.easy,
+        DifficultyFilter.easy: DifficultyLevel.easy,
         DifficultyFilter.medium: DifficultyLevel.medium,
-        DifficultyFilter.hard:   DifficultyLevel.hard,
+        DifficultyFilter.hard: DifficultyLevel.hard,
       };
-      filtered = filtered
-          .where((q) => q.tingkatKesulitan == levelMap[_selectedDifficulty])
-          .toList();
+      filtered = filtered.where((q) => q.tingkatKesulitan == levelMap[_selectedDifficulty]).toList();
     }
-
     if (_searchQuery.isNotEmpty) {
-      filtered = filtered
-          .where((q) => q.pertanyaan
-              .toLowerCase()
-              .contains(_searchQuery.toLowerCase()))
-          .toList();
+      filtered = filtered.where((q) => q.pertanyaan.toLowerCase().contains(_searchQuery.toLowerCase())).toList();
     }
-
     return filtered;
   }
 
   @override
   Widget build(BuildContext context) {
-    final categoriesAsync    = ref.watch(categoryProvider);
-    final questionsAsync     = ref.watch(questionProvider);
+    final categoriesAsync = ref.watch(categoryProvider);
+    final questionsAsync = ref.watch(questionProvider);
     final selectedCategoryId = ref.watch(selectedCategoryIdProvider);
 
     return Scaffold(
+      backgroundColor: AppColors.bgLight,
       appBar: AppBar(
-        title: const Text('Bank Soal'),
-        leading: IconButton(
-          icon: Icon(
-            _isSidebarOpen
-                ? Icons.menu_open_outlined
-                : Icons.menu_outlined,
-          ),
-          tooltip:
-              _isSidebarOpen ? 'Tutup Kategori' : 'Buka Kategori',
-          onPressed: () =>
-              setState(() => _isSidebarOpen = !_isSidebarOpen),
-        ),
-        actions: [
-          if (selectedCategoryId != null)
-            categoriesAsync.when(
-              data: (categories) {
-                final match = categories
-                    .where((c) => c.id == selectedCategoryId)
-                    .toList();
-                final categoryName =
-                    match.isNotEmpty ? match.first.nama : 'Soal';
-                return Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.home_outlined),
-                      tooltip: 'Beranda',
-                      onPressed: () => Navigator.pushNamedAndRemoveUntil(
-                        context,
-                        AppRoutes.dashboardMahasiswa,
-                        (route) => false,
-                      ),
-                    ),
-                    IconButton(
-                      icon: _isDownloading
-                          ? SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                value: _downloadProgress,
-                                color: AppColors.textLight,
-                                strokeWidth: 2,
-                              ),
-                            )
-                          : const Icon(Icons.download_outlined),
-                      tooltip: 'Unduh untuk Offline',
-                      onPressed: _isDownloading
-                          ? null
-                          : () => _downloadForOffline(
-                                selectedCategoryId,
-                                categoryName,
-                              ),
-                    ),
-                  ],
-                );
-              },
-              loading: () => const SizedBox.shrink(),
-              error: (_, __) => const SizedBox.shrink(),
+        title: Row(
+          children: [
+            Container(
+              width: 32, height: 32,
+              decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
             ),
+            const SizedBox(width: AppSpacings.sm),
+            Text('BANKSOS', style: AppTextStyles.h2.copyWith(color: AppColors.primaryBlue)),
+          ],
+        ),
+        backgroundColor: AppColors.bgWhite,
+        iconTheme: const IconThemeData(color: AppColors.primaryBlue),
+        actions: [
+          IconButton(icon: const Icon(Icons.sync), onPressed: () {}),
         ],
       ),
-      body: Row(
+      body: Column(
         children: [
-          // ─── Sidebar Kategori ────────────────────────────────────────────────
-          if (_isSidebarOpen)
-            categoriesAsync.when(
-              data: (categories) => Container(
-                width: 200,
-                decoration: BoxDecoration(
-                  border: Border(
-                    right: BorderSide(
-                      color: AppColors.borderGrey.withValues(alpha: 0.5),
-                    ),
-                  ),
-                  color: AppColors.bgWhite,
-                ),
-                child: ListView(
-                  padding: EdgeInsets.zero,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Text(
-                        'Kategori',
-                        style:
-                            AppTextStyles.small.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                    ...List.generate(
-                      categories.length,
-                      (i) {
-                        final cat = categories[i];
-                        return _buildCategoryItem(
-                          id: cat.id,
-                          label: cat.nama,
-                          icon: Icons.book_outlined,
-                          isSelected: selectedCategoryId == cat.id,
-                        );
-                      },
-                    ),
-                  ],
-                ),
-              ),
-              loading: () =>
-                  const Center(child: CircularProgressIndicator()),
-              error: (err, __) => Center(child: Text('Error: $err')),
-            ),
-
-          // ─── Main Content Area ───────────────────────────────────────────────
-          Expanded(
+          Container(
+            color: AppColors.bgWhite,
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacings.lg, vertical: AppSpacings.sm),
             child: Column(
               children: [
-                // ─── Search & Filter Bar ──────────────────────────────────────
-                Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Column(
-                    children: [
-                      // Search bar
-                      TextField(
-                        controller: _searchCtrl,
-                        onChanged: (value) =>
-                            setState(() => _searchQuery = value),
-                        decoration: InputDecoration(
-                          hintText: 'Cari soal...',
-                          prefixIcon: const Icon(Icons.search_outlined),
-                          suffixIcon: _searchQuery.isNotEmpty
-                              ? IconButton(
-                                  icon: const Icon(Icons.clear_outlined),
-                                  onPressed: () {
-                                    _searchCtrl.clear();
-                                    setState(() => _searchQuery = '');
-                                  },
-                                )
-                              : null,
-                          border: const OutlineInputBorder(
-                            borderRadius: AppRadius.mdAll,
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 12,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-
-                      // Filter kesulitan
-                      SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Row(
-                          children: DifficultyFilter.values.map((filter) {
-                            final filterLabels = {
-                              DifficultyFilter.all: 'Semua',
-                              DifficultyFilter.easy: 'Mudah',
-                              DifficultyFilter.medium: 'Sedang',
-                              DifficultyFilter.hard: 'Sulit',
-                            };
-                            return Padding(
-                              padding: const EdgeInsets.only(right: 8),
-                              child: FilterChip(
-                                label: Text(filterLabels[filter] ?? filter.name),
-                                selected:
-                                    _selectedDifficulty == filter,
-                                onSelected: (_) {
-                                  setState(() =>
-                                      _selectedDifficulty = filter);
-                                },
-                              ),
-                            );
-                          }).toList(),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // ─── Daftar Soal ─────────────────────────────────────────────
-                Expanded(
-                  child: questionsAsync.when(
-                    data: (questions) {
-                      final filtered = _applyFilters(questions);
-                      if (filtered.isEmpty) {
-                        return _buildEmpty(selectedCategoryId);
-                      }
-                      return _buildQuestionList(filtered);
-                    },
-                    loading: () =>
-                        const Center(child: CircularProgressIndicator()),
-                    error: (err, __) => _buildError(
-                      'Error: ${err.toString()}',
-                      () => ref.invalidate(questionProvider),
+                // Search Bar Sesuai Figma
+                TextField(
+                  controller: _searchCtrl,
+                  onChanged: (value) => setState(() => _searchQuery = value),
+                  decoration: const InputDecoration(
+                    hintText: 'Cari materi atau topik...',
+                    prefixIcon: Icon(Icons.search_outlined),
+                    suffixIcon: Icon(Icons.tune_outlined),
+                    filled: true,
+                    fillColor: AppColors.bgLight,
+                    border: OutlineInputBorder(
+                      borderRadius: AppRadius.pill,
+                      borderSide: BorderSide.none,
                     ),
                   ),
+                ),
+                const SizedBox(height: AppSpacings.md),
+                
+                // Kategori Chips Sesuai Figma
+                categoriesAsync.when(
+                  data: (categories) => SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        _buildCategoryChip(null, 'Semua', selectedCategoryId == null),
+                        ...categories.map((cat) => _buildCategoryChip(cat.id, cat.nama, selectedCategoryId == cat.id)),
+                      ],
+                    ),
+                  ),
+                  loading: () => const LinearProgressIndicator(),
+                  error: (_, __) => const Text('Gagal memuat kategori'),
+                ),
+                const SizedBox(height: AppSpacings.sm),
+                
+                // Difficulty Chips
+                AppDifficultyChips(
+                  selected: _selectedDifficulty,
+                  onChanged: (val) => setState(() => _selectedDifficulty = val),
                 ),
               ],
             ),
           ),
+
+          // Daftar Soal
+          Expanded(
+            child: questionsAsync.when(
+              data: (questions) {
+                final filtered = _applyFilters(questions);
+                if (filtered.isEmpty) return const AppEmptyState(icon: Icons.inbox, title: 'Soal tidak ditemukan');
+                return ListView.separated(
+                  padding: AppSpacings.pagePadding,
+                  itemCount: filtered.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: AppSpacings.sm),
+                  itemBuilder: (context, index) => _QuestionCard(question: filtered[index]),
+                );
+              },
+              loading: () => const AppLoadingIndicator(),
+              error: (err, __) => Center(child: Text('Error: $err')),
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildCategoryItem({
-    required String? id,
-    required String label,
-    required IconData icon,
-    required bool isSelected,
-  }) {
-    return InkWell(
-      onTap: () {
-        ref.read(selectedCategoryIdProvider.notifier).state = id;
-        setState(() {
-          _selectedDifficulty = DifficultyFilter.all;
-          _searchCtrl.clear();
-          _searchQuery = '';
-        });
-        ref.invalidate(questionProvider);
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? AppColors.primaryBlue.withValues(alpha: 0.08)
-              : Colors.transparent,
-          border: isSelected
-              ? const Border(
-                  left: BorderSide(
-                      color: AppColors.primaryBlue, width: 3))
-              : null,
+  Widget _buildCategoryChip(String? id, String label, bool isSelected) {
+    return Padding(
+      padding: const EdgeInsets.only(right: AppSpacings.sm),
+      child: ChoiceChip(
+        label: Text(label),
+        selected: isSelected,
+        onSelected: (_) {
+          ref.read(selectedCategoryIdProvider.notifier).state = id;
+          setState(() => _searchCtrl.clear());
+          ref.invalidate(questionProvider);
+        },
+        selectedColor: AppColors.primaryBlue,
+        backgroundColor: AppColors.bgWhite,
+        labelStyle: TextStyle(
+          color: isSelected ? Colors.white : AppColors.textGrey,
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
         ),
-        child: Row(
-          children: [
-            Icon(
-              icon,
-              size: 16,
-              color: isSelected
-                  ? AppColors.primaryBlue
-                  : AppColors.textGrey,
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                label,
-                style: AppTextStyles.small.copyWith(
-                  fontWeight: isSelected
-                      ? FontWeight.w600
-                      : FontWeight.normal,
-                  color: isSelected
-                      ? AppColors.primaryBlue
-                      : AppColors.textDark,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildQuestionList(List<QuestionModel> questions) {
-    return ListView.separated(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      itemCount: questions.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 8),
-      itemBuilder: (context, index) {
-        return _QuestionCard(
-          question: questions[index],
-          nomor: index + 1,
-        );
-      },
-    );
-  }
-
-  Widget _buildEmpty(String? categoryId) {
-    return AppEmptyState(
-      icon: categoryId == null
-          ? Icons.menu_book_outlined
-          : Icons.inbox_outlined,
-      title: _searchQuery.isNotEmpty
-          ? 'Soal tidak ditemukan'
-          : categoryId == null
-              ? 'Pilih mata kuliah di sidebar'
-              : 'Belum ada soal',
-      subtitle: _searchQuery.isNotEmpty
-          ? null
-          : categoryId == null
-              ? null
-              : 'Coba unduh soal terlebih dahulu.',
-      action: _searchQuery.isNotEmpty
-          ? TextButton(
-              onPressed: () {
-                _searchCtrl.clear();
-                setState(() => _searchQuery = '');
-              },
-              child: const Text('Hapus pencarian'),
-            )
-          : null,
-    );
-  }
-
-  Widget _buildError(String message, VoidCallback onRetry) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.cloud_off_outlined,
-                size: 48, color: AppColors.errorRed),
-            const SizedBox(height: 12),
-            const Text(
-              "Gagal memuat data dari server.",
-              style: AppTextStyles.small,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 12),
-            ElevatedButton.icon(
-              onPressed: onRetry,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Coba Lagi'),
-            ),
-          ],
-        ),
+        shape: const RoundedRectangleBorder(borderRadius: AppRadius.pill),
+        showCheckmark: false,
       ),
     );
   }
 }
 
-// ─── Card Soal ──────────────────────────
-
+// ─── CARD SOAL ─────────────────────────────────────────────────────────────
 class _QuestionCard extends StatelessWidget {
   final QuestionModel question;
-  final int nomor;
-
-  const _QuestionCard({required this.question, required this.nomor});
-
-  String _buildPlaceholder(String answer) {
-    return answer.trim().split(' ').map((word) => '_' * word.length).join(' ');
-  }
+  const _QuestionCard({required this.question});
 
   @override
   Widget build(BuildContext context) {
-    final rawUserId = SessionService.instance.userId ?? '';
-
-    String cleanId(String id) {
-      final match = RegExp(r'ObjectId\("([a-f0-9]{24})"\)').firstMatch(id);
-      return match != null ? match.group(1)! : id;
-    }
-    
-    final currentUserId = rawUserId.isNotEmpty ? cleanId(rawUserId) : '';
-
     return Card(
-      child: InkWell(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
         borderRadius: AppRadius.lgAll,
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => QuestionDetailScreen(question: question)),
-          );
-        },
-        child: Padding(
-          padding: AppSpacings.cardPadding,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    width: 24, height: 24,
-                    decoration: const BoxDecoration(color: AppColors.lightBlue, borderRadius: AppRadius.smAll),
-                    alignment: Alignment.center,
-                    child: Text('$nomor', style: AppTextStyles.captionBold.copyWith(color: AppColors.primaryBlue)),
+        side: BorderSide(color: AppColors.borderGrey.withValues(alpha: 0.3)), // FIX: Deprecation withValues
+      ),
+      child: Padding(
+        padding: AppSpacings.cardPadding,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(question.kategoriNama, style: AppTextStyles.captionBold.copyWith(color: AppColors.primaryBlue)),
+                const Icon(Icons.bookmark_border, size: 20, color: AppColors.textGrey),
+              ],
+            ),
+            const SizedBox(height: AppSpacings.xs),
+            Text(question.pertanyaan, style: AppTextStyles.bodySemibold, maxLines: 2, overflow: TextOverflow.ellipsis),
+            const SizedBox(height: AppSpacings.md),
+            Row(
+              children: [
+                AppBadge.difficulty(question.tingkatKesulitan.name),
+                const SizedBox(width: AppSpacings.sm),
+                Text('+25 pts', style: AppTextStyles.captionBold.copyWith(color: AppColors.textGrey)),
+                const Spacer(),
+                ElevatedButton(
+                  onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => QuestionDetailScreen(question: question))),
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size(90, 32),
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    textStyle: AppTextStyles.captionBold,
                   ),
-                  const SizedBox(width: 8),
-
-                  Expanded(
-                    child: Wrap(
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      spacing: 6, runSpacing: 4,
-                      children: [
-                        AppBadge.difficulty(question.tingkatKesulitan.name),
-                        if (question.hints.isNotEmpty)
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.lightbulb_outline, size: 14, color: AppColors.warningYellow),
-                              const SizedBox(width: 2),
-                              Text('${question.hints.length}', style: AppTextStyles.caption),
-                            ],
-                          ),
-                      ],
-                    ),
-                  ),
-
-                  // LOGIKA BOOKMARK DENGAN SNACKBAR
-                  ValueListenableBuilder<Box<BookmarkModel>>(
-                    valueListenable: HiveService.instance.bookmarksBox.listenable(),
-                    builder: (context, box, _) {
-                      final isBookmarked = box.values.any((b) =>
-                          cleanId(b.questionId) == cleanId(question.id) &&
-                          cleanId(b.userId) == currentUserId);
-
-                      return SizedBox(
-                        width: 32, height: 32,
-                        child: IconButton(
-                          icon: Icon(
-                            isBookmarked ? Icons.bookmark : Icons.bookmark_border_outlined,
-                            size: 20,
-                            color: isBookmarked ? Colors.amberAccent : AppColors.textGrey.withValues(alpha: 0.5),
-                          ),
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                          onPressed: () async {
-                            if (currentUserId.isEmpty) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Sesi tidak valid.'), backgroundColor: AppColors.errorRed),
-                              );
-                              return;
-                            }
-                            
-                            // Eksekusi fungsi dan tangkap hasil boolean
-                            final isNowSaved = await SyncService.instance.toggleBookmark(
-                              userId: currentUserId,
-                              questionId: question.id,
-                            );
-
-                            // Munculkan Feedback SnackBar!
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).clearSnackBars();
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(isNowSaved ? 'Soal disimpan ke Bookmark' : 'Bookmark dihapus'),
-                                  backgroundColor: isNowSaved ? AppColors.successGreen : AppColors.textGrey,
-                                  behavior: SnackBarBehavior.floating,
-                                  duration: const Duration(seconds: 1),
-                                ),
-                              );
-                            }
-                          },
-                        ),
-                      );
-                    },
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Text(question.pertanyaan, style: AppTextStyles.bodySemibold),
-              const SizedBox(height: 8),
-              Text(_buildPlaceholder(question.jawaban), style: AppTextStyles.answerPlaceholder),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  const Icon(Icons.folder_outlined, size: 13, color: AppColors.textGrey),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Text(question.kategoriNama, style: AppTextStyles.caption, overflow: TextOverflow.ellipsis),
-                  ),
-                ],
-              ),
-            ],
-          ),
+                  child: const Text('Solve Now'),
+                )
+              ],
+            ),
+          ],
         ),
       ),
     );

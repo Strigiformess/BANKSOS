@@ -1,6 +1,6 @@
 // lib/features/auth/screens/splash_screen.dart
-// PIC: Seruni (SL) — Splash & Onboarding
-// Tampilan sesuai mockup Figma, fully pakai AppColors/AppTextStyles/AppSpacings/AppRadius
+// PIC: Seruni Libertina Islami (SL)
+// Sprint 1: Pemisahan Logic Splash Screen Asli & Onboarding
 
 import 'package:flutter/material.dart';
 
@@ -10,48 +10,50 @@ import '../../../routes/app_routes.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
-
   @override
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> {
-  final PageController _pageController = PageController();
+class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
+  bool _showOnboarding = false;
   int _currentPage = 0;
+  final PageController _pageController = PageController();
 
-  // Isi konten tiap halaman onboarding
-  final List<String> _subtitles = [
-    'Belajar Cerdas, Kumpulkan Poin, Buka\nSoal Premium',
-    'Kerjakan soal kapan saja, bahkan\ntanpa koneksi internet.',
-    'Berkontribusi soal dan bantu\nteman-teman belajar bersama.',
-  ];
+  late final AnimationController _fadeCtrl;
+  late final Animation<double> _fadeAnim;
 
   @override
   void initState() {
     super.initState();
-    // Kalau user sudah pernah login, lewati onboarding langsung ke dashboard
-    _checkSession();
+    _fadeCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 1000));
+    _fadeAnim = CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeIn);
+    _fadeCtrl.forward();
+    _initSplash();
   }
 
   @override
   void dispose() {
+    _fadeCtrl.dispose();
     _pageController.dispose();
     super.dispose();
   }
 
-  Future<void> _checkSession() async {
-    // Tampilkan splash minimal 1.5 detik
-    await Future.delayed(const Duration(milliseconds: 1500));
+  Future<void> _initSplash() async {
+    // 2.5 Detik menampilkan Splash murni
+    await Future.delayed(const Duration(milliseconds: 2500));
     if (!mounted) return;
 
     final session = SessionService.instance;
     if (session.isLoggedIn) {
       _redirectByRole(session.role);
+    } else {
+      // Mengubah state untuk trigger PageView Onboarding
+      setState(() => _showOnboarding = true);
     }
-    // Kalau belum login, biarkan di onboarding, user swipe sendiri
   }
 
   void _redirectByRole(String? role) {
+    if (!mounted) return;
     switch (role) {
       case 'admin':
         Navigator.pushReplacementNamed(context, AppRoutes.dashboardAdmin);
@@ -83,188 +85,104 @@ class _SplashScreenState extends State<SplashScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.bgWhite,
-      body: SafeArea(
+      body: _showOnboarding ? _buildOnboarding() : _buildSplash(),
+    );
+  }
+
+  // ─── 1. Splash Screen Asli ──────────────────────────────────────────────
+  Widget _buildSplash() {
+    return FadeTransition(
+      opacity: _fadeAnim,
+      child: Center(
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // ── Konten Onboarding (swipeable) ───────────────────────────
-            Expanded(
-              child: PageView.builder(
-                controller: _pageController,
-                onPageChanged: (index) =>
-                    setState(() => _currentPage = index),
-                itemCount: _subtitles.length,
-                itemBuilder: (context, index) {
-                  return _OnboardingPage(subtitle: _subtitles[index]);
-                },
+            Container(
+              width: 100, height: 100,
+              decoration: BoxDecoration(
+                color: AppColors.primaryBlue,
+                borderRadius: AppRadius.xlAll,
+                boxShadow: [
+                  BoxShadow(color: AppColors.primaryBlue.withValues(alpha:0.3), blurRadius: 24, offset: const Offset(0, 8)),
+                ],
               ),
+              alignment: Alignment.center,
+              child: Text('BS', style: AppTextStyles.h1.copyWith(fontSize: 40, color: Colors.white, fontWeight: FontWeight.bold)),
             ),
-
-            // ── Dot Indicator ────────────────────────────────────────────
             const SizedBox(height: AppSpacings.xxl),
-            _buildDots(),
-            const SizedBox(height: AppSpacings.xxxl),
-
-            // ── Tombol: Lanjut / Mulai ───────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacings.xl),
-              child: ElevatedButton(
-                onPressed: _onNext,
-                child: Text(
-                  _currentPage < _subtitles.length - 1
-                      ? 'Lanjut'
-                      : 'Mulai',
-                ),
-              ),
-            ),
-
-            // ── Skip ─────────────────────────────────────────────────────
-            TextButton(
-              onPressed: _goToLogin,
-              child: Text(
-                'Lewati',
-                style: AppTextStyles.body.copyWith(
-                  color: AppColors.textGrey,
-                ),
-              ),
-            ),
-
-            const SizedBox(height: AppSpacings.lg),
+            Text('BANKSOS', style: AppTextStyles.h1.copyWith(fontSize: 32, color: AppColors.primaryBlue, letterSpacing: 5)),
+            const SizedBox(height: AppSpacings.md),
+            const CircularProgressIndicator(color: AppColors.primaryBlue), // Loading Murni
           ],
         ),
       ),
     );
   }
 
-  Widget _buildDots() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(
-        _subtitles.length,
-        (index) => AnimatedContainer(
-          duration: const Duration(milliseconds: 250),
-          margin: const EdgeInsets.symmetric(horizontal: AppSpacings.xs),
-          width: _currentPage == index ? 24 : 8,
-          height: 8,
-          decoration: BoxDecoration(
-            // Pakai AppColors dari app_theme.dart
-            color: _currentPage == index
-                ? AppColors.primaryBlue
-                : AppColors.primaryBlue.withOpacity(0.25),
-            borderRadius: AppRadius.pill,
-          ),
-        ),
-      ),
-    );
-  }
-}
+  // ─── 2. Onboarding Screen ───────────────────────────────────────────────
+  Widget _buildOnboarding() {
+    final List<Map<String, String>> pages = [
+      {'title': 'BANKSOS', 'desc': 'Belajar Cerdas, Kumpulkan Poin,\nBuka Soal Premium'},
+      {'title': 'Offline First', 'desc': 'Kerjakan soal kapan saja,\nbahkan tanpa koneksi internet.'},
+    ];
 
-// ─── Halaman Onboarding ───────────────────────────────────────────────────
-
-class _OnboardingPage extends StatefulWidget {
-  final String subtitle;
-
-  const _OnboardingPage({required this.subtitle});
-
-  @override
-  State<_OnboardingPage> createState() => _OnboardingPageState();
-}
-
-class _OnboardingPageState extends State<_OnboardingPage>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _animCtrl;
-  late Animation<double> _fadeAnim;
-  late Animation<Offset> _slideAnim;
-
-  @override
-  void initState() {
-    super.initState();
-    _animCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 500),
-    );
-    _fadeAnim = CurvedAnimation(
-        parent: _animCtrl, curve: Curves.easeOut);
-    _slideAnim = Tween<Offset>(
-      begin: const Offset(0, 0.08),
-      end: Offset.zero,
-    ).animate(
-        CurvedAnimation(parent: _animCtrl, curve: Curves.easeOut));
-
-    _animCtrl.forward();
-  }
-
-  @override
-  void dispose() {
-    _animCtrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return FadeTransition(
-      opacity: _fadeAnim,
-      child: SlideTransition(
-        position: _slideAnim,
-        child: Padding(
-          padding: AppSpacings.pagePadding,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // ── Logo BS ────────────────────────────────────────────────
-              Container(
-                width: 88,
-                height: 88,
-                decoration: BoxDecoration(
-                  // Pakai AppColors.primaryBlue dari app_theme.dart
-                  color: AppColors.primaryBlue,
-                  // Pakai AppRadius.xl dari app_theme.dart
-                  borderRadius: AppRadius.xlAll,
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.primaryBlue.withOpacity(0.25),
-                      blurRadius: 20,
-                      offset: const Offset(0, 8),
+    return SafeArea(
+      child: Column(
+        children: [
+          Expanded(
+            child: PageView.builder(
+              controller: _pageController,
+              onPageChanged: (i) => setState(() => _currentPage = i),
+              itemCount: pages.length,
+              itemBuilder: (ctx, i) => Padding(
+                padding: AppSpacings.pagePadding,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      width: 88, height: 88,
+                      decoration: BoxDecoration(color: AppColors.primaryBlue, borderRadius: AppRadius.xlAll),
+                      alignment: Alignment.center,
+                      child: Text('BS', style: AppTextStyles.h1.copyWith(color: Colors.white, fontSize: 32)),
                     ),
+                    const SizedBox(height: AppSpacings.xxxl),
+                    Text(pages[i]['title']!, style: AppTextStyles.h1.copyWith(color: AppColors.primaryBlue)),
+                    const SizedBox(height: AppSpacings.lg),
+                    Text(pages[i]['desc']!, textAlign: TextAlign.center, style: AppTextStyles.body.copyWith(color: AppColors.textGrey, height: 1.6)),
                   ],
                 ),
-                child: Center(
-                  child: Text(
-                    'BS',
-                    style: AppTextStyles.appBarTitle.copyWith(
-                      fontSize: 30,
-                      letterSpacing: 2,
-                    ),
-                  ),
-                ),
               ),
-
-              const SizedBox(height: AppSpacings.xxxl),
-
-              // ── App Name ───────────────────────────────────────────────
-              Text(
-                'BANKSOS',
-                style: AppTextStyles.h1.copyWith(
-                  fontSize: 28,
-                  color: AppColors.primaryBlue,
-                  letterSpacing: 4,
-                ),
-              ),
-
-              const SizedBox(height: AppSpacings.lg),
-
-              // ── Subtitle ───────────────────────────────────────────────
-              Text(
-                widget.subtitle,
-                textAlign: TextAlign.center,
-                style: AppTextStyles.body.copyWith(
-                  color: AppColors.textGrey,
-                  height: 1.6,
-                ),
-              ),
-            ],
+            ),
           ),
-        ),
+          // Indikator
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(pages.length, (i) {
+              final active = _currentPage == i;
+              return AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                margin: const EdgeInsets.symmetric(horizontal: 4),
+                width: active ? 24 : 8, height: 8,
+                decoration: BoxDecoration(color: active ? AppColors.primaryBlue : AppColors.lightBlue, borderRadius: AppRadius.pill),
+              );
+            }),
+          ),
+          const SizedBox(height: AppSpacings.xxxl),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacings.xl),
+            child: ElevatedButton(
+              onPressed: () {
+                if (_currentPage < pages.length - 1) {
+                  _pageController.nextPage(duration: const Duration(milliseconds: 350), curve: Curves.easeIn);
+                } else {
+                  Navigator.pushReplacementNamed(context, AppRoutes.login);
+                }
+              },
+              child: Text(_currentPage < pages.length - 1 ? 'Lanjut' : 'Mulai Sekarang'),
+            ),
+          ),
+          const SizedBox(height: AppSpacings.lg),
+        ],
       ),
     );
   }

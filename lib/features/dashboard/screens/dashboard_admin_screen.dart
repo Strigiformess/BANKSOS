@@ -63,7 +63,7 @@ class _DashboardAdminScreenState extends State<DashboardAdminScreen> {
                 UserAvatar(
                   name: session.nama ?? 'Admin',
                   size: 44,
-                  bgColor: AppColors.errorRed.withOpacity(0.15),
+                  bgColor: AppColors.errorRed.withValues(alpha:0.15),
                 ),
                 const SizedBox(width: 12),
                 Column(
@@ -90,10 +90,10 @@ class _DashboardAdminScreenState extends State<DashboardAdminScreen> {
               padding:
                   const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
               decoration: BoxDecoration(
-                color: AppColors.errorRed.withOpacity(0.08),
+                color: AppColors.errorRed.withValues(alpha:0.08),
                 borderRadius: AppRadius.pill,
                 border: Border.all(
-                    color: AppColors.errorRed.withOpacity(0.25)),
+                    color: AppColors.errorRed.withValues(alpha:0.25)),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
