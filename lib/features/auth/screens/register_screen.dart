@@ -1,5 +1,5 @@
 // lib/features/auth/screens/register_screen.dart
-// PIC: Seruni Libertina Islami (SL)
+// PIC: Seruni Libertina Islami
 // Sprint 1: Halaman registrasi sesuai Figma "Login & Registration"
 //
 // FITUR:

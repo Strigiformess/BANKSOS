@@ -1,5 +1,5 @@
 // lib/features/auth/screens/splash_screen.dart
-// PIC: Seruni Libertina Islami (SL)
+// PIC: Seruni Libertina Islami
 // Sprint 1: Pemisahan Logic Splash Screen Asli & Onboarding
 
 import 'package:flutter/material.dart';
@@ -21,6 +21,12 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
 
   late final AnimationController _fadeCtrl;
   late final Animation<double> _fadeAnim;
+
+  // 1. Definisikan list halaman onboarding di sini agar bisa diakses secara global di dalam class
+  final List<Map<String, String>> _onboardingPages = [
+    {'title': 'BANKSOS', 'desc': 'Belajar Cerdas, Kumpulkan Poin,\nBuka Soal Premium'},
+    {'title': 'Offline First', 'desc': 'Kerjakan soal kapan saja,\nbahkan tanpa koneksi internet.'},
+  ];
 
   @override
   void initState() {
@@ -70,8 +76,9 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     Navigator.pushReplacementNamed(context, AppRoutes.login);
   }
 
+  // 2. Gunakan _onboardingPages untuk menggantikan _subtitles yang error
   void _onNext() {
-    if (_currentPage < _subtitles.length - 1) {
+    if (_currentPage < _onboardingPages.length - 1) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
@@ -121,10 +128,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
 
   // ─── 2. Onboarding Screen ───────────────────────────────────────────────
   Widget _buildOnboarding() {
-    final List<Map<String, String>> pages = [
-      {'title': 'BANKSOS', 'desc': 'Belajar Cerdas, Kumpulkan Poin,\nBuka Soal Premium'},
-      {'title': 'Offline First', 'desc': 'Kerjakan soal kapan saja,\nbahkan tanpa koneksi internet.'},
-    ];
+    // Variabel lokal 'pages' di sini sudah dihapus dan digantikan oleh '_onboardingPages' di atas
 
     return SafeArea(
       child: Column(
@@ -133,7 +137,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
             child: PageView.builder(
               controller: _pageController,
               onPageChanged: (i) => setState(() => _currentPage = i),
-              itemCount: pages.length,
+              itemCount: _onboardingPages.length,
               itemBuilder: (ctx, i) => Padding(
                 padding: AppSpacings.pagePadding,
                 child: Column(
@@ -146,9 +150,9 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                       child: Text('BS', style: AppTextStyles.h1.copyWith(color: Colors.white, fontSize: 32)),
                     ),
                     const SizedBox(height: AppSpacings.xxxl),
-                    Text(pages[i]['title']!, style: AppTextStyles.h1.copyWith(color: AppColors.primaryBlue)),
+                    Text(_onboardingPages[i]['title']!, style: AppTextStyles.h1.copyWith(color: AppColors.primaryBlue)),
                     const SizedBox(height: AppSpacings.lg),
-                    Text(pages[i]['desc']!, textAlign: TextAlign.center, style: AppTextStyles.body.copyWith(color: AppColors.textGrey, height: 1.6)),
+                    Text(_onboardingPages[i]['desc']!, textAlign: TextAlign.center, style: AppTextStyles.body.copyWith(color: AppColors.textGrey, height: 1.6)),
                   ],
                 ),
               ),
@@ -157,7 +161,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
           // Indikator
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(pages.length, (i) {
+            children: List.generate(_onboardingPages.length, (i) {
               final active = _currentPage == i;
               return AnimatedContainer(
                 duration: const Duration(milliseconds: 300),
@@ -171,14 +175,8 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: AppSpacings.xl),
             child: ElevatedButton(
-              onPressed: () {
-                if (_currentPage < pages.length - 1) {
-                  _pageController.nextPage(duration: const Duration(milliseconds: 350), curve: Curves.easeIn);
-                } else {
-                  Navigator.pushReplacementNamed(context, AppRoutes.login);
-                }
-              },
-              child: Text(_currentPage < pages.length - 1 ? 'Lanjut' : 'Mulai Sekarang'),
+              onPressed: _onNext, // Gunakan langsung fungsi _onNext yang sudah diperbaiki agar logic tombol lebih rapi
+              child: Text(_currentPage < _onboardingPages.length - 1 ? 'Lanjut' : 'Mulai Sekarang'),
             ),
           ),
           const SizedBox(height: AppSpacings.lg),

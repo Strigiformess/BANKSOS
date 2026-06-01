@@ -1,3 +1,7 @@
+// lib/features/question/screens/offline_questions_screen.dart
+// PIC: Jibril (MJ)
+// Sprint 2: Implementasi deteksi status koneksi dan halaman Mode Offline
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 

@@ -1,3 +1,7 @@
+// lib/features/auth/repositories/auth_repository.dart
+// PIC: Revaldi (RP)
+// Sprint 1: Implementasi auth_repository.dart (hubungkan auth_remote dengan controller)
+
 import '../../../data/models/user_model.dart';
 import '../data/auth_remote.dart';
 

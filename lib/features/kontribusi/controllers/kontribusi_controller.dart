@@ -1,5 +1,5 @@
 // lib/features/kontribusi/controllers/kontribusi_controller.dart
-// PIC: Seruni Libertina Islami (SL)
+// PIC: Seruni Libertina Islami
 // Catatan: Memisahkan logic pengambilan data kontribusi dari UI.
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
