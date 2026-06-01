@@ -293,7 +293,164 @@ class SyncManager {
           final synced = item.copyWith(isSynced: true);
           await _hive.userProgressBox.put(item.key ?? item.id, synced);
         }
-      } catch (_) {}
+      } catch (_) {
+        // Biarkan SyncManager mencoba lagi nanti.
+      }
+    }
+  }
+
+  Future<void> enqueueBookmarkAction({
+    required String userId,
+    required String questionId,
+    required String action,
+  }) async {
+    final id = DateTime.now().millisecondsSinceEpoch.toString();
+    final queueItem = SyncQueueModel(
+      id: id,
+      type: SyncType.bookmark,
+      payload: {
+        'userId': userId,
+        'questionId': questionId,
+      },
+      action: action,
+      createdAt: DateTime.now(),
+    );
+
+    await _hive.syncQueueBox.put(queueItem.id, queueItem);
+  }
+
+  // ─── Dependency ─────────────────────────────────────────────────────────────
+
+  final MongoDBService _db = MongoDBService.instance;
+
+  // ─── State internal ─────────────────────────────────────────────────────────
+
+  StreamSubscription<ConnectivityResult>? _connectivitySub;
+  bool _isSyncing = false;
+
+  /// True jika proses sync sedang berjalan.
+  bool get isSyncing => _isSyncing;
+
+  /// Jumlah item yang sedang menunggu sync.
+  int get pendingCount => _hive.syncQueueBox.length;
+
+  // ─── Public API ──────────────────────────────────────────────────────────────
+
+  /// Mulai mendengarkan perubahan koneksi.
+  /// Dipanggil sekali di main() setelah HiveService.init().
+  void startListening() {
+    _connectivitySub?.cancel();
+    _connectivitySub =
+        _connectivity.onConnectivityChanged.listen((result) async {
+      if (result != ConnectivityResult.none) {
+        // Device baru saja kembali online — coba sync
+        await syncAll();
+      }
+    });
+
+    // Coba sync langsung saat pertama kali app buka (jika sudah online)
+    _trySyncOnStart();
+  }
+
+  /// Hentikan listener. Dipanggil saat app ditutup (opsional).
+  void stopListening() {
+    _connectivitySub?.cancel();
+    _connectivitySub = null;
+  }
+
+  /// Tambahkan item baru ke antrian sinkronisasi.
+  ///
+  /// Dipanggil dari BookmarkRepository atau ProgressRepository saat
+  /// operasi dilakukan dalam kondisi offline.
+  Future<void> enqueue(SyncQueueModel item) async {
+    await _hive.syncQueueBox.put(item.id, item);
+  }
+
+  /// Helper untuk membuat dan langsung mengantre item progress.
+  Future<void> enqueueProgress({
+    required String userId,
+    required String questionId,
+    required String categoryId,
+    required bool isSolved,
+    required int attemptCount,
+    DateTime? solvedAt,
+  }) async {
+    const uuid = Uuid();
+    final item = SyncQueueModel(
+      id: uuid.v4(),
+      type: SyncType.progress,
+      payload: {
+        'user_id': userId,
+        'question_id': questionId,
+        'category_id': categoryId,
+        'is_solved': isSolved,
+        'attempt_count': attemptCount,
+        'solved_at': solvedAt?.toIso8601String(),
+      },
+      action: SyncAction.progressSync.name,
+      createdAt: DateTime.now(),
+    );
+    await enqueue(item);
+  }
+
+  /// Helper untuk membuat dan langsung mengantre item bookmark.
+  Future<void> enqueueBookmark({
+    required String userId,
+    required String questionId,
+    required bool isAdd, // true = tambah, false = hapus
+  }) async {
+    const uuid = Uuid();
+    final item = SyncQueueModel(
+      id: uuid.v4(),
+      type: SyncType.bookmark,
+      payload: {
+        'user_id': userId,
+        'question_id': questionId,
+        'action': isAdd ? 'add' : 'remove',
+      },
+      action: isAdd ? SyncAction.bookmarkAdd.name : SyncAction.bookmarkRemove.name,
+      createdAt: DateTime.now(),
+    );
+    await enqueue(item);
+  }
+
+  /// Proses semua item di antrian.
+  ///
+  /// Aman dipanggil berkali-kali — jika sudah running, panggilan baru diabaikan.
+  /// Mengembalikan jumlah item yang berhasil disinkronisasi.
+  Future<int> syncAll() async {
+    if (_isSyncing) return 0;
+
+    final isOnline = await _connectivity.checkNow();
+    if (!isOnline || !_db.isConnected) return 0;
+
+    _isSyncing = true;
+    int successCount = 0;
+
+    try {
+      // Ambil semua item dari Hive, urutkan dari yang paling lama (FIFO)
+      final items = _hive.syncQueueBox.values.toList()
+        ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+
+      for (final item in items) {
+        final result = await _processItem(item);
+
+        if (result == _SyncItemResult.success) {
+          // Hapus dari antrian setelah berhasil
+          await _hive.syncQueueBox.delete(item.key);
+          successCount++;
+        } else if (result == _SyncItemResult.skipped) {
+          // Sudah melebihi maxRetry — hapus agar tidak memblokir antrian
+          await _hive.syncQueueBox.delete(item.key);
+        }
+        // Jika failed, biarkan di antrian dengan retryCount+1 untuk dicoba lagi nanti
+      }
+    } catch (e) {
+      // Log error tanpa crash
+      // ignore: avoid_print
+      print('[SyncManager] syncAll() error: $e');
+    } finally {
+      _isSyncing = false;
     }
   }
 

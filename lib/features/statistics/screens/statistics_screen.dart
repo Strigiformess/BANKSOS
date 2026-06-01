@@ -76,12 +76,11 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
       backgroundColor: AppColors.bgLight,
       appBar: AppBar(
         title: const Text('Stats & Offline Management'),
-        centerTitle: false,
+        centerTitle: true,
         actions: [
           IconButton(
-            icon: const Icon(Icons.sync_outlined),
-            tooltip: 'Sinkronisasi',
-            onPressed: () {},
+            icon: const Icon(Icons.refresh_outlined),
+            onPressed: () => setState(() {}),
           ),
         ],
       ),
@@ -95,36 +94,6 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // ── Header ───────────────────────────────────────────────
-                Row(
-                  children: [
-                    UserAvatar(
-                      name: SessionService.instance.nama ?? 'User',
-                      size: 36,
-                      bgColor: AppColors.primaryBlue.withOpacity(0.12),
-                    ),
-                    const SizedBox(width: 10),
-                    Text(
-                      'BANKSOS',
-                      style: AppTextStyles.h2.copyWith(
-                        color: AppColors.primaryBlue,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 1.5,
-                      ),
-                    ),
-                    const Spacer(),
-                    IconButton(
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                      icon: const Icon(Icons.sync,
-                          color: AppColors.primaryBlue, size: 22),
-                      onPressed: () {},
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 20),
-
                 Text(
                   'Performance Overview',
                   style: AppTextStyles.h1.copyWith(

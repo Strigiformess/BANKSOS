@@ -12,6 +12,7 @@ import 'data/remote/question_remote.dart';
 import 'core/services/connectivity_service.dart';
 import 'core/services/sync_service.dart';
 import 'routes/app_routes.dart';
+import 'shared/layouts/main_shell.dart';
 
 // Auth
 import 'features/auth/screens/login_screen.dart';
@@ -169,6 +170,7 @@ class BanksosApp extends StatelessWidget {
         AppRoutes.dashboardMahasiswa: (_) => const DashboardMahasiswaScreen(),
         AppRoutes.dashboardReviewer:  (_) => const DashboardReviewerScreen(),
         AppRoutes.dashboardAdmin:     (_) => const DashboardAdminScreen(),
+        AppRoutes.shell:              (_) => const MainShell(),
         AppRoutes.bankSoal:           (_) => const BankSoalScreen(),
         AppRoutes.profile:            (_) => const ProfileScreen(),
         AppRoutes.statistik:          (_) => const StatisticsScreen(),

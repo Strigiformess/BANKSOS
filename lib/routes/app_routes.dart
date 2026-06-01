@@ -27,7 +27,8 @@ class AppRoutes {
   static const String bookmarks          = '/bookmarks';
   static const String riwayat            = '/riwayat';
   static const String profile            = '/profile';
-  static const String statistik          = '/statistik';   // ← TAMBAHKAN INI
+  static const String shell              = '/shell';
+  static const String statistik          = '/statistik';
 
 
   // Sprint 5 — Panel Admin

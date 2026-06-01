@@ -137,7 +137,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Scaffold(
       backgroundColor: AppColors.bgLight,
       appBar: AppBar(
-        title: const Text('BANKSOS'),
+        title: const Text('Profile'),
+        centerTitle: true,
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh_outlined),

@@ -55,9 +55,29 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   void _redirectByRole(String? role) {
     if (!mounted) return;
     switch (role) {
-      case 'admin': Navigator.pushReplacementNamed(context, AppRoutes.dashboardAdmin); break;
-      case 'reviewer': Navigator.pushReplacementNamed(context, AppRoutes.dashboardReviewer); break;
-      default: Navigator.pushReplacementNamed(context, AppRoutes.dashboardMahasiswa);
+      case 'admin':
+        Navigator.pushReplacementNamed(context, AppRoutes.dashboardAdmin);
+        break;
+      case 'reviewer':
+        Navigator.pushReplacementNamed(context, AppRoutes.dashboardReviewer);
+        break;
+      default:
+        Navigator.pushReplacementNamed(context, AppRoutes.shell);
+    }
+  }
+
+  void _goToLogin() {
+    Navigator.pushReplacementNamed(context, AppRoutes.login);
+  }
+
+  void _onNext() {
+    if (_currentPage < _subtitles.length - 1) {
+      _pageController.nextPage(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    } else {
+      _goToLogin();
     }
   }
 
