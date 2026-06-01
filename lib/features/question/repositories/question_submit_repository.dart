@@ -179,7 +179,7 @@ class QuestionSubmitRepository implements IQuestionSubmitRepository {
 
       return QuestionSubmitResult(
         success: true,
-        questionId: newId.toHexString(),
+        questionId: newId.oid,
       );
     } catch (e) {
       return QuestionSubmitResult(

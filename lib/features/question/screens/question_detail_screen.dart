@@ -199,7 +199,7 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen>
                     Text(
                       '$currentNum/$totalHints',
                       style: TextStyle(
-                        color: Colors.black.withOpacity(0.6),
+                        color: Colors.black.withValues(alpha:0.6),
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
                       ),
@@ -315,7 +315,7 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen>
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: context.isDark
-                    ? AppColors.primaryBlue.withOpacity(0.15)
+                    ? AppColors.primaryBlue.withValues(alpha:0.15)
                     : AppColors.lightBlue,
                 borderRadius: AppRadius.lgAll,
                 border: Border.all(
@@ -334,7 +334,7 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen>
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
-                          color: _getDifficultyColor().withOpacity(0.2), // dibikin soft seperti mockup
+                          color: _getDifficultyColor().withValues(alpha:0.2), // dibikin soft seperti mockup
                           borderRadius: AppRadius.pill,
                           border: Border.all(color: _getDifficultyColor()),
                         ),
@@ -402,7 +402,7 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen>
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                     decoration: BoxDecoration(
                       color: context.isDark 
-                          ? AppColors.primaryBlue.withOpacity(0.2) 
+                          ? AppColors.primaryBlue.withValues(alpha:0.2) 
                           : const Color(0xFFD9E7F5), // Warna soft blue latar tombol HINT
                       borderRadius: BorderRadius.circular(20),
                     ),
@@ -456,7 +456,7 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen>
                                 borderRadius: BorderRadius.circular(14),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.black.withOpacity(0.1),
+                                    color: Colors.black.withValues(alpha:0.1),
                                     blurRadius: 4,
                                     offset: const Offset(0, 2),
                                   )
@@ -498,7 +498,7 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen>
                     Icons.edit,
                     color: _hasSubmitted 
                         ? (_isCorrect ? AppColors.successGreen : AppColors.errorRed)
-                        : colors.primaryText.withOpacity(0.5), 
+                        : colors.primaryText.withValues(alpha:0.5), 
                       ),
                     enabledBorder: OutlineInputBorder(
                     borderRadius: AppRadius.mdAll,

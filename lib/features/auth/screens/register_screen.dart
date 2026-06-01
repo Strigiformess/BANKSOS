@@ -25,14 +25,12 @@ class RegisterScreen extends ConsumerStatefulWidget {
 }
 
 class _RegisterScreenState extends ConsumerState<RegisterScreen> {
-  // ─── Controllers ──────────────────────────────────────────────────────────
   final _namaCtrl       = TextEditingController();
   final _nimCtrl        = TextEditingController();
   final _emailCtrl      = TextEditingController();
   final _passwordCtrl   = TextEditingController();
   final _konfirmasiCtrl = TextEditingController();
 
-  // ─── State ────────────────────────────────────────────────────────────────
   bool _obscurePass      = true;
   bool _obscureKonfirmasi = true;
 
@@ -59,21 +57,27 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     super.dispose();
   }
 
-  // ─── Validasi ─────────────────────────────────────────────────────────────
-
   void _validateNama(String v) {
     setState(() {
-      if (v.trim().isEmpty)      _namaError = 'Nama lengkap tidak boleh kosong';
-      else if (v.trim().length < 3) _namaError = 'Nama minimal 3 karakter';
-      else                       _namaError = null;
+      if (v.trim().isEmpty) {
+        _namaError = 'Nama lengkap tidak boleh kosong';
+      } else if (v.trim().length < 3) {
+        _namaError = 'Nama minimal 3 karakter';
+      } else {
+        _namaError = null;
+      }
     });
   }
 
   void _validateNim(String v) {
     setState(() {
-      if (v.trim().isEmpty)                           _nimError = 'NIM tidak boleh kosong';
-      else if (!RegExp(r'^\d{9}$').hasMatch(v.trim())) _nimError = 'NIM harus 9 digit angka';
-      else                                            _nimError = null;
+      if (v.trim().isEmpty) {
+        _nimError = 'NIM tidak boleh kosong';
+      } else if (!RegExp(r'^\d{9}$').hasMatch(v.trim())) {
+        _nimError = 'NIM harus 9 digit angka';
+      } else {
+        _nimError = null;
+      }
     });
   }
 
@@ -91,14 +95,15 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   void _validatePassword(String v) {
     setState(() {
-      if (v.isEmpty)          _passwordError = 'Kata sandi tidak boleh kosong';
-      else if (v.length < 8)  _passwordError = 'Kata sandi minimal 8 karakter';
-      else if (!RegExp(r'(?=.*[A-Za-z])(?=.*\d)').hasMatch(v)) {
+      if (v.isEmpty) {
+        _passwordError = 'Kata sandi tidak boleh kosong';
+      } else if (v.length < 8) {
+        _passwordError = 'Kata sandi minimal 8 karakter';
+      } else if (!RegExp(r'(?=.*[A-Za-z])(?=.*\d)').hasMatch(v)) {
         _passwordError = 'Harus mengandung huruf dan angka';
       } else {
         _passwordError = null;
       }
-      // Validasi ulang konfirmasi jika sudah diisi
       if (_konfirmasiCtrl.text.isNotEmpty) {
         _validateKonfirmasi(_konfirmasiCtrl.text);
       }
@@ -107,13 +112,15 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   void _validateKonfirmasi(String v) {
     setState(() {
-      if (v.isEmpty)                     _konfirmasiError = 'Konfirmasi tidak boleh kosong';
-      else if (v != _passwordCtrl.text)  _konfirmasiError = 'Kata sandi tidak cocok';
-      else                               _konfirmasiError = null;
+      if (v.isEmpty) {
+        _konfirmasiError = 'Konfirmasi tidak boleh kosong';
+      } else if (v != _passwordCtrl.text) {
+        _konfirmasiError = 'Kata sandi tidak cocok';
+      } else {
+        _konfirmasiError = null;
+      }
     });
   }
-
-  // ─── Submit ───────────────────────────────────────────────────────────────
 
   Future<void> _onRegister() async {
     if (!_isFormValid) return;
@@ -139,8 +146,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     }
   }
 
-  // ─── Build ────────────────────────────────────────────────────────────────
-
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authControllerProvider);
@@ -154,13 +159,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const SizedBox(height: AppSpacings.lg),
-
-              // ── Tab Toggle ───────────────────────────────────────────────
               _buildTabToggle(),
-
               const SizedBox(height: AppSpacings.xxxl),
-
-              // ── Header ───────────────────────────────────────────────────
               Text(
                 'Create Account',
                 textAlign: TextAlign.center,
@@ -176,10 +176,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 textAlign: TextAlign.center,
                 style: AppTextStyles.body.copyWith(color: AppColors.textGrey),
               ),
-
               const SizedBox(height: AppSpacings.xxl),
 
-              // ── Error Banner ─────────────────────────────────────────────
               if (authState.errorMessage != null) ...[
                 AppMessageBanner(
                   type: BannerType.error,
@@ -188,7 +186,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 const SizedBox(height: AppSpacings.lg),
               ],
 
-              // ── Field: Nama Lengkap ──────────────────────────────────────
               _buildLabel('Nama Lengkap'),
               const SizedBox(height: AppSpacings.xs),
               _buildTextField(
@@ -199,10 +196,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 onChanged: _validateNama,
                 action: TextInputAction.next,
               ),
-
               const SizedBox(height: AppSpacings.md),
 
-              // ── Field: NIM ───────────────────────────────────────────────
               _buildLabel('NIM'),
               const SizedBox(height: AppSpacings.xs),
               _buildTextField(
@@ -214,10 +209,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 keyboardType: TextInputType.number,
                 action: TextInputAction.next,
               ),
-
               const SizedBox(height: AppSpacings.md),
 
-              // ── Field: Email ─────────────────────────────────────────────
               _buildLabel('Email Address'),
               const SizedBox(height: AppSpacings.xs),
               _buildTextField(
@@ -229,10 +222,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 keyboardType: TextInputType.emailAddress,
                 action: TextInputAction.next,
               ),
-
               const SizedBox(height: AppSpacings.md),
 
-              // ── Field: Password ──────────────────────────────────────────
               _buildLabel('Password'),
               const SizedBox(height: AppSpacings.xs),
               _buildPasswordField(
@@ -244,10 +235,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 onToggle: () => setState(() => _obscurePass = !_obscurePass),
                 action: TextInputAction.next,
               ),
-
               const SizedBox(height: AppSpacings.md),
 
-              // ── Field: Konfirmasi Password ───────────────────────────────
               _buildLabel('Confirm Password'),
               const SizedBox(height: AppSpacings.xs),
               _buildPasswordField(
@@ -260,10 +249,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 action: TextInputAction.done,
                 onSubmitted: (_) => _onRegister(),
               ),
-
               const SizedBox(height: AppSpacings.xxl),
 
-              // ── Tombol Daftar ────────────────────────────────────────────
               ElevatedButton(
                 onPressed: (!_isFormValid || authState.isLoading) ? null : _onRegister,
                 child: authState.isLoading
@@ -276,10 +263,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       )
                     : const Text('Daftar'),
               ),
-
               const SizedBox(height: AppSpacings.xxl),
 
-              // ── Link Login ───────────────────────────────────────────────
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -301,7 +286,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   ),
                 ],
               ),
-
               const SizedBox(height: AppSpacings.lg),
             ],
           ),
@@ -310,19 +294,16 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     );
   }
 
-  // ─── Helper Widgets ───────────────────────────────────────────────────────
-
   Widget _buildTabToggle() {
     return Container(
       height: 44,
       decoration: BoxDecoration(
-        color: AppColors.borderGrey.withOpacity(0.35),
+        color: AppColors.borderGrey.withValues(alpha: 0.35),
         borderRadius: AppRadius.pill,
       ),
       padding: const EdgeInsets.all(4),
       child: Row(
         children: [
-          // Tab Login — tidak aktif
           Expanded(
             child: GestureDetector(
               onTap: () {
@@ -338,7 +319,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               ),
             ),
           ),
-          // Tab Register — aktif
           Expanded(
             child: Container(
               decoration: const BoxDecoration(

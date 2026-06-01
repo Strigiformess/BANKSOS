@@ -177,7 +177,7 @@ class CorrectAnswerCard extends AnimatedWidget {
           color: AppColors.easyBg,
           borderRadius: AppRadius.mdAll,
           border:
-              Border.all(color: AppColors.successGreen.withOpacity(0.4)),
+              Border.all(color: AppColors.successGreen.withValues(alpha:0.4)),
         ),
         child: Row(
           children: [
@@ -232,10 +232,10 @@ class CorrectAnswerCardAnimated extends StatelessWidget {
                 color: AppColors.easyBg,
                 borderRadius: AppRadius.mdAll,
                 border: Border.all(
-                    color: AppColors.successGreen.withOpacity(0.4)),
+                    color: AppColors.successGreen.withValues(alpha:0.4)),
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.successGreen.withOpacity(0.12),
+                    color: AppColors.successGreen.withValues(alpha:0.12),
                     blurRadius: 12,
                     offset: const Offset(0, 4),
                   ),
@@ -309,7 +309,7 @@ class WrongAnswerBanner extends StatelessWidget {
           color: AppColors.hardBg,
           borderRadius: AppRadius.mdAll,
           border:
-              Border.all(color: AppColors.errorRed.withOpacity(0.4)),
+              Border.all(color: AppColors.errorRed.withValues(alpha:0.4)),
         ),
         child: Row(
           children: [

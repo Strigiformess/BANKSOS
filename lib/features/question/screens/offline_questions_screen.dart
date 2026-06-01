@@ -66,10 +66,10 @@ class OfflineQuestionsScreen extends ConsumerWidget {
                   decoration: BoxDecoration(
                     color: AppColors.bgWhite,
                     borderRadius: AppRadius.lgAll,
-                    border: Border.all(color: AppColors.borderGrey.withOpacity(0.3)),
+                    border: Border.all(color: AppColors.borderGrey.withValues(alpha:0.3)),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.03),
+                        color: Colors.black.withValues(alpha:0.03),
                         blurRadius: 12,
                         offset: const Offset(0, 4),
                       ),

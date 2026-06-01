@@ -1,5 +1,5 @@
 // lib/features/dashboard/screens/dashboard_mahasiswa_screen.dart
-// PIC: Seruni (SL) — Terintegrasi dengan Hive & MongoDB, tanpa data dummy
+// PIC: Seruni — Terintegrasi dengan Hive & MongoDB
 // Dashboard Mahasiswa — sesuai mockup UI Light Theme
 
 import 'package:flutter/material.dart';

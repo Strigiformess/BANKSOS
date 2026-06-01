@@ -1,9 +1,10 @@
 // lib/features/admin/screens/admin_kelola_user_screen.dart
-// Sprint 5 — Seruni (SL) + Revaldi (RP) guard integration
+// Sprint 5 — Seruni + Revaldi guard integration
 //
 // RBAC Guard dipanggil di initState menggunakan RbacGuard.redirectIfUnauthorized
 // Guard CONTROLLER LEVEL ada di AdminController (Revaldi).
 
+// ignore_for_file: deprecated_member_use
 import 'package:flutter/material.dart';
 
 import '../../../core/guard/rbac_guard.dart';
@@ -446,10 +447,10 @@ class _UserCard extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(
                       horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: _roleColor.withOpacity(0.1),
+                    color: _roleColor.withValues(alpha:0.1),
                     borderRadius: AppRadius.pill,
                     border: Border.all(
-                        color: _roleColor.withOpacity(0.4)),
+                        color: _roleColor.withValues(alpha:0.4)),
                   ),
                   child: Text(
                     _roleLabel,
@@ -536,9 +537,9 @@ class _StatPill extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha:0.1),
         borderRadius: AppRadius.pill,
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha:0.3)),
       ),
       child: Row(
         children: [

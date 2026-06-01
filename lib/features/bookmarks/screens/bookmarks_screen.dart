@@ -168,7 +168,7 @@ class _BookmarkCard extends StatelessWidget {
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 20),
         decoration: BoxDecoration(
-          color: AppColors.errorRed.withOpacity(0.1),
+          color: AppColors.errorRed.withValues(alpha:0.1),
           borderRadius: AppRadius.lgAll,
         ),
         child: Column(
@@ -234,7 +234,7 @@ class _BookmarkCard extends StatelessWidget {
                         );
                         if (confirmed == true) onRemove();
                       },
-                      child: Icon(Icons.bookmark_remove_outlined, size: 18, color: AppColors.textGrey.withOpacity(0.6)),
+                      child: Icon(Icons.bookmark_remove_outlined, size: 18, color: AppColors.textGrey.withValues(alpha:0.6)),
                     ),
                   ],
                 ),
