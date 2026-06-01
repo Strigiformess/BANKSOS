@@ -1,7 +1,8 @@
 // lib/features/auth/states/auth_state.dart
-
-/// State untuk controller autentikasi (login & register).
-/// Digunakan oleh AuthController (Riverpod StateNotifier).
+// PIC: Revaldi (RP)
+// Sprint 1: Implementasi state management login/register
+// State untuk controller autentikasi (login & register).
+// Digunakan oleh AuthController (Riverpod StateNotifier).
 class AuthState {
   final bool isLoading;
   final String? errorMessage;

@@ -1,4 +1,6 @@
 // lib/features/auth/data/auth_remote.dart
+// PIC: Adjie (AA)
+// Sprint 1: Implementasi auth_remote.dart (fungsi loginUser & registerUser)
 import 'package:bcrypt/bcrypt.dart';
 import 'package:mongo_dart/mongo_dart.dart';
 

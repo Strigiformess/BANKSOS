@@ -1,13 +1,7 @@
 // lib/shared/layouts/main_shell.dart
-//
-// Shell widget dengan persistent bottom navbar untuk semua halaman utama.
-// Menggunakan IndexedStack agar state tiap tab tidak hilang saat berpindah.
-//
-// Cara pakai di main.dart:
-//   AppRoutes.shell: (_) => const MainShell(),
-//
-// Untuk navigasi dari luar (misal setelah login):
-//   Navigator.pushReplacementNamed(context, AppRoutes.shell);
+// PIC: Seruni
+// Sprint 1: Pembuatan UI Layer dasar dan struktur halaman aplikasi
+
 
 import 'package:flutter/material.dart';
 

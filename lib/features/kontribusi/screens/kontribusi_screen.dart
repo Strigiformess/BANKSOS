@@ -1,5 +1,5 @@
 // lib/features/kontribusi/screens/kontribusi_screen.dart
-// PIC: Seruni Libertina Islami (SL)
+// PIC: Seruni Libertina Islami
 // Sprint 4: Halaman Kontribusiku - Pure UI (Figma Match) & Zero Analyzer Issues
 
 import 'package:flutter/material.dart';

@@ -1,6 +1,6 @@
 // lib/features/statistics/screens/statistics_screen.dart
-// Halaman Statistik — Performance Overview (menggantikan Rewards di navbar)
-
+// PIC: Seruni 
+// Sprint 5: Buat halaman Kelola Soal beserta statistik di header
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 

@@ -1,3 +1,7 @@
+// lib/features/question/controllers/question_controller.dart
+// PIC: Revaldi (RP)
+// Sprint 2: Implementasi logic dan state management fitur kerjakan soal
+
 import 'package:flutter/foundation.dart';
 import 'package:banksos/data/models/question_model.dart';
 import 'package:banksos/features/question/repositories/question_repository.dart';

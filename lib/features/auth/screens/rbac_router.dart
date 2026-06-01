@@ -1,3 +1,7 @@
+// lib/features/auth/screens/rbac_router.dart
+// PIC: Revaldi (RP)
+// Sprint 1: Implementasi RBAC routing setelah login berhasil
+
 import 'package:flutter/material.dart';
 
 // Placeholder - nanti diganti screen asli dari masing-masing PIC
