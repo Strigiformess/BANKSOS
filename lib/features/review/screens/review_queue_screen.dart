@@ -1,11 +1,12 @@
 // lib/features/review/screens/review_queue_screen.dart
-// Sprint 4 — Seruni (SL) UI + Revaldi (RP) guard & controller integration
+// Sprint 4 — Seruni UI + Revaldi guard & controller integration
 //
 // Update dari Revaldi (Sprint 4 Kamis):
 //   - Guard RBAC di initState (redirect jika bukan reviewer)
 //   - Terhubung ke ReviewController untuk aksi approve/revisi/reject
 //   - Validasi dilakukan di controller level (bukan hanya UI)
 
+// ignore_for_file: deprecated_member_use
 import 'package:flutter/material.dart';
 
 import 'package:banksos/core/guard/rbac_guard.dart';

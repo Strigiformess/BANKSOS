@@ -1,15 +1,15 @@
-// lib/features/auth/screens/login_screen.dart
-// PIC: Seruni Libertina Islami (SL)
-// Sprint 1: Halaman login sesuai Figma "Login & Registration"
-//
-// FITUR:
-//   - Tab toggle Login | Register
-//   - Form email & password dengan validasi real-time
-//   - Tombol "Masuk" dengan loading state
-//   - Tombol Google Account (placeholder)
-//   - Link ke halaman register
-//   - Error banner dari controller
-//   - Redirect otomatis ke dashboard sesuai role setelah login
+// // lib/features/auth/screens/login_screen.dart
+// // PIC: Seruni Libertina Islami
+// // Sprint 1: Halaman login "Login & Registration"
+// //
+// // FITUR:
+// //   - Tab toggle Login | Register
+// //   - Form email & password dengan validasi real-time
+// //   - Tombol "Masuk" dengan loading state
+// //   - Tombol Google Account (placeholder)
+// //   - Link ke halaman register
+// //   - Error banner dari controller
+// //   - Redirect otomatis ke dashboard sesuai role setelah login
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -39,8 +39,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     _passwordCtrl.dispose();
     super.dispose();
   }
-
-  // ─── Aksi ─────────────────────────────────────────────────────────────────
 
   Future<void> _onLogin() async {
     if (!_formKey.currentState!.validate()) return;
@@ -73,8 +71,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     );
   }
 
-  // ─── Build ────────────────────────────────────────────────────────────────
-
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authControllerProvider);
@@ -90,13 +86,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const SizedBox(height: AppSpacings.lg),
-
-                // ── Tab Toggle: Login | Register ────────────────────────────
                 _buildTabToggle(),
-
                 const SizedBox(height: AppSpacings.xxxl),
-
-                // ── Header ──────────────────────────────────────────────────
                 Text(
                   'Welcome Back',
                   textAlign: TextAlign.center,
@@ -112,10 +103,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   textAlign: TextAlign.center,
                   style: AppTextStyles.body.copyWith(color: AppColors.textGrey),
                 ),
-
                 const SizedBox(height: AppSpacings.xxxl),
 
-                // ── Error Banner ─────────────────────────────────────────────
                 if (authState.errorMessage != null) ...[
                   AppMessageBanner(
                     type: BannerType.error,
@@ -124,7 +113,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   const SizedBox(height: AppSpacings.lg),
                 ],
 
-                // ── Field: Email ─────────────────────────────────────────────
                 _buildFieldLabel('Email Address'),
                 const SizedBox(height: AppSpacings.xs),
                 TextFormField(
@@ -148,18 +136,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     return null;
                   },
                 ),
-
                 const SizedBox(height: AppSpacings.lg),
 
-                // ── Field: Password ──────────────────────────────────────────
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     _buildFieldLabel('Password'),
                     GestureDetector(
-                      onTap: () {
-                        // TODO: implementasi lupa password
-                      },
+                      onTap: () {},
                       child: Text(
                         'Forgot password?',
                         style: AppTextStyles.small.copyWith(
@@ -201,10 +185,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     return null;
                   },
                 ),
-
                 const SizedBox(height: AppSpacings.xxl),
 
-                // ── Tombol Masuk ─────────────────────────────────────────────
                 ElevatedButton(
                   onPressed: authState.isLoading ? null : _onLogin,
                   child: authState.isLoading
@@ -217,10 +199,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         )
                       : const Text('Masuk'),
                 ),
-
                 const SizedBox(height: AppSpacings.xl),
 
-                // ── Divider ──────────────────────────────────────────────────
                 Row(
                   children: [
                     const Expanded(child: Divider()),
@@ -231,14 +211,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     const Expanded(child: Divider()),
                   ],
                 ),
-
                 const SizedBox(height: AppSpacings.lg),
 
-                // ── Tombol Google ────────────────────────────────────────────
                 OutlinedButton(
-                  onPressed: () {
-                    // TODO: Google Sign In
-                  },
+                  onPressed: () {},
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.textDark,
                     side: const BorderSide(color: AppColors.borderGrey),
@@ -257,10 +233,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ],
                   ),
                 ),
-
                 const SizedBox(height: AppSpacings.xxl),
 
-                // ── Link Register ─────────────────────────────────────────────
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -279,7 +253,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                   ],
                 ),
-
                 const SizedBox(height: AppSpacings.lg),
               ],
             ),
@@ -289,19 +262,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     );
   }
 
-  // ─── Helper Widgets ───────────────────────────────────────────────────────
-
   Widget _buildTabToggle() {
     return Container(
       height: 44,
       decoration: BoxDecoration(
-        color: AppColors.borderGrey.withOpacity(0.35),
+        color: AppColors.borderGrey.withValues(alpha: 0.35),
         borderRadius: AppRadius.pill,
       ),
       padding: const EdgeInsets.all(4),
       child: Row(
         children: [
-          // Tab Login — aktif
           Expanded(
             child: Container(
               decoration: const BoxDecoration(
@@ -317,7 +287,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               ),
             ),
           ),
-          // Tab Register — tidak aktif
           Expanded(
             child: GestureDetector(
               onTap: _goToRegister,
@@ -368,7 +337,7 @@ class _GoogleLogoPainter extends CustomPainter {
     final tp = TextPainter(
       text: const TextSpan(
         text: 'G',
-        style: TextStyle(
+        style: TextStyle( // FIX: Menggunakan Const secara otomatis karena block const sebelumnya
           fontSize: 15,
           fontWeight: FontWeight.bold,
           color: Color(0xFF4285F4),

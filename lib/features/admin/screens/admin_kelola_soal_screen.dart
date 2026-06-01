@@ -1,5 +1,5 @@
 // lib/features/admin/screens/admin_kelola_soal_screen.dart
-// Sprint 5 — Seruni (SL) + Revaldi (RP) guard integration
+// Sprint 5 — Seruni + Revaldi guard integration
 //
 // Halaman admin untuk mengelola semua soal (termasuk arsip).
 // RBAC guard di initState (UI) + AdminController._guardAdmin() (controller).
@@ -416,9 +416,9 @@ class _ActionButton extends StatelessWidget {
         padding:
             const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha:0.1),
           borderRadius: AppRadius.smAll,
-          border: Border.all(color: color.withOpacity(0.4)),
+          border: Border.all(color: color.withValues(alpha:0.4)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -452,9 +452,9 @@ class _StatPill extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha:0.1),
         borderRadius: AppRadius.pill,
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha:0.3)),
       ),
       child: Row(
         children: [
