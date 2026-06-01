@@ -1,6 +1,6 @@
 // lib/features/dashboard/screens/dashboard_mahasiswa_screen.dart
-// PIC: Seruni (SL) — Sprint 1 placeholder, Sprint 3 akan lengkap
-// Dashboard Mahasiswa — sesuai mockup UI Light Theme
+// VERSI REFACTOR: Scaffold tidak lagi punya bottomNavigationBar.
+// Navigasi antar tab dilakukan via MainShell.of(context)?.jumpTo(index).
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,10 +11,9 @@ import '../../../core/services/session_service.dart';
 import '../../../core/services/connectivity_service.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import '../../../routes/app_routes.dart';
-
-// ─── TAMBAHAN IMPORT ────────────────────────────────────────────────────────
 import '../../../data/local/hive/hive_service.dart';
 import '../../../data/models/question_model.dart';
+import '../../../shared/layouts/main_shell.dart';
 
 class DashboardMahasiswaScreen extends ConsumerStatefulWidget {
   const DashboardMahasiswaScreen({super.key});
@@ -26,9 +25,6 @@ class DashboardMahasiswaScreen extends ConsumerStatefulWidget {
 
 class _DashboardMahasiswaScreenState
     extends ConsumerState<DashboardMahasiswaScreen> {
-  int _selectedNavIndex = 0;
-
-  // Warna khusus untuk ranking (emas, perak, perunggu)
   static const Color _rankGold   = Color(0xFFFFD700);
   static const Color _rankSilver = Color(0xFFC0C0C0);
   static const Color _rankBronze = Color(0xFFCD7F32);
@@ -37,58 +33,50 @@ class _DashboardMahasiswaScreenState
   Widget build(BuildContext context) {
     final nama = SessionService.instance.nama?.split(' ').first ?? 'Ahmad';
 
+    // ── PERUBAHAN UTAMA: tidak ada bottomNavigationBar di sini ──
+    // Navbar sudah dihandle oleh MainShell.
     return Scaffold(
-      // Menggunakan background terang sesuai AppTheme
       backgroundColor: AppColors.bgLight,
       body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildTopBar(nama),
+              _buildSyncStatusBanner(),
+              const SizedBox(height: AppSpacings.lg),
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacings.lg),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildTopBar(nama),
-                    _buildSyncStatusBanner(),
-                    const SizedBox(height: AppSpacings.lg),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacings.lg),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildRankCard(),
-                          const SizedBox(height: AppSpacings.md),
-                          // ─── SUMMARY DITAMBAHKAN DI SINI ───
-                          _buildProgressSummary(),
-                          const SizedBox(height: AppSpacings.md),
-                          // ───────────────────────────────────
-                          _buildStreakStatusRow(),
-                          const SizedBox(height: AppSpacings.xxl),
-                          _buildMenuUtama(),
-                          const SizedBox(height: AppSpacings.xxl),
-                          _buildRekomendasi(),
-                          const SizedBox(height: AppSpacings.xxl),
-                          _buildSoalTerbaru(),
-                          const SizedBox(height: AppSpacings.xxl),
-                          _buildTopStudents(),
-                          const SizedBox(height: AppSpacings.xxxl), // Extra padding bottom
-                        ],
-                      ),
-                    ),
+                    _buildRankCard(),
+                    const SizedBox(height: AppSpacings.md),
+                    _buildProgressSummary(),
+                    const SizedBox(height: AppSpacings.md),
+                    _buildStreakStatusRow(),
+                    const SizedBox(height: AppSpacings.xxl),
+                    _buildMenuUtama(),
+                    const SizedBox(height: AppSpacings.xxl),
+                    _buildRekomendasi(),
+                    const SizedBox(height: AppSpacings.xxl),
+                    _buildSoalTerbaru(),
+                    const SizedBox(height: AppSpacings.xxl),
+                    _buildTopStudents(),
+                    const SizedBox(height: 100), // padding bawah untuk navbar
                   ],
                 ),
               ),
-            ),
-            _buildBottomNav(),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 
-  // ─── Top Bar ─────────────────────────────────────────────────────────────
+  // ─── Top Bar ──────────────────────────────────────────────────────────────
   Widget _buildTopBar(String nama) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(
@@ -114,7 +102,8 @@ class _DashboardMahasiswaScreenState
                   Text(
                     nama,
                     style: AppTextStyles.h3.copyWith(
-                        color: AppColors.textDark, fontWeight: FontWeight.bold),
+                        color: AppColors.textDark,
+                        fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(width: AppSpacings.xs),
                   const Text('👋', style: TextStyle(fontSize: 16)),
@@ -123,7 +112,6 @@ class _DashboardMahasiswaScreenState
             ],
           ),
           const Spacer(),
-          // Badge dengan status koneksi dinamis
           _buildConnectivityBadge(),
         ],
       ),
@@ -136,10 +124,10 @@ class _DashboardMahasiswaScreenState
       initialData: ConnectivityResult.none,
       builder: (context, snapshot) {
         final isOnline = snapshot.data != ConnectivityResult.none;
-
         return Container(
           width: double.infinity,
-          margin: const EdgeInsets.symmetric(horizontal: AppSpacings.lg),
+          margin: const EdgeInsets.fromLTRB(
+              AppSpacings.lg, AppSpacings.sm, AppSpacings.lg, 0),
           padding: const EdgeInsets.symmetric(
             vertical: AppSpacings.sm,
             horizontal: AppSpacings.md,
@@ -158,8 +146,12 @@ class _DashboardMahasiswaScreenState
           child: Row(
             children: [
               Icon(
-                isOnline ? Icons.cloud_done_rounded : Icons.cloud_off_rounded,
-                color: isOnline ? AppColors.successGreen : AppColors.errorRed,
+                isOnline
+                    ? Icons.cloud_done_rounded
+                    : Icons.cloud_off_rounded,
+                color: isOnline
+                    ? AppColors.successGreen
+                    : AppColors.errorRed,
                 size: 18,
               ),
               const SizedBox(width: AppSpacings.sm),
@@ -168,9 +160,8 @@ class _DashboardMahasiswaScreenState
                   isOnline
                       ? 'Semua data tersinkronisasi'
                       : 'Tidak ada koneksi. Data akan tersimpan offline.',
-                  style: AppTextStyles.body.copyWith(
-                    color: AppColors.textDark,
-                  ),
+                  style: AppTextStyles.body
+                      .copyWith(color: AppColors.textDark),
                 ),
               ),
             ],
@@ -180,7 +171,7 @@ class _DashboardMahasiswaScreenState
     );
   }
 
-  // ─── Rank Card ───────────────────────────────────────────────────────────
+  // ─── Rank Card ────────────────────────────────────────────────────────────
   Widget _buildRankCard() {
     return Container(
       width: double.infinity,
@@ -226,7 +217,8 @@ class _DashboardMahasiswaScreenState
               ),
               Container(
                 padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacings.md, vertical: AppSpacings.sm),
+                    horizontal: AppSpacings.md,
+                    vertical: AppSpacings.sm),
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.15),
                   borderRadius: AppRadius.lgAll,
@@ -235,8 +227,8 @@ class _DashboardMahasiswaScreenState
                   children: [
                     Text(
                       'Total Points',
-                      style: AppTextStyles.caption.copyWith(
-                          color: Colors.white70),
+                      style: AppTextStyles.caption
+                          .copyWith(color: Colors.white70),
                     ),
                     const SizedBox(height: 2),
                     RichText(
@@ -244,13 +236,13 @@ class _DashboardMahasiswaScreenState
                         children: [
                           TextSpan(
                             text: '1,250',
-                            style: AppTextStyles.h2.copyWith(
-                                color: Colors.white),
+                            style: AppTextStyles.h2
+                                .copyWith(color: Colors.white),
                           ),
                           TextSpan(
                             text: ' pts',
-                            style: AppTextStyles.small.copyWith(
-                                color: Colors.white70),
+                            style: AppTextStyles.small
+                                .copyWith(color: Colors.white70),
                           ),
                         ],
                       ),
@@ -266,13 +258,13 @@ class _DashboardMahasiswaScreenState
             children: [
               Text(
                 '75% to Scholar',
-                style: AppTextStyles.smallSemibold.copyWith(
-                    color: Colors.white),
+                style: AppTextStyles.smallSemibold
+                    .copyWith(color: Colors.white),
               ),
               Text(
                 '1,500 pts',
-                style: AppTextStyles.small.copyWith(
-                    color: Colors.white70),
+                style: AppTextStyles.small
+                    .copyWith(color: Colors.white70),
               ),
             ],
           ),
@@ -283,7 +275,8 @@ class _DashboardMahasiswaScreenState
               value: 0.75,
               minHeight: 8,
               backgroundColor: Colors.white.withOpacity(0.2),
-              valueColor: const AlwaysStoppedAnimation<Color>(AppColors.successGreen),
+              valueColor: const AlwaysStoppedAnimation<Color>(
+                  AppColors.successGreen),
             ),
           ),
         ],
@@ -291,26 +284,21 @@ class _DashboardMahasiswaScreenState
     );
   }
 
-  // ─── Progress Summary ────────────────────────────────────────────────────
+  // ─── Progress Summary ─────────────────────────────────────────────────────
   Widget _buildProgressSummary() {
     final userId = SessionService.instance.userId ?? '';
-
-    // Hitung dari Hive (data real)
     final progressBox = HiveService.instance.userProgressBox;
     final questionBox = HiveService.instance.questionsBox;
 
     final totalSelesai = progressBox.values
         .where((p) => p.userId == userId && p.isSolved)
         .length;
-
     final totalSoal = questionBox.values
         .where((q) => q.status == QuestionStatus.published)
         .length;
-
     final totalBookmark = HiveService.instance.bookmarksBox.values
         .where((b) => b.userId == userId)
         .length;
-
     final persen = totalSoal > 0
         ? (totalSelesai / totalSoal).clamp(0.0, 1.0)
         : 0.0;
@@ -321,8 +309,8 @@ class _DashboardMahasiswaScreenState
       decoration: BoxDecoration(
         color: AppColors.bgWhite,
         borderRadius: AppRadius.lgAll,
-        border:
-            Border.all(color: AppColors.borderGrey.withOpacity(0.4)),
+        border: Border.all(
+            color: AppColors.borderGrey.withOpacity(0.4)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.02),
@@ -334,14 +322,11 @@ class _DashboardMahasiswaScreenState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Header ─────────────────────────────────────────────────
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Progres Belajar',
-                style: AppTextStyles.h3.copyWith(color: AppColors.textDark),
-              ),
+              Text('Progres Belajar', style: AppTextStyles.h3),
+              // ── PERUBAHAN: gunakan MainShell.jumpTo ──
               GestureDetector(
                 onTap: () =>
                     Navigator.pushNamed(context, AppRoutes.riwayat),
@@ -354,10 +339,7 @@ class _DashboardMahasiswaScreenState
               ),
             ],
           ),
-
           const SizedBox(height: AppSpacings.md),
-
-          // ── Progress bar ───────────────────────────────────────────
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -378,9 +360,7 @@ class _DashboardMahasiswaScreenState
               ),
             ],
           ),
-
           const SizedBox(height: AppSpacings.sm),
-
           ClipRRect(
             borderRadius: AppRadius.smAll,
             child: LinearProgressIndicator(
@@ -391,23 +371,16 @@ class _DashboardMahasiswaScreenState
                   AppColors.primaryBlue),
             ),
           ),
-
           const SizedBox(height: AppSpacings.md),
-
-          // ── Row stat kecil ─────────────────────────────────────────
           Row(
             children: [
-              // Selesai
               _MiniStat(
                 icon: Icons.check_circle_outline,
                 iconColor: AppColors.successGreen,
                 label: 'Selesai',
                 value: '$totalSelesai',
               ),
-
               const SizedBox(width: AppSpacings.xl),
-
-              // Bookmark
               GestureDetector(
                 onTap: () =>
                     Navigator.pushNamed(context, AppRoutes.bookmarks),
@@ -418,10 +391,7 @@ class _DashboardMahasiswaScreenState
                   value: '$totalBookmark',
                 ),
               ),
-
               const Spacer(),
-
-              // Shortcut Kontribusi (Sprint 4)
               TextButton.icon(
                 onPressed: () =>
                     Navigator.pushNamed(context, AppRoutes.kontribusi),
@@ -429,9 +399,8 @@ class _DashboardMahasiswaScreenState
                 label: const Text('Kontribusi'),
                 style: TextButton.styleFrom(
                   foregroundColor: AppColors.primaryBlue,
-                  textStyle: AppTextStyles.small.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+                  textStyle: AppTextStyles.small
+                      .copyWith(fontWeight: FontWeight.w600),
                   padding: EdgeInsets.zero,
                   minimumSize: Size.zero,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -444,7 +413,7 @@ class _DashboardMahasiswaScreenState
     );
   }
 
-  // ─── Streak & Status Row ─────────────────────────────────────────────────
+  // ─── Streak & Status Row ──────────────────────────────────────────────────
   Widget _buildStreakStatusRow() {
     return Row(
       children: [
@@ -456,9 +425,7 @@ class _DashboardMahasiswaScreenState
           ),
         ),
         const SizedBox(width: AppSpacings.md),
-        Expanded(
-          child: _buildDynamicStatusCard(),
-        ),
+        Expanded(child: _buildDynamicStatusCard()),
       ],
     );
   }
@@ -472,16 +439,10 @@ class _DashboardMahasiswaScreenState
     return Container(
       padding: AppSpacings.cardPadding,
       decoration: BoxDecoration(
-        color: AppColors.bgWhite, // Light Mode Background
+        color: AppColors.bgWhite,
         borderRadius: AppRadius.lgAll,
-        border: Border.all(color: AppColors.borderGrey.withOpacity(0.4)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.02),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        border:
+            Border.all(color: AppColors.borderGrey.withOpacity(0.4)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -495,56 +456,39 @@ class _DashboardMahasiswaScreenState
                     color: AppColors.warningYellow.withOpacity(0.15),
                     shape: BoxShape.circle,
                   ),
-                  child: Text(emoji, style: const TextStyle(fontSize: 16)),
-                )
-              else if (iconWidget != null)
-                Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: AppColors.primaryBlue.withOpacity(0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: iconWidget,
+                  child:
+                      Text(emoji, style: const TextStyle(fontSize: 16)),
                 ),
               const SizedBox(width: AppSpacings.sm),
               Text(
                 label,
-                style: AppTextStyles.smallSemibold.copyWith(
-                    color: AppColors.textGrey),
+                style: AppTextStyles.smallSemibold
+                    .copyWith(color: AppColors.textGrey),
               ),
             ],
           ),
           const SizedBox(height: AppSpacings.sm),
-          Text(
-            value,
-            style: AppTextStyles.h2.copyWith(color: AppColors.textDark),
-          ),
+          Text(value,
+              style: AppTextStyles.h2
+                  .copyWith(color: AppColors.textDark)),
         ],
       ),
     );
   }
 
-  // ─── Dynamic Status Card (berubah saat offline) ────────────────────────────
   Widget _buildDynamicStatusCard() {
     return StreamBuilder<ConnectivityResult>(
       stream: ConnectivityService.instance.onConnectivityChanged,
       initialData: ConnectivityResult.none,
       builder: (context, snapshot) {
         final isOnline = snapshot.data != ConnectivityResult.none;
-        
         return Container(
           padding: AppSpacings.cardPadding,
           decoration: BoxDecoration(
             color: AppColors.bgWhite,
             borderRadius: AppRadius.lgAll,
-            border: Border.all(color: AppColors.borderGrey.withOpacity(0.4)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.02),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
+            border: Border.all(
+                color: AppColors.borderGrey.withOpacity(0.4)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -572,8 +516,8 @@ class _DashboardMahasiswaScreenState
                   const SizedBox(width: AppSpacings.sm),
                   Text(
                     'Status',
-                    style: AppTextStyles.smallSemibold.copyWith(
-                        color: AppColors.textGrey),
+                    style: AppTextStyles.smallSemibold
+                        .copyWith(color: AppColors.textGrey),
                   ),
                 ],
               ),
@@ -596,57 +540,69 @@ class _DashboardMahasiswaScreenState
   // ─── Menu Utama ───────────────────────────────────────────────────────────
   Widget _buildMenuUtama() {
     final menus = [
-      {'icon': Icons.menu_book_rounded, 'label': 'Bank Soal', 'route': AppRoutes.bankSoal},
-      {'icon': Icons.bookmark_rounded, 'label': 'Bookmark', 'route': AppRoutes.bookmarks},
-      {'icon': Icons.bar_chart_rounded, 'label': 'Statistik', 'route': AppRoutes.statistik},
-      {'icon': Icons.wifi_off_rounded, 'label': 'Offline', 'route': AppRoutes.offlineSoal},
+      {
+        'icon': Icons.menu_book_rounded,
+        'label': 'Bank Soal',
+        // ── PERUBAHAN: switch tab via MainShell ──
+        'onTap': () => MainShell.of(context)?.jumpTo(1),
+      },
+      {
+        'icon': Icons.bookmark_rounded,
+        'label': 'Bookmark',
+        'onTap': () =>
+            Navigator.pushNamed(context, AppRoutes.bookmarks),
+      },
+      {
+        'icon': Icons.bar_chart_rounded,
+        'label': 'Statistik',
+        // ── PERUBAHAN: switch tab Stats ──
+        'onTap': () => MainShell.of(context)?.jumpTo(3),
+      },
+      {
+        'icon': Icons.wifi_off_rounded,
+        'label': 'Offline',
+        'onTap': () =>
+            Navigator.pushNamed(context, AppRoutes.offlineSoal),
+      },
     ];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Menu Utama',
-          style: AppTextStyles.h2.copyWith(color: AppColors.textDark),
-        ),
+        Text('Menu Utama', style: AppTextStyles.h2),
         const SizedBox(height: AppSpacings.md),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: menus.asMap().entries.map((entry) {
             final i = entry.key;
             final m = entry.value;
-            final route = m['route'] as String?;
-
+            final isFirst = i == 0;
             return GestureDetector(
-              onTap: route != null ? () => Navigator.pushNamed(context, route) : null,
+              onTap: m['onTap'] as VoidCallback?,
               child: Column(
                 children: [
                   Container(
                     width: 56,
                     height: 56,
                     decoration: BoxDecoration(
-                      color: AppColors.bgWhite,
+                      color: isFirst
+                          ? AppColors.primaryBlue
+                          : AppColors.bgWhite,
                       borderRadius: AppRadius.lgAll,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.03),
-                            blurRadius: 8,
-                            offset: const Offset(0, 4),
-                          ),
-                      ],
                     ),
                     child: Icon(
                       m['icon'] as IconData,
-                      color: AppColors.primaryBlue,
+                      color: isFirst
+                          ? Colors.white
+                          : AppColors.primaryBlue,
                       size: 26,
                     ),
                   ),
                   const SizedBox(height: AppSpacings.sm),
                   Text(
                     m['label'] as String,
-                    style: AppTextStyles.smallSemibold.copyWith(
-                      color: AppColors.textDark,
-                    ),
+                    style: AppTextStyles.smallSemibold
+                        .copyWith(color: AppColors.textDark),
                   ),
                 ],
               ),
@@ -657,7 +613,7 @@ class _DashboardMahasiswaScreenState
     );
   }
 
-  // ─── Rekomendasi Matkul ───────────────────────────────────────────────────
+  // ─── Rekomendasi ─────────────────────────────────────────────────────────
   Widget _buildRekomendasi() {
     final matkuls = [
       {
@@ -682,17 +638,13 @@ class _DashboardMahasiswaScreenState
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              'Rekomendasi Matkul',
-              style: AppTextStyles.h2.copyWith(color: AppColors.textDark),
-            ),
+            Text('Rekomendasi Matkul', style: AppTextStyles.h2),
             GestureDetector(
-              onTap: () => Navigator.pushNamed(context, AppRoutes.bankSoal),
+              onTap: () => MainShell.of(context)?.jumpTo(1),
               child: Text(
                 'Lihat Semua',
-                style: AppTextStyles.smallSemibold.copyWith(
-                  color: AppColors.primaryBlue,
-                ),
+                style: AppTextStyles.smallSemibold
+                    .copyWith(color: AppColors.primaryBlue),
               ),
             ),
           ],
@@ -703,26 +655,19 @@ class _DashboardMahasiswaScreenState
             final i = entry.key;
             final m = entry.value;
             final isLast = i == matkuls.length - 1;
-
             return Expanded(
               child: Container(
-                margin: EdgeInsets.only(right: isLast ? 0 : AppSpacings.md),
+                margin:
+                    EdgeInsets.only(right: isLast ? 0 : AppSpacings.md),
                 decoration: BoxDecoration(
                   color: AppColors.bgWhite,
                   borderRadius: AppRadius.lgAll,
-                  border: Border.all(color: AppColors.borderGrey.withOpacity(0.3)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.02),
-                      blurRadius: 8,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
+                  border: Border.all(
+                      color: AppColors.borderGrey.withOpacity(0.3)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Gambar Placeholder Atas (Pakai Gradien)
                     Container(
                       height: 70,
                       decoration: BoxDecoration(
@@ -742,12 +687,13 @@ class _DashboardMahasiswaScreenState
                           Positioned(
                             right: -20,
                             top: -10,
-                            child: Icon(Icons.computer, size: 80, color: Colors.white.withOpacity(0.1)),
+                            child: Icon(Icons.computer,
+                                size: 80,
+                                color: Colors.white.withOpacity(0.1)),
                           )
                         ],
                       ),
                     ),
-                    // Teks Bawah (Warna Terang)
                     Padding(
                       padding: const EdgeInsets.all(AppSpacings.sm),
                       child: Column(
@@ -756,30 +702,28 @@ class _DashboardMahasiswaScreenState
                           Container(
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 8, vertical: 3),
-                            decoration: const BoxDecoration(
+                            decoration: BoxDecoration(
                               color: AppColors.bgBlue,
                               borderRadius: AppRadius.pill,
                             ),
                             child: Text(
                               m['kode'] as String,
                               style: AppTextStyles.captionBold.copyWith(
-                                color: AppColors.primaryBlue,
-                              ),
+                                  color: AppColors.primaryBlue),
                             ),
                           ),
                           const SizedBox(height: AppSpacings.xs),
                           Text(
                             m['nama'] as String,
-                            style: AppTextStyles.bodySemibold.copyWith(
-                                color: AppColors.textDark),
+                            style: AppTextStyles.bodySemibold,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                           const SizedBox(height: 2),
                           Text(
                             m['soal'] as String,
-                            style: AppTextStyles.caption.copyWith(
-                                color: AppColors.textGrey),
+                            style: AppTextStyles.caption
+                                .copyWith(color: AppColors.textGrey),
                           ),
                         ],
                       ),
@@ -812,62 +756,45 @@ class _DashboardMahasiswaScreenState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Soal Terbaru',
-          style: AppTextStyles.h2.copyWith(color: AppColors.textDark),
-        ),
+        Text('Soal Terbaru', style: AppTextStyles.h2),
         const SizedBox(height: AppSpacings.md),
         ...soals.map((s) => Container(
               margin: const EdgeInsets.only(bottom: AppSpacings.sm),
               padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacings.md, vertical: AppSpacings.md),
+                  horizontal: AppSpacings.md,
+                  vertical: AppSpacings.md),
               decoration: BoxDecoration(
-                color: AppColors.bgWhite, // Light Mode Card
+                color: AppColors.bgWhite,
                 borderRadius: AppRadius.lgAll,
-                border: Border.all(color: AppColors.borderGrey.withOpacity(0.3)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.01),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
+                border: Border.all(
+                    color: AppColors.borderGrey.withOpacity(0.3)),
               ),
               child: Row(
                 children: [
                   Container(
                     width: 40,
                     height: 40,
-                    decoration: const BoxDecoration(
+                    decoration: BoxDecoration(
                       color: AppColors.bgBlue,
                       borderRadius: AppRadius.mdAll,
                     ),
-                    child: const Icon(
-                      Icons.quiz_outlined,
-                      color: AppColors.primaryBlue,
-                      size: 20,
-                    ),
+                    child: const Icon(Icons.quiz_outlined,
+                        color: AppColors.primaryBlue, size: 20),
                   ),
                   const SizedBox(width: AppSpacings.md),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          s['judul'] as String,
-                          style: AppTextStyles.bodySemibold.copyWith(
-                              color: AppColors.textDark),
-                        ),
+                        Text(s['judul'] as String,
+                            style: AppTextStyles.bodySemibold),
                         const SizedBox(height: 2),
-                        Text(
-                          s['sub'] as String,
-                          style: AppTextStyles.caption.copyWith(
-                              color: AppColors.textGrey),
-                        ),
+                        Text(s['sub'] as String,
+                            style: AppTextStyles.caption
+                                .copyWith(color: AppColors.textGrey)),
                       ],
                     ),
                   ),
-                  // AppBadge.difficulty sudah diset dengan warna terang di app_theme
                   AppBadge.difficulty(s['difficulty'] as String),
                 ],
               ),
@@ -879,11 +806,10 @@ class _DashboardMahasiswaScreenState
   // ─── Top Students ─────────────────────────────────────────────────────────
   Widget _buildTopStudents() {
     final students = [
-      {'nama': 'Sarah Wijaya', 'pts': '2,450 pts', 'rank': 1},
-      {'nama': 'Budi Santoso', 'pts': '2,120 pts', 'rank': 2},
-      {'nama': 'Citra Putri', 'pts': '1,980 pts', 'rank': 3},
+      {'nama': 'Sarah Wijaya',  'pts': '2,450 pts', 'rank': 1},
+      {'nama': 'Budi Santoso',  'pts': '2,120 pts', 'rank': 2},
+      {'nama': 'Citra Putri',   'pts': '1,980 pts', 'rank': 3},
     ];
-
     final rankColors = [_rankGold, _rankSilver, _rankBronze];
 
     return Column(
@@ -893,25 +819,16 @@ class _DashboardMahasiswaScreenState
           children: [
             const Text('🏆', style: TextStyle(fontSize: 18)),
             const SizedBox(width: AppSpacings.sm),
-            Text(
-              'Top Students',
-              style: AppTextStyles.h2.copyWith(color: AppColors.textDark),
-            ),
+            Text('Top Students', style: AppTextStyles.h2),
           ],
         ),
         const SizedBox(height: AppSpacings.md),
         Container(
           decoration: BoxDecoration(
-            color: AppColors.bgWhite, // Light Mode Card
+            color: AppColors.bgWhite,
             borderRadius: AppRadius.lgAll,
-            border: Border.all(color: AppColors.borderGrey.withOpacity(0.3)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.01),
-                blurRadius: 4,
-                offset: const Offset(0, 2),
-              ),
-            ],
+            border: Border.all(
+                color: AppColors.borderGrey.withOpacity(0.3)),
           ),
           child: Column(
             children: students.asMap().entries.map((entry) {
@@ -940,17 +857,13 @@ class _DashboardMahasiswaScreenState
                         ),
                         const SizedBox(width: AppSpacings.md),
                         Expanded(
-                          child: Text(
-                            s['nama'] as String,
-                            style: AppTextStyles.bodySemibold.copyWith(
-                              color: AppColors.textDark,
-                            ),
-                          ),
+                          child: Text(s['nama'] as String,
+                              style: AppTextStyles.bodySemibold),
                         ),
                         Text(
                           s['pts'] as String,
                           style: AppTextStyles.smallSemibold.copyWith(
-                              color: AppColors.primaryBlue), // Points warna biru
+                              color: AppColors.primaryBlue),
                         ),
                       ],
                     ),
@@ -971,46 +884,40 @@ class _DashboardMahasiswaScreenState
     );
   }
 
-  // ─── Connectivity Badge dengan Status Dinamis ─────────────────────────────
-  /// Badge yang berubah icon, warna, dan text saat koneksi offline
+  // ─── Connectivity Badge ───────────────────────────────────────────────────
   Widget _buildConnectivityBadge() {
     return StreamBuilder<ConnectivityResult>(
       stream: ConnectivityService.instance.onConnectivityChanged,
       initialData: ConnectivityResult.none,
       builder: (context, snapshot) {
         final isOnline = snapshot.data != ConnectivityResult.none;
-        
         return Container(
-          padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacings.sm + 4, vertical: AppSpacings.xs + 2),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
             color: AppColors.bgWhite,
             borderRadius: AppRadius.pill,
             border: Border.all(
-              color: isOnline ? AppColors.bgBlue : AppColors.errorRed,
+              color: isOnline
+                  ? AppColors.bgBlue
+                  : AppColors.errorRed,
             ),
-            boxShadow: [
-              BoxShadow(
-                color: (isOnline ? AppColors.primaryBlue : AppColors.errorRed)
-                    .withOpacity(0.05),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              )
-            ],
           ),
           child: Row(
             children: [
               Icon(
                 isOnline ? Icons.sync : Icons.cloud_off_outlined,
-                color: isOnline ? AppColors.primaryBlue : AppColors.errorRed,
+                color: isOnline
+                    ? AppColors.primaryBlue
+                    : AppColors.errorRed,
                 size: 14,
               ),
               const SizedBox(width: 4),
               Text(
                 isOnline ? 'Synced' : 'Offline',
                 style: AppTextStyles.smallSemibold.copyWith(
-                  color:
-                      isOnline ? AppColors.primaryBlue : AppColors.errorRed,
+                  color: isOnline
+                      ? AppColors.primaryBlue
+                      : AppColors.errorRed,
                 ),
               ),
             ],
@@ -1019,116 +926,9 @@ class _DashboardMahasiswaScreenState
       },
     );
   }
-
-  // ─── Bottom Navigation Sesuai Figma ───────────────────────────────────────
-  Widget _buildBottomNav() {
-    final items = [
-      {'icon': Icons.home_filled, 'label': 'Home'},
-      {'icon': Icons.menu_book_rounded, 'label': 'Bank'},
-      {'icon': Icons.add, 'label': 'Upload', 'isCenter': true},
-      {'icon': Icons.bar_chart_rounded, 'label': 'Stats'},
-      {'icon': Icons.person_rounded, 'label': 'Profile'},
-    ];
-
-    return Container(
-      height: 75,
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacings.md),
-      decoration: BoxDecoration(
-        color: AppColors.bgWhite, // Pure white
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 20,
-            offset: const Offset(0, -5),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: items.asMap().entries.map((entry) {
-          final i = entry.key;
-          final item = entry.value;
-          final isCenter = item['isCenter'] == true;
-          final isSelected = _selectedNavIndex == i;
-
-          return GestureDetector(
-            onTap: () {
-              setState(() => _selectedNavIndex = i);
-              if (i == 1) Navigator.pushNamed(context, AppRoutes.bankSoal);
-              if (i == 2) Navigator.pushNamed(context, AppRoutes.kontribusi);
-              if (i == 3) Navigator.pushNamed(context, AppRoutes.statistik);
-              if (i == 4) Navigator.pushNamed(context, AppRoutes.profile);
-            },
-            child: isSelected && !isCenter
-                // Tampilan saat Item Biasa Terpilih (Pill Biru seperti di Figma)
-                ? Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacings.lg, vertical: AppSpacings.sm),
-                    decoration: const BoxDecoration(
-                      color: AppColors.primaryBlue,
-                      borderRadius: AppRadius.pill,
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(item['icon'] as IconData,
-                            color: Colors.white, size: 20),
-                        const SizedBox(width: AppSpacings.xs),
-                        Text(
-                          item['label'] as String,
-                          style: AppTextStyles.smallSemibold.copyWith(
-                              color: Colors.white),
-                        ),
-                      ],
-                    ),
-                  )
-                // Tampilan Tombol Tengah (Upload / Plus Bulat)
-                : isCenter
-                    ? Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Container(
-                            width: 36,
-                            height: 36,
-                            decoration: const BoxDecoration(
-                              color: AppColors.primaryBlue,
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(item['icon'] as IconData,
-                                color: Colors.white, size: 22),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            item['label'] as String,
-                            style: AppTextStyles.navLabel.copyWith(
-                                color: AppColors.textGrey),
-                          ),
-                        ],
-                      )
-                    // Tampilan Item Biasa Tidak Terpilih
-                    : Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 10),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(item['icon'] as IconData,
-                                color: AppColors.textGrey, size: 24),
-                            const SizedBox(height: 4),
-                            Text(
-                              item['label'] as String,
-                              style: AppTextStyles.navLabel.copyWith(
-                                  color: AppColors.textGrey),
-                            ),
-                          ],
-                        ),
-                      ),
-          );
-        }).toList(),
-      ),
-    );
-  }
 }
 
-// ─── Widget helper kecil di luar class ────────────────────────────────────────
+// ─── Helper widget ────────────────────────────────────────────────────────────
 
 class _MiniStat extends StatelessWidget {
   final IconData icon;
@@ -1152,11 +952,9 @@ class _MiniStat extends StatelessWidget {
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              value,
-              style: AppTextStyles.bodySemibold
-                  .copyWith(color: AppColors.textDark),
-            ),
+            Text(value,
+                style: AppTextStyles.bodySemibold
+                    .copyWith(color: AppColors.textDark)),
             Text(label, style: AppTextStyles.caption),
           ],
         ),

@@ -60,7 +60,7 @@ class _SplashScreenState extends State<SplashScreen> {
         Navigator.pushReplacementNamed(context, AppRoutes.dashboardReviewer);
         break;
       default:
-        Navigator.pushReplacementNamed(context, AppRoutes.dashboardMahasiswa);
+        Navigator.pushReplacementNamed(context, AppRoutes.shell);
     }
   }
 

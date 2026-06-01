@@ -233,11 +233,9 @@ class SyncManager {
 
     await _hive.syncQueueBox.put(queueItem.id, queueItem);
   }
-}
+
   // ─── Dependency ─────────────────────────────────────────────────────────────
 
-  final ConnectivityService _connectivity = ConnectivityService.instance;
-  final HiveService _hive = HiveService.instance;
   final MongoDBService _db = MongoDBService.instance;
 
   // ─── State internal ─────────────────────────────────────────────────────────
@@ -304,6 +302,7 @@ class SyncManager {
         'attempt_count': attemptCount,
         'solved_at': solvedAt?.toIso8601String(),
       },
+      action: SyncAction.progressSync.name,
       createdAt: DateTime.now(),
     );
     await enqueue(item);
@@ -324,6 +323,7 @@ class SyncManager {
         'question_id': questionId,
         'action': isAdd ? 'add' : 'remove',
       },
+      action: isAdd ? SyncAction.bookmarkAdd.name : SyncAction.bookmarkRemove.name,
       createdAt: DateTime.now(),
     );
     await enqueue(item);
