@@ -31,8 +31,27 @@ class AppBadge extends StatelessWidget {
   });
 
   factory AppBadge.difficulty(String level) {
-    final s = AppBadgeStyle.difficulty(level);
+    final styles = {
+      'easy': (
+        bg: const Color(0xFF22C55E).withValues(alpha: 0.15),
+        text: const Color(0xFF22C55E),
+        border: const Color(0xFF22C55E).withValues(alpha: 0.3),
+      ),
+      'medium': (
+        bg: const Color(0xFFF59E0B).withValues(alpha: 0.15),
+        text: const Color(0xFFF59E0B),
+        border: const Color(0xFFF59E0B).withValues(alpha: 0.3),
+      ),
+      'hard': (
+        bg: const Color(0xFFEF4444).withValues(alpha: 0.15),
+        text: const Color(0xFFEF4444),
+        border: const Color(0xFFEF4444).withValues(alpha: 0.3),
+      ),
+    };
+
+    final s = styles[level.toLowerCase()] ?? styles['easy']!;
     const labels = {'easy': 'Mudah', 'medium': 'Sedang', 'hard': 'Sulit'};
+
     return AppBadge(
       label: labels[level.toLowerCase()] ?? level,
       bg: s.bg,
@@ -43,11 +62,11 @@ class AppBadge extends StatelessWidget {
   factory AppBadge.status(String status) {
     final s = AppBadgeStyle.questionStatus(status);
     const labels = {
-      'pending':    'Pending',
-      'published':  'Diterima',
-      'rejected':   'Ditolak',
-      'archived':   'Diarsip',
-      'inactive':   'Nonaktif',
+      'pending': 'Pending',
+      'published': 'Diterima',
+      'rejected': 'Ditolak',
+      'archived': 'Diarsip',
+      'inactive': 'Nonaktif',
       'revision_required': 'Revisi',
     };
     return AppBadge(
@@ -146,7 +165,9 @@ class _FilterChip extends StatelessWidget {
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
         decoration: BoxDecoration(
-          color: isSelected ? activeColor.withValues(alpha: 0.1) : AppColors.bgWhite,
+          color: isSelected
+              ? activeColor.withValues(alpha: 0.1)
+              : AppColors.bgWhite,
           borderRadius: AppRadius.pill,
           border: Border.all(
             color: isSelected ? activeColor : AppColors.borderGrey,
@@ -172,7 +193,12 @@ class OfflineBanner extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      color: AppColors.warningYellow.withValues(alpha: 0.12),
+      decoration: const BoxDecoration(
+        color: Color(0xFF2A1F08),  // dark amber bg
+        border: Border(
+          left: BorderSide(color: AppColors.warningYellow, width: 3),
+        ),
+      ),
       child: Row(
         children: [
           const Icon(Icons.wifi_off_outlined, size: 16, color: AppColors.warningYellow),
@@ -264,8 +290,10 @@ class SyncStatusIcon extends StatelessWidget {
   Widget build(BuildContext context) {
     if (isLoading) {
       return const SizedBox(
-        width: 20, height: 20,
-        child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primaryBlue),
+        width: 20,
+        height: 20,
+        child: CircularProgressIndicator(
+            strokeWidth: 2, color: AppColors.primaryBlue),
       );
     }
 
@@ -353,7 +381,8 @@ class AppEmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 56, color: AppColors.textGrey.withValues(alpha: 0.4)),
+            Icon(icon,
+                size: 56, color: AppColors.textGrey.withValues(alpha: 0.4)),
             const SizedBox(height: 12),
             Text(
               title,
@@ -406,7 +435,8 @@ class AppMenuCard extends StatelessWidget {
           child: Row(
             children: [
               Container(
-                width: 44, height: 44,
+                width: 44,
+                height: 44,
                 decoration: const BoxDecoration(
                   color: AppColors.lightBlue,
                   borderRadius: AppRadius.mdAll,
@@ -426,19 +456,22 @@ class AppMenuCard extends StatelessWidget {
               ),
               if (badge != null) ...[
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                   decoration: const BoxDecoration(
                     color: AppColors.errorRed,
                     borderRadius: AppRadius.pill,
                   ),
                   child: Text(
                     badge!,
-                    style: AppTextStyles.captionBold.copyWith(color: Colors.white),
+                    style:
+                        AppTextStyles.captionBold.copyWith(color: Colors.white),
                   ),
                 ),
                 const SizedBox(width: 8),
               ],
-              const Icon(Icons.chevron_right, color: AppColors.primaryBlue, size: 20),
+              const Icon(Icons.chevron_right,
+                  color: AppColors.primaryBlue, size: 20),
             ],
           ),
         ),
@@ -465,7 +498,8 @@ class AppStatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color bgColor = iconColor?.withValues(alpha: 0.15) ?? AppColors.warningYellow.withValues(alpha: 0.15);
+    final Color bgColor = iconColor?.withValues(alpha: 0.15) ??
+        AppColors.warningYellow.withValues(alpha: 0.15);
 
     return Container(
       padding: AppSpacings.cardPadding,
@@ -488,20 +522,24 @@ class AppStatCard extends StatelessWidget {
             children: [
               Container(
                 padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(color: bgColor, shape: BoxShape.circle),
+                decoration:
+                    BoxDecoration(color: bgColor, shape: BoxShape.circle),
                 child: emoji != null
                     ? Text(emoji!, style: const TextStyle(fontSize: 16))
-                    : Icon(icon!, color: iconColor ?? AppColors.primaryBlue, size: 20),
+                    : Icon(icon!,
+                        color: iconColor ?? AppColors.primaryBlue, size: 20),
               ),
               const SizedBox(width: AppSpacings.sm),
               Text(
                 label,
-                style: AppTextStyles.smallSemibold.copyWith(color: AppColors.textGrey),
+                style: AppTextStyles.smallSemibold
+                    .copyWith(color: AppColors.textGrey),
               ),
             ],
           ),
           const SizedBox(height: AppSpacings.sm),
-          Text(value, style: AppTextStyles.h2.copyWith(color: AppColors.textDark)),
+          Text(value,
+              style: AppTextStyles.h2.copyWith(color: AppColors.textDark)),
         ],
       ),
     );

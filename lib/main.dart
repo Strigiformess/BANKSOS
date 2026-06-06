@@ -38,10 +38,11 @@ import 'features/kontribusi/screens/submit_soal_screen.dart';
 import 'features/review/screens/review_queue_screen.dart';
 import 'features/collection/screens/collection_management_screen.dart';
 
-// Tambahkan import di bagian atas
+
 import 'features/bookmarks/screens/bookmarks_screen.dart';
 import 'features/riwayat/screens/riwayat_screen.dart';
 import 'features/profile/screens/profile_screen.dart';
+import 'features/profile/screens/reviewer_profile.dart';
 import 'features/statistics/screens/statistics_screen.dart';
 
 // Admin
@@ -172,6 +173,7 @@ class BanksosApp extends StatelessWidget {
         AppRoutes.shell: (_) => const MainShell(),
         AppRoutes.bankSoal: (_) => const BankSoalScreen(),
         AppRoutes.profile: (_) => const ProfileScreen(),
+        AppRoutes.reviewerProfile: (context) => const ReviewerScreen(),
         AppRoutes.statistik: (_) => const StatisticsScreen(),
         AppRoutes.offlineSoal: (_) => const OfflineQuestionsScreen(),
         AppRoutes.bookmarks: (_) => const BookmarksScreen(),

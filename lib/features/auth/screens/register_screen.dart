@@ -14,6 +14,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/theme/app_theme_extensions.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import '../controllers/auth_controller.dart';
 
@@ -151,7 +152,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     final authState = ref.watch(authControllerProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.bgLight,
+      backgroundColor: context.colors.scaffoldBg,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: AppSpacings.pagePadding,

@@ -132,10 +132,23 @@ class _CollectionManagementScreenState
   // ─── Build ────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark ? const Color(0xFF1A2744) : Colors.white;
+    final borderColor =
+        isDark ? const Color(0xFF2D3748) : const Color(0xFFE5E7EB);
+    final textPrimary =
+        isDark ? const Color(0xFFE8EDF5) : const Color(0xFF111827);
+    final textSecondary =
+        isDark ? const Color(0xFF8A9BB0) : const Color(0xFF6B7280);
+    final scaffoldBg =
+        isDark ? const Color(0xFF0D1B2A) : const Color(0xFFF9FAFB);
+    final searchFill =
+        isDark ? const Color(0xFF17253A) : const Color(0xFFF3F4F6);
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB),
+      backgroundColor: scaffoldBg,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: cardBg,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
         titleSpacing: 0,
@@ -144,12 +157,12 @@ class _CollectionManagementScreenState
             const SizedBox(width: 16),
             _buildAvatar('R'),
             const SizedBox(width: 10),
-            const Text(
+            Text(
               'Manajemen Koleksi',
               style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF111827),
+                color: textPrimary,
               ),
             ),
           ],
@@ -159,8 +172,7 @@ class _CollectionManagementScreenState
             clipBehavior: Clip.none,
             children: [
               IconButton(
-                icon: const Icon(Icons.notifications_outlined,
-                    color: Color(0xFF374151)),
+                icon: Icon(Icons.notifications_outlined, color: textSecondary),
                 onPressed: () {},
               ),
               Positioned(
@@ -188,7 +200,7 @@ class _CollectionManagementScreenState
         ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(0.5),
-          child: Container(height: 0.5, color: const Color(0xFFE5E7EB)),
+          child: Container(height: 0.5, color: borderColor),
         ),
       ),
       body: Column(
@@ -201,12 +213,10 @@ class _CollectionManagementScreenState
               onChanged: (_) => setState(() {}),
               decoration: InputDecoration(
                 hintText: 'Cari kategori atau soal...',
-                hintStyle:
-                    const TextStyle(fontSize: 13, color: Color(0xFF9CA3AF)),
-                prefixIcon: const Icon(Icons.search,
-                    size: 20, color: Color(0xFF9CA3AF)),
+                hintStyle: TextStyle(fontSize: 13, color: textSecondary),
+                prefixIcon: Icon(Icons.search, size: 20, color: textSecondary),
                 filled: true,
-                fillColor: const Color(0xFFF3F4F6),
+                fillColor: searchFill,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(100),
                   borderSide: BorderSide.none,
@@ -251,7 +261,7 @@ class _CollectionManagementScreenState
             ),
           ),
 
-          Container(height: 0.5, color: const Color(0xFFE5E7EB)),
+          Container(height: 0.5, color: borderColor),
 
           // List
           Expanded(
@@ -275,7 +285,7 @@ class _CollectionManagementScreenState
                           Text(
                             _controller.errorMessage ?? 'Gagal memuat koleksi',
                             textAlign: TextAlign.center,
-                            style: const TextStyle(color: Color(0xFF9CA3AF)),
+                            style: TextStyle(color: textSecondary),
                           ),
                           const SizedBox(height: 12),
                           ElevatedButton(
@@ -290,12 +300,12 @@ class _CollectionManagementScreenState
 
                 final displayItems = _filtered;
                 if (displayItems.isEmpty) {
-                  return const Center(
+                  return Center(
                     child: Padding(
-                      padding: EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(16),
                       child: Text('Tidak ada koleksi yang cocok.',
                           textAlign: TextAlign.center,
-                          style: TextStyle(color: Color(0xFF9CA3AF))),
+                          style: TextStyle(color: textSecondary)),
                     ),
                   );
                 }
@@ -325,6 +335,10 @@ class _CollectionManagementScreenState
 
   Widget _buildTab(String label) {
     final active = _activeTab == label;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final inactiveTextColor =
+        isDark ? const Color(0xFF8A9BB0) : const Color(0xFF6B7280);
+
     return GestureDetector(
       onTap: () => setState(() => _activeTab = label),
       child: Container(
@@ -342,7 +356,7 @@ class _CollectionManagementScreenState
           style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w600,
-            color: active ? const Color(0xFF1A6FDF) : const Color(0xFF6B7280),
+            color: active ? const Color(0xFF1A6FDF) : inactiveTextColor,
           ),
         ),
       ),
@@ -387,12 +401,21 @@ class _CollectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark ? const Color(0xFF1A2744) : Colors.white;
+    final borderColor =
+        isDark ? const Color(0xFF2D3748) : const Color(0xFFE5E7EB);
+    final textPrimary =
+        isDark ? const Color(0xFFE8EDF5) : const Color(0xFF111827);
+    final textSecondary =
+        isDark ? const Color(0xFF8A9BB0) : const Color(0xFF6B7280);
+
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(13),
       decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: const Color(0xFFE5E7EB), width: 0.5),
+        color: cardBg,
+        border: Border.all(color: borderColor, width: 0.5),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Column(
@@ -405,12 +428,12 @@ class _CollectionCard extends StatelessWidget {
               const SizedBox(width: 6),
               Text(
                 _formatDate(item.createdAt),
-                style: const TextStyle(fontSize: 11, color: Color(0xFF9CA3AF)),
+                style: TextStyle(fontSize: 11, color: textSecondary),
               ),
               const Spacer(),
               _IconBtn(
                   icon: Icons.remove_red_eye_outlined,
-                  color: const Color(0xFF6B7280),
+                  color: textSecondary,
                   onTap: () {}),
               _IconBtn(
                   icon: Icons.edit_outlined,
@@ -424,16 +447,16 @@ class _CollectionCard extends StatelessWidget {
           ),
           const SizedBox(height: 7),
           Text(item.title,
-              style: const TextStyle(
+              style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: Color(0xFF111827))),
+                  color: textPrimary)),
           const SizedBox(height: 4),
           Text(item.description,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                  fontSize: 12, color: Color(0xFF6B7280), height: 1.4)),
+              style:
+                  TextStyle(fontSize: 12, color: textSecondary, height: 1.4)),
           const SizedBox(height: 9),
           Row(children: [
             _Pill(

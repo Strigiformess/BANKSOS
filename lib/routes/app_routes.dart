@@ -36,7 +36,8 @@ class AppRoutes {
   static const String adminKelolaUser = '/admin/kelola-user';
   static const String adminKelolasoal = '/admin/kelola-soal';
 
-  // Shell Reviewer
+  // Panel Reviewer
   static const String reviewerMain = '/reviewer-main';
   static const String collectionManagement = '/collection-management';
+  static const String reviewerProfile = '/reviewer-profile';
 }
