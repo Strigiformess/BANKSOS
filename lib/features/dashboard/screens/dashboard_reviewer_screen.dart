@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart'; // Ganti ke Riverpod
 import '../../../core/services/session_service.dart';
 import '../../../routes/app_routes.dart';
 
-// TODO: Pastikan reviewControllerProvider sudah didefinisikan di controller Anda menggunakan Riverpod.
 // Contoh jika belum ada: final reviewControllerProvider = ChangeNotifierProvider((ref) => ReviewController());
 import '../../review/controllers/review_controller.dart';
 
@@ -58,7 +57,7 @@ class _DashboardReviewerScreenState
     final pendingCount = reviewController.jumlahPending;
 
     return Scaffold(
-      backgroundColor: Color.fromARGB(255, 107, 124, 141),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: _buildAppBar(nama),
       body: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
@@ -176,25 +175,43 @@ class _DashboardReviewerScreenState
         title: Row(
           children: [
             const SizedBox(width: 16),
-            Container(
-              width: 34,
-              height: 34,
-              decoration: const BoxDecoration(
-                  color: Color(0xFF1A6FDF), shape: BoxShape.circle),
-              child: const Center(
-                child: Text('R',
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700)),
+            // Membungkus Avatar dan Nama dengan InkWell agar bisa ditekan
+            InkWell(
+              onTap: () {
+                // Berpindah ke Halaman Reviewer Profile
+                Navigator.pushNamed(context, AppRoutes.reviewerProfile); 
+                // Catatan: Sesuaikan 'AppRoutes.reviewerProfile' dengan nama rute 
+                // yang Anda daftarkan di berkas routes/app_routes.dart Anda.
+              },
+              borderRadius: BorderRadius.circular(8),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 34,
+                      height: 34,
+                      decoration: const BoxDecoration(
+                          color: Color(0xFF1A6FDF), shape: BoxShape.circle),
+                      child: const Center(
+                        child: Text('R',
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700)),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Text(nama,
+                        style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF111827))),
+                  ],
+                ),
               ),
             ),
-            const SizedBox(width: 10),
-            Text(nama,
-                style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF111827))),
           ],
         ),
         actions: [

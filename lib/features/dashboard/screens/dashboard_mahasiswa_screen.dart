@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/theme/app_theme_extensions.dart';
 import '../../../core/services/session_service.dart';
 import '../../../core/services/connectivity_service.dart';
 import '../../../shared/widgets/app_widgets.dart';
@@ -25,7 +26,7 @@ class DashboardMahasiswaScreen extends ConsumerStatefulWidget {
 
 class _DashboardMahasiswaScreenState
     extends ConsumerState<DashboardMahasiswaScreen> {
-  static const Color _rankGold   = Color(0xFFFFD700);
+  static const Color _rankGold = Color(0xFFFFD700);
   static const Color _rankSilver = Color(0xFFC0C0C0);
   static const Color _rankBronze = Color(0xFFCD7F32);
 
@@ -47,8 +48,7 @@ class _DashboardMahasiswaScreenState
               _buildSyncStatusBanner(),
               const SizedBox(height: AppSpacings.lg),
               Padding(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacings.lg),
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacings.lg),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -86,7 +86,7 @@ class _DashboardMahasiswaScreenState
           UserAvatar(
             name: nama,
             size: 40,
-            bgColor: AppColors.primaryBlue.withOpacity(0.1),
+            bgColor: AppColors.primaryBlue.withValues(alpha: 0.1),
           ),
           const SizedBox(width: AppSpacings.sm),
           Column(
@@ -102,8 +102,7 @@ class _DashboardMahasiswaScreenState
                   Text(
                     nama,
                     style: AppTextStyles.h3.copyWith(
-                        color: AppColors.textDark,
-                        fontWeight: FontWeight.bold),
+                        color: AppColors.textDark, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(width: AppSpacings.xs),
                   const Text('👋', style: TextStyle(fontSize: 16)),
@@ -134,24 +133,20 @@ class _DashboardMahasiswaScreenState
           ),
           decoration: BoxDecoration(
             color: isOnline
-                ? AppColors.successGreen.withOpacity(0.12)
-                : AppColors.errorRed.withOpacity(0.12),
+                ? AppColors.successGreen.withValues(alpha: 0.12)
+                : AppColors.errorRed.withValues(alpha: 0.12),
             borderRadius: AppRadius.lgAll,
             border: Border.all(
               color: isOnline
-                  ? AppColors.successGreen.withOpacity(0.2)
-                  : AppColors.errorRed.withOpacity(0.2),
+                  ? AppColors.successGreen.withValues(alpha: 0.2)
+                  : AppColors.errorRed.withValues(alpha: 0.2),
             ),
           ),
           child: Row(
             children: [
               Icon(
-                isOnline
-                    ? Icons.cloud_done_rounded
-                    : Icons.cloud_off_rounded,
-                color: isOnline
-                    ? AppColors.successGreen
-                    : AppColors.errorRed,
+                isOnline ? Icons.cloud_done_rounded : Icons.cloud_off_rounded,
+                color: isOnline ? AppColors.successGreen : AppColors.errorRed,
                 size: 18,
               ),
               const SizedBox(width: AppSpacings.sm),
@@ -160,8 +155,7 @@ class _DashboardMahasiswaScreenState
                   isOnline
                       ? 'Semua data tersinkronisasi'
                       : 'Tidak ada koneksi. Data akan tersimpan offline.',
-                  style: AppTextStyles.body
-                      .copyWith(color: AppColors.textDark),
+                  style: AppTextStyles.body.copyWith(color: AppColors.textDark),
                 ),
               ),
             ],
@@ -181,7 +175,7 @@ class _DashboardMahasiswaScreenState
         borderRadius: AppRadius.xlAll,
         boxShadow: [
           BoxShadow(
-            color: AppColors.primaryBlue.withOpacity(0.25),
+            color: AppColors.primaryBlue.withValues(alpha: 0.25),
             blurRadius: 16,
             offset: const Offset(0, 6),
           ),
@@ -217,18 +211,17 @@ class _DashboardMahasiswaScreenState
               ),
               Container(
                 padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacings.md,
-                    vertical: AppSpacings.sm),
+                    horizontal: AppSpacings.md, vertical: AppSpacings.sm),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.15),
+                  color: Colors.white.withValues(alpha: 0.15),
                   borderRadius: AppRadius.lgAll,
                 ),
                 child: Column(
                   children: [
                     Text(
                       'Total Points',
-                      style: AppTextStyles.caption
-                          .copyWith(color: Colors.white70),
+                      style:
+                          AppTextStyles.caption.copyWith(color: Colors.white70),
                     ),
                     const SizedBox(height: 2),
                     RichText(
@@ -236,8 +229,8 @@ class _DashboardMahasiswaScreenState
                         children: [
                           TextSpan(
                             text: '1,250',
-                            style: AppTextStyles.h2
-                                .copyWith(color: Colors.white),
+                            style:
+                                AppTextStyles.h2.copyWith(color: Colors.white),
                           ),
                           TextSpan(
                             text: ' pts',
@@ -258,13 +251,12 @@ class _DashboardMahasiswaScreenState
             children: [
               Text(
                 '75% to Scholar',
-                style: AppTextStyles.smallSemibold
-                    .copyWith(color: Colors.white),
+                style:
+                    AppTextStyles.smallSemibold.copyWith(color: Colors.white),
               ),
               Text(
                 '1,500 pts',
-                style: AppTextStyles.small
-                    .copyWith(color: Colors.white70),
+                style: AppTextStyles.small.copyWith(color: Colors.white70),
               ),
             ],
           ),
@@ -274,9 +266,9 @@ class _DashboardMahasiswaScreenState
             child: LinearProgressIndicator(
               value: 0.75,
               minHeight: 8,
-              backgroundColor: Colors.white.withOpacity(0.2),
-              valueColor: const AlwaysStoppedAnimation<Color>(
-                  AppColors.successGreen),
+              backgroundColor: Colors.white.withValues(alpha: 0.2),
+              valueColor:
+                  const AlwaysStoppedAnimation<Color>(AppColors.successGreen),
             ),
           ),
         ],
@@ -289,6 +281,7 @@ class _DashboardMahasiswaScreenState
     final userId = SessionService.instance.userId ?? '';
     final progressBox = HiveService.instance.userProgressBox;
     final questionBox = HiveService.instance.questionsBox;
+    final colors = context.colors;
 
     final totalSelesai = progressBox.values
         .where((p) => p.userId == userId && p.isSolved)
@@ -299,21 +292,19 @@ class _DashboardMahasiswaScreenState
     final totalBookmark = HiveService.instance.bookmarksBox.values
         .where((b) => b.userId == userId)
         .length;
-    final persen = totalSoal > 0
-        ? (totalSelesai / totalSoal).clamp(0.0, 1.0)
-        : 0.0;
+    final persen =
+        totalSoal > 0 ? (totalSelesai / totalSoal).clamp(0.0, 1.0) : 0.0;
 
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(AppSpacings.lg),
       decoration: BoxDecoration(
-        color: AppColors.bgWhite,
+        color: colors.cardBg,
         borderRadius: AppRadius.lgAll,
-        border: Border.all(
-            color: AppColors.borderGrey.withOpacity(0.4)),
+        border: Border.all(color: colors.borderColor),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: Colors.black.withValues(alpha: 0.02),
             blurRadius: 8,
             offset: const Offset(0, 4),
           ),
@@ -328,8 +319,7 @@ class _DashboardMahasiswaScreenState
               Text('Progres Belajar', style: AppTextStyles.h3),
               // ── PERUBAHAN: gunakan MainShell.jumpTo ──
               GestureDetector(
-                onTap: () =>
-                    Navigator.pushNamed(context, AppRoutes.riwayat),
+                onTap: () => Navigator.pushNamed(context, AppRoutes.riwayat),
                 child: Text(
                   'Lihat Riwayat',
                   style: AppTextStyles.smallSemibold.copyWith(
@@ -367,8 +357,8 @@ class _DashboardMahasiswaScreenState
               value: persen,
               minHeight: 8,
               backgroundColor: AppColors.lightBlue,
-              valueColor: const AlwaysStoppedAnimation<Color>(
-                  AppColors.primaryBlue),
+              valueColor:
+                  const AlwaysStoppedAnimation<Color>(AppColors.primaryBlue),
             ),
           ),
           const SizedBox(height: AppSpacings.md),
@@ -382,8 +372,7 @@ class _DashboardMahasiswaScreenState
               ),
               const SizedBox(width: AppSpacings.xl),
               GestureDetector(
-                onTap: () =>
-                    Navigator.pushNamed(context, AppRoutes.bookmarks),
+                onTap: () => Navigator.pushNamed(context, AppRoutes.bookmarks),
                 child: _MiniStat(
                   icon: Icons.bookmark_outline,
                   iconColor: Colors.amber,
@@ -399,8 +388,8 @@ class _DashboardMahasiswaScreenState
                 label: const Text('Kontribusi'),
                 style: TextButton.styleFrom(
                   foregroundColor: AppColors.primaryBlue,
-                  textStyle: AppTextStyles.small
-                      .copyWith(fontWeight: FontWeight.w600),
+                  textStyle:
+                      AppTextStyles.small.copyWith(fontWeight: FontWeight.w600),
                   padding: EdgeInsets.zero,
                   minimumSize: Size.zero,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -441,8 +430,7 @@ class _DashboardMahasiswaScreenState
       decoration: BoxDecoration(
         color: AppColors.bgWhite,
         borderRadius: AppRadius.lgAll,
-        border:
-            Border.all(color: AppColors.borderGrey.withOpacity(0.4)),
+        border: Border.all(color: AppColors.borderGrey.withValues(alpha: 0.4)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -453,11 +441,10 @@ class _DashboardMahasiswaScreenState
                 Container(
                   padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
-                    color: AppColors.warningYellow.withOpacity(0.15),
+                    color: AppColors.warningYellow.withValues(alpha: 0.15),
                     shape: BoxShape.circle,
                   ),
-                  child:
-                      Text(emoji, style: const TextStyle(fontSize: 16)),
+                  child: Text(emoji, style: const TextStyle(fontSize: 16)),
                 ),
               const SizedBox(width: AppSpacings.sm),
               Text(
@@ -469,8 +456,7 @@ class _DashboardMahasiswaScreenState
           ),
           const SizedBox(height: AppSpacings.sm),
           Text(value,
-              style: AppTextStyles.h2
-                  .copyWith(color: AppColors.textDark)),
+              style: AppTextStyles.h2.copyWith(color: AppColors.textDark)),
         ],
       ),
     );
@@ -487,8 +473,8 @@ class _DashboardMahasiswaScreenState
           decoration: BoxDecoration(
             color: AppColors.bgWhite,
             borderRadius: AppRadius.lgAll,
-            border: Border.all(
-                color: AppColors.borderGrey.withOpacity(0.4)),
+            border:
+                Border.all(color: AppColors.borderGrey.withValues(alpha: 0.4)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -499,17 +485,16 @@ class _DashboardMahasiswaScreenState
                     padding: const EdgeInsets.all(6),
                     decoration: BoxDecoration(
                       color: isOnline
-                          ? AppColors.primaryBlue.withOpacity(0.1)
-                          : AppColors.errorRed.withOpacity(0.1),
+                          ? AppColors.primaryBlue.withValues(alpha: 0.1)
+                          : AppColors.errorRed.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
                       isOnline
                           ? Icons.cloud_done_rounded
                           : Icons.cloud_off_rounded,
-                      color: isOnline
-                          ? AppColors.primaryBlue
-                          : AppColors.errorRed,
+                      color:
+                          isOnline ? AppColors.primaryBlue : AppColors.errorRed,
                       size: 22,
                     ),
                   ),
@@ -525,9 +510,7 @@ class _DashboardMahasiswaScreenState
               Text(
                 isOnline ? 'Synced' : 'Offline',
                 style: AppTextStyles.h2.copyWith(
-                  color: isOnline
-                      ? AppColors.primaryBlue
-                      : AppColors.errorRed,
+                  color: isOnline ? AppColors.primaryBlue : AppColors.errorRed,
                 ),
               ),
             ],
@@ -549,8 +532,7 @@ class _DashboardMahasiswaScreenState
       {
         'icon': Icons.bookmark_rounded,
         'label': 'Bookmark',
-        'onTap': () =>
-            Navigator.pushNamed(context, AppRoutes.bookmarks),
+        'onTap': () => Navigator.pushNamed(context, AppRoutes.bookmarks),
       },
       {
         'icon': Icons.bar_chart_rounded,
@@ -561,8 +543,7 @@ class _DashboardMahasiswaScreenState
       {
         'icon': Icons.wifi_off_rounded,
         'label': 'Offline',
-        'onTap': () =>
-            Navigator.pushNamed(context, AppRoutes.offlineSoal),
+        'onTap': () => Navigator.pushNamed(context, AppRoutes.offlineSoal),
       },
     ];
 
@@ -585,16 +566,13 @@ class _DashboardMahasiswaScreenState
                     width: 56,
                     height: 56,
                     decoration: BoxDecoration(
-                      color: isFirst
-                          ? AppColors.primaryBlue
-                          : AppColors.bgWhite,
+                      color:
+                          isFirst ? AppColors.primaryBlue : AppColors.bgWhite,
                       borderRadius: AppRadius.lgAll,
                     ),
                     child: Icon(
                       m['icon'] as IconData,
-                      color: isFirst
-                          ? Colors.white
-                          : AppColors.primaryBlue,
+                      color: isFirst ? Colors.white : AppColors.primaryBlue,
                       size: 26,
                     ),
                   ),
@@ -631,6 +609,7 @@ class _DashboardMahasiswaScreenState
         'gradientEnd': const Color(0xFF155570),
       },
     ];
+    final colors = context.colors;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -657,13 +636,12 @@ class _DashboardMahasiswaScreenState
             final isLast = i == matkuls.length - 1;
             return Expanded(
               child: Container(
-                margin:
-                    EdgeInsets.only(right: isLast ? 0 : AppSpacings.md),
+                margin: EdgeInsets.only(right: isLast ? 0 : AppSpacings.md),
                 decoration: BoxDecoration(
-                  color: AppColors.bgWhite,
+                  color: colors.cardBg,
                   borderRadius: AppRadius.lgAll,
                   border: Border.all(
-                      color: AppColors.borderGrey.withOpacity(0.3)),
+                      color: colors.borderColor.withValues(alpha: 0.3)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -689,7 +667,7 @@ class _DashboardMahasiswaScreenState
                             top: -10,
                             child: Icon(Icons.computer,
                                 size: 80,
-                                color: Colors.white.withOpacity(0.1)),
+                                color: Colors.white.withValues(alpha: 0.1)),
                           )
                         ],
                       ),
@@ -708,8 +686,8 @@ class _DashboardMahasiswaScreenState
                             ),
                             child: Text(
                               m['kode'] as String,
-                              style: AppTextStyles.captionBold.copyWith(
-                                  color: AppColors.primaryBlue),
+                              style: AppTextStyles.captionBold
+                                  .copyWith(color: AppColors.primaryBlue),
                             ),
                           ),
                           const SizedBox(height: AppSpacings.xs),
@@ -752,6 +730,7 @@ class _DashboardMahasiswaScreenState
         'difficulty': 'hard',
       },
     ];
+    final colors = context.colors;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -761,13 +740,12 @@ class _DashboardMahasiswaScreenState
         ...soals.map((s) => Container(
               margin: const EdgeInsets.only(bottom: AppSpacings.sm),
               padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacings.md,
-                  vertical: AppSpacings.md),
+                  horizontal: AppSpacings.md, vertical: AppSpacings.md),
               decoration: BoxDecoration(
-                color: AppColors.bgWhite,
+                color: colors.cardBg,
                 borderRadius: AppRadius.lgAll,
                 border: Border.all(
-                    color: AppColors.borderGrey.withOpacity(0.3)),
+                    color: colors.borderColor.withValues(alpha: 0.3)),
               ),
               child: Row(
                 children: [
@@ -806,9 +784,9 @@ class _DashboardMahasiswaScreenState
   // ─── Top Students ─────────────────────────────────────────────────────────
   Widget _buildTopStudents() {
     final students = [
-      {'nama': 'Sarah Wijaya',  'pts': '2,450 pts', 'rank': 1},
-      {'nama': 'Budi Santoso',  'pts': '2,120 pts', 'rank': 2},
-      {'nama': 'Citra Putri',   'pts': '1,980 pts', 'rank': 3},
+      {'nama': 'Sarah Wijaya', 'pts': '2,450 pts', 'rank': 1},
+      {'nama': 'Budi Santoso', 'pts': '2,120 pts', 'rank': 2},
+      {'nama': 'Citra Putri', 'pts': '1,980 pts', 'rank': 3},
     ];
     final rankColors = [_rankGold, _rankSilver, _rankBronze];
 
@@ -827,8 +805,8 @@ class _DashboardMahasiswaScreenState
           decoration: BoxDecoration(
             color: AppColors.bgWhite,
             borderRadius: AppRadius.lgAll,
-            border: Border.all(
-                color: AppColors.borderGrey.withOpacity(0.3)),
+            border:
+                Border.all(color: AppColors.borderGrey.withValues(alpha: 0.3)),
           ),
           child: Column(
             children: students.asMap().entries.map((entry) {
@@ -845,15 +823,15 @@ class _DashboardMahasiswaScreenState
                           width: 24,
                           child: Text(
                             '${s['rank']}',
-                            style: AppTextStyles.bodySemibold.copyWith(
-                                color: rankColors[i], fontSize: 16),
+                            style: AppTextStyles.bodySemibold
+                                .copyWith(color: rankColors[i], fontSize: 16),
                           ),
                         ),
                         const SizedBox(width: AppSpacings.xs),
                         UserAvatar(
                           name: s['nama'] as String,
                           size: 38,
-                          bgColor: rankColors[i].withOpacity(0.15),
+                          bgColor: rankColors[i].withValues(alpha: 0.15),
                         ),
                         const SizedBox(width: AppSpacings.md),
                         Expanded(
@@ -862,8 +840,8 @@ class _DashboardMahasiswaScreenState
                         ),
                         Text(
                           s['pts'] as String,
-                          style: AppTextStyles.smallSemibold.copyWith(
-                              color: AppColors.primaryBlue),
+                          style: AppTextStyles.smallSemibold
+                              .copyWith(color: AppColors.primaryBlue),
                         ),
                       ],
                     ),
@@ -897,27 +875,21 @@ class _DashboardMahasiswaScreenState
             color: AppColors.bgWhite,
             borderRadius: AppRadius.pill,
             border: Border.all(
-              color: isOnline
-                  ? AppColors.bgBlue
-                  : AppColors.errorRed,
+              color: isOnline ? AppColors.bgBlue : AppColors.errorRed,
             ),
           ),
           child: Row(
             children: [
               Icon(
                 isOnline ? Icons.sync : Icons.cloud_off_outlined,
-                color: isOnline
-                    ? AppColors.primaryBlue
-                    : AppColors.errorRed,
+                color: isOnline ? AppColors.primaryBlue : AppColors.errorRed,
                 size: 14,
               ),
               const SizedBox(width: 4),
               Text(
                 isOnline ? 'Synced' : 'Offline',
                 style: AppTextStyles.smallSemibold.copyWith(
-                  color: isOnline
-                      ? AppColors.primaryBlue
-                      : AppColors.errorRed,
+                  color: isOnline ? AppColors.primaryBlue : AppColors.errorRed,
                 ),
               ),
             ],

@@ -30,7 +30,7 @@ class _ReviewQueueScreenState extends ConsumerState<ReviewQueueScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       RbacGuard.redirectIfUnauthorized(context, requiredRole: 'reviewer');
-      
+
       // Menggunakan ref.read untuk memanggil fungsi di Riverpod
       ref.read(reviewControllerProvider).loadSoalPending();
     });
@@ -49,11 +49,13 @@ class _ReviewQueueScreenState extends ConsumerState<ReviewQueueScreen> {
     );
 
     if (!mounted) return;
-    
+
     if (result.success) {
-      _showSnackBar('Soal berhasil disetujui dan dipublikasikan.', isSuccess: true);
+      _showSnackBar('Soal berhasil disetujui dan dipublikasikan.',
+          isSuccess: true);
     } else {
-      _showSnackBar(result.errorMessage ?? 'Gagal menyetujui soal.', isSuccess: false);
+      _showSnackBar(result.errorMessage ?? 'Gagal menyetujui soal.',
+          isSuccess: false);
     }
   }
 
@@ -70,11 +72,13 @@ class _ReviewQueueScreenState extends ConsumerState<ReviewQueueScreen> {
     );
 
     if (!mounted) return;
-    
+
     if (result.success) {
-      _showSnackBar('Soal ditolak. Mahasiswa akan mendapat notifikasi.', isSuccess: false);
+      _showSnackBar('Soal ditolak. Mahasiswa akan mendapat notifikasi.',
+          isSuccess: false);
     } else {
-      _showSnackBar(result.errorMessage ?? 'Gagal menolak soal.', isSuccess: false);
+      _showSnackBar(result.errorMessage ?? 'Gagal menolak soal.',
+          isSuccess: false);
     }
   }
 
@@ -85,7 +89,8 @@ class _ReviewQueueScreenState extends ConsumerState<ReviewQueueScreen> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setSt) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           title: const Text('Pilih Tingkat Kesulitan',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
           content: Column(
@@ -160,21 +165,18 @@ class _ReviewQueueScreenState extends ConsumerState<ReviewQueueScreen> {
               maxLines: 4,
               style: const TextStyle(fontSize: 13),
               decoration: InputDecoration(
-                hintText:
-                    'Tulis alasan penolakan (minimal 10 karakter)...',
-                hintStyle: const TextStyle(
-                    fontSize: 13, color: Color(0xFF9CA3AF)),
+                hintText: 'Tulis alasan penolakan (minimal 10 karakter)...',
+                hintStyle:
+                    const TextStyle(fontSize: 13, color: Color(0xFF9CA3AF)),
                 filled: true,
                 fillColor: const Color(0xFFF9FAFB),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(6),
-                  borderSide:
-                      const BorderSide(color: Color(0xFFE5E7EB)),
+                  borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(6),
-                  borderSide:
-                      const BorderSide(color: Color(0xFF1A6FDF)),
+                  borderSide: const BorderSide(color: Color(0xFF1A6FDF)),
                 ),
                 contentPadding: const EdgeInsets.all(10),
               ),
@@ -184,8 +186,8 @@ class _ReviewQueueScreenState extends ConsumerState<ReviewQueueScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Batal',
-                style: TextStyle(color: Color(0xFF6B7280))),
+            child:
+                const Text('Batal', style: TextStyle(color: Color(0xFF6B7280))),
           ),
           ElevatedButton(
             onPressed: () {
@@ -242,32 +244,42 @@ class _ReviewQueueScreenState extends ConsumerState<ReviewQueueScreen> {
   // ─── Build ────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark ? const Color(0xFF1A2744) : Colors.white;
+    final borderColor =
+        isDark ? const Color(0xFF2D3748) : const Color(0xFFE5E7EB);
+    final textPrimary =
+        isDark ? const Color(0xFFE8EDF5) : const Color(0xFF111827);
+    final textSecondary =
+        isDark ? const Color(0xFF8A9BB0) : const Color(0xFF6B7280);
+    final scaffoldBg =
+        isDark ? const Color(0xFF0D1B2A) : const Color(0xFFF9FAFB);
+
     // Mengamati perubahan state lewat Riverpod ref.watch
     final controller = ref.watch(reviewControllerProvider);
     final soalList = controller.soalPending;
-    
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB),
+      backgroundColor: scaffoldBg,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: cardBg,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
         automaticallyImplyLeading: false,
         titleSpacing: 16,
-        title: const Column(
+        title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Antrian Review',
                 style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF111827))),
+                    color: textPrimary)),
           ],
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.notifications_outlined,
-                color: Color(0xFF374151)),
+            icon: Icon(Icons.notifications_outlined, color: textSecondary),
             onPressed: () {},
           ),
           Container(
@@ -284,7 +296,7 @@ class _ReviewQueueScreenState extends ConsumerState<ReviewQueueScreen> {
         ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(0.5),
-          child: Container(height: 0.5, color: const Color(0xFFE5E7EB)),
+          child: Container(height: 0.5, color: borderColor),
         ),
       ),
       body: Column(
@@ -296,18 +308,16 @@ class _ReviewQueueScreenState extends ConsumerState<ReviewQueueScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Antrean Review',
+                Text('Antrean Review',
                     style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF111827))),
+                        color: textPrimary)),
                 const SizedBox(height: 3),
                 Text(
                   'Moderasi kontribusi soal terbaru dari komunitas pendidik.',
                   style: TextStyle(
-                      fontSize: 12,
-                      color: const Color(0xFF6B7280),
-                      height: 1.4),
+                      fontSize: 12, color: textSecondary, height: 1.4),
                 ),
               ],
             ),
@@ -328,13 +338,9 @@ class _ReviewQueueScreenState extends ConsumerState<ReviewQueueScreen> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 14, vertical: 7),
                       decoration: BoxDecoration(
-                        color: active
-                            ? const Color(0xFF1A6FDF)
-                            : Colors.white,
+                        color: active ? const Color(0xFF1A6FDF) : cardBg,
                         border: Border.all(
-                          color: active
-                              ? const Color(0xFF1A6FDF)
-                              : const Color(0xFFE5E7EB),
+                          color: active ? const Color(0xFF1A6FDF) : borderColor,
                         ),
                         borderRadius: BorderRadius.circular(100),
                       ),
@@ -343,9 +349,7 @@ class _ReviewQueueScreenState extends ConsumerState<ReviewQueueScreen> {
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
-                          color: active
-                              ? Colors.white
-                              : const Color(0xFF6B7280),
+                          color: active ? Colors.white : textSecondary,
                         ),
                       ),
                     ),
@@ -362,22 +366,22 @@ class _ReviewQueueScreenState extends ConsumerState<ReviewQueueScreen> {
                     child: CircularProgressIndicator(),
                   )
                 : soalList.isEmpty
-                    ? const Center(
+                    ? Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(Icons.fact_check_outlined,
-                                size: 48, color: Color(0xFFD1D5DB)),
-                            SizedBox(height: 12),
+                                size: 48, color: textSecondary),
+                            const SizedBox(height: 12),
                             Text('Antrian Kosong',
                                 style: TextStyle(
                                     fontSize: 15,
                                     fontWeight: FontWeight.w600,
-                                    color: Color(0xFF374151))),
-                            SizedBox(height: 4),
+                                    color: textPrimary)),
+                            const SizedBox(height: 4),
                             Text('Semua soal sudah direview!',
                                 style: TextStyle(
-                                    fontSize: 13, color: Color(0xFF9CA3AF))),
+                                    fontSize: 13, color: textSecondary)),
                           ],
                         ),
                       )
@@ -386,8 +390,10 @@ class _ReviewQueueScreenState extends ConsumerState<ReviewQueueScreen> {
                         itemCount: soalList.length,
                         itemBuilder: (_, i) => _ReviewCard(
                           item: soalList[i],
-                          diffLabel: _diffLabel(soalList[i].tingkatKesulitan.name),
-                          diffColor: _diffColor(soalList[i].tingkatKesulitan.name),
+                          diffLabel:
+                              _diffLabel(soalList[i].tingkatKesulitan.name),
+                          diffColor:
+                              _diffColor(soalList[i].tingkatKesulitan.name),
                           diffBg: _diffBg(soalList[i].tingkatKesulitan.name),
                           onApprove: () => _onApprove(soalList[i]),
                           onReject: () => _onReject(soalList[i]),
@@ -468,6 +474,14 @@ class _ReviewCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark ? const Color(0xFF1A2744) : Colors.white;
+    final borderColor =
+        isDark ? const Color(0xFF2D3748) : const Color(0xFFE5E7EB);
+    final textPrimary =
+        isDark ? const Color(0xFFE8EDF5) : const Color(0xFF111827);
+    final textSecondary =
+        isDark ? const Color(0xFF8A9BB0) : const Color(0xFF6B7280);
     final avatarBg = _getAvatarBg(item.submittedBy);
     final avatarFg = _getAvatarFg(item.submittedBy);
     final initials = _getInitials(item.submittedBy);
@@ -477,8 +491,8 @@ class _ReviewCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(13),
       decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: const Color(0xFFE5E7EB), width: 0.5),
+        color: cardBg,
+        border: Border.all(color: borderColor, width: 0.5),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Column(
@@ -487,11 +501,9 @@ class _ReviewCard extends StatelessWidget {
           Row(
             children: [
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
                 decoration: BoxDecoration(
-                    color: diffBg,
-                    borderRadius: BorderRadius.circular(100)),
+                    color: diffBg, borderRadius: BorderRadius.circular(100)),
                 child: Text(diffLabel,
                     style: TextStyle(
                         fontSize: 11,
@@ -500,26 +512,23 @@ class _ReviewCard extends StatelessWidget {
               ),
               const Spacer(),
               Text(timeStr,
-                  style: const TextStyle(
-                      fontSize: 11, color: Color(0xFF9CA3AF))),
+                  style: TextStyle(fontSize: 11, color: textSecondary)),
             ],
           ),
           const SizedBox(height: 7),
           Text(item.pertanyaan,
-              style: const TextStyle(
+              style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: Color(0xFF111827),
+                  color: textPrimary,
                   height: 1.4)),
           const SizedBox(height: 6),
           Row(
             children: [
-              const Icon(Icons.menu_book_outlined,
-                  size: 13, color: Color(0xFF9CA3AF)),
+              Icon(Icons.menu_book_outlined, size: 13, color: textSecondary),
               const SizedBox(width: 4),
               Text(item.kategoriNama,
-                  style: const TextStyle(
-                      fontSize: 12, color: Color(0xFF6B7280))),
+                  style: TextStyle(fontSize: 12, color: textSecondary)),
             ],
           ),
           const SizedBox(height: 10),
@@ -528,9 +537,8 @@ class _ReviewCard extends StatelessWidget {
               Container(
                 width: 30,
                 height: 30,
-                decoration: BoxDecoration(
-                    color: avatarBg,
-                    shape: BoxShape.circle),
+                decoration:
+                    BoxDecoration(color: avatarBg, shape: BoxShape.circle),
                 child: Center(
                   child: Text(initials,
                       style: TextStyle(
@@ -544,13 +552,12 @@ class _ReviewCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text('Pengguna #${item.submittedBy.substring(0, 8)}',
-                      style: const TextStyle(
+                      style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFF111827))),
-                  const Text('Kontributor',
-                      style: TextStyle(
-                          fontSize: 11, color: Color(0xFF9CA3AF))),
+                          color: textPrimary)),
+                  Text('Kontributor',
+                      style: TextStyle(fontSize: 11, color: textSecondary)),
                 ],
               ),
             ],
@@ -563,17 +570,15 @@ class _ReviewCard extends StatelessWidget {
                   onPressed: onReject,
                   icon: const Icon(Icons.close, size: 15),
                   label: const Text('Tolak',
-                      style: TextStyle(
-                          fontSize: 13, fontWeight: FontWeight.w600)),
+                      style:
+                          TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: const Color(0xFFDC2626),
-                    side:
-                        const BorderSide(color: Color(0xFFFCA5A5)),
+                    side: const BorderSide(color: Color(0xFFFCA5A5)),
                     backgroundColor: const Color(0xFFFEF2F2),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8)),
-                    padding:
-                        const EdgeInsets.symmetric(vertical: 8),
+                    padding: const EdgeInsets.symmetric(vertical: 8),
                   ),
                 ),
               ),
@@ -583,16 +588,15 @@ class _ReviewCard extends StatelessWidget {
                   onPressed: onApprove,
                   icon: const Icon(Icons.check, size: 15),
                   label: const Text('Setujui',
-                      style: TextStyle(
-                          fontSize: 13, fontWeight: FontWeight.w600)),
+                      style:
+                          TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF16A34A),
                     foregroundColor: Colors.white,
                     elevation: 0,
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8)),
-                    padding:
-                        const EdgeInsets.symmetric(vertical: 8),
+                    padding: const EdgeInsets.symmetric(vertical: 8),
                   ),
                 ),
               ),

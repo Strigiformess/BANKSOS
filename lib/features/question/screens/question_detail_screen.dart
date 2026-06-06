@@ -314,13 +314,13 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen>
               width: double.infinity,
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: context.isDark
-                    ? AppColors.primaryBlue.withValues(alpha:0.15)
+                color: context.isDark 
+                    ? const Color(0x1A4A90D9)  // biru transparan di dark
                     : AppColors.lightBlue,
-                borderRadius: AppRadius.lgAll,
                 border: Border.all(
-                  color: context.isDark ? Colors.transparent : Colors.blue.shade100, // sesuaikan kecerahan mockup
-                  width: 1,
+                  color: context.isDark 
+                      ? const Color(0x404A90D9) 
+                      : Colors.blue.shade100,
                 ),
               ),
               child: Column(

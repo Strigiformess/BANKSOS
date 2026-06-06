@@ -18,6 +18,7 @@
 //   3. POST ke MongoDB via MongoDBService
 //   4. Return QuestionSubmitResult dengan data soal yang baru dibuat
 
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:mongo_dart/mongo_dart.dart' show ObjectId;
 
 import '../../../core/services/connectivity_service.dart';
@@ -111,7 +112,7 @@ class QuestionSubmitRepository implements IQuestionSubmitRepository {
     }
 
     // 2. Validasi field wajib
-    final validasiError = _validasi(soal);
+    final validasiError = validasi(soal);
     if (validasiError != null) {
       return QuestionSubmitResult(
         success: false,
@@ -124,8 +125,7 @@ class QuestionSubmitRepository implements IQuestionSubmitRepository {
     if (!isOnline) {
       return const QuestionSubmitResult(
         success: false,
-        errorMessage:
-            'Pengajuan soal membutuhkan koneksi internet. '
+        errorMessage: 'Pengajuan soal membutuhkan koneksi internet. '
             'Sambungkan ke internet lalu coba lagi.',
       );
     }
@@ -144,10 +144,8 @@ class QuestionSubmitRepository implements IQuestionSubmitRepository {
       final newId = ObjectId();
 
       // Hints — filter yang kosong
-      final hints = soal.hints
-          .map((h) => h.trim())
-          .where((h) => h.isNotEmpty)
-          .toList();
+      final hints =
+          soal.hints.map((h) => h.trim()).where((h) => h.isNotEmpty).toList();
 
       final doc = {
         '_id': newId,
@@ -206,18 +204,16 @@ class QuestionSubmitRepository implements IQuestionSubmitRepository {
     if (!isOnline || !_db.isConnected) return [];
 
     try {
-      final results = await _db.questions
-          .find({
-            'submitted_by': ObjectId.parse(userId),
-          })
-          .toList();
+      final results = await _db.questions.find({
+        'submitted_by': ObjectId.parse(userId),
+      }).toList();
 
       // Urutkan: terbaru dulu
       results.sort((a, b) {
-        final aDate = DateTime.tryParse(a['created_at']?.toString() ?? '') ??
-            DateTime(0);
-        final bDate = DateTime.tryParse(b['created_at']?.toString() ?? '') ??
-            DateTime(0);
+        final aDate =
+            DateTime.tryParse(a['created_at']?.toString() ?? '') ?? DateTime(0);
+        final bDate =
+            DateTime.tryParse(b['created_at']?.toString() ?? '') ?? DateTime(0);
         return bDate.compareTo(aDate);
       });
 
@@ -230,7 +226,10 @@ class QuestionSubmitRepository implements IQuestionSubmitRepository {
   // ─── Validasi Internal ────────────────────────────────────────────────────
 
   /// Validasi field wajib. Mengembalikan pesan error atau null jika valid.
-  String? _validasi(SoalBaru soal) {
+  /// Dipublikasikan agar bisa diuji secara langsung di unit test.
+  // ignore: invalid_use_of_visible_for_testing_member
+  @visibleForTesting
+  String? validasi(SoalBaru soal) {
     if (soal.pertanyaan.trim().isEmpty) {
       return 'Pertanyaan tidak boleh kosong.';
     }
