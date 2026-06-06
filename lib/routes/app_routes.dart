@@ -9,31 +9,34 @@ class AppRoutes {
   AppRoutes._();
 
   // Auth
-  static const String splash             = '/splash';
-  static const String login              = '/login';
-  static const String register           = '/register';
+  static const String splash = '/splash';
+  static const String login = '/login';
+  static const String register = '/register';
 
   // Dashboard
   static const String dashboardMahasiswa = '/dashboard-mahasiswa';
-  static const String dashboardReviewer  = '/dashboard-reviewer';
-  static const String dashboardAdmin     = '/dashboard-admin';
-  
+  static const String dashboardReviewer = '/dashboard-reviewer';
+  static const String dashboardAdmin = '/dashboard-admin';
+
   // Menu Umum
-  static const String bankSoal           = '/bank-soal';
-  static const String kerjakanSoal       = '/kerjakan-soal';
-  static const String offlineSoal        = '/offline-soal';
-  static const String submitSoal         = '/submit-soal';
-  static const String questionDetail     = '/question-detail';
-  static const String kontribusi         = '/kontribusi';
-  static const String reviewQueue        = '/review-queue';
-  static const String bookmarks          = '/bookmarks';
-  static const String riwayat            = '/riwayat';
-  static const String profile            = '/profile';
-  static const String shell              = '/shell';
-  static const String statistik          = '/statistik';
+  static const String bankSoal = '/bank-soal';
+  static const String kerjakanSoal = '/kerjakan-soal';
+  static const String offlineSoal = '/offline-soal';
+  static const String submitSoal = '/submit-soal';
+  static const String questionDetail = '/question-detail';
+  static const String kontribusi = '/kontribusi';
+  static const String reviewQueue = '/review-queue';
+  static const String bookmarks = '/bookmarks';
+  static const String riwayat = '/riwayat';
+  static const String profile = '/profile';
+  static const String shell = '/shell';
+  static const String statistik = '/statistik';
 
+  // Panel Admin
+  static const String adminKelolaUser = '/admin/kelola-user';
+  static const String adminKelolasoal = '/admin/kelola-soal';
 
-  // Sprint 5 — Panel Admin
-  static const String adminKelolaUser    = '/admin/kelola-user';
-  static const String adminKelolasoal   = '/admin/kelola-soal';
+  // Shell Reviewer
+  static const String reviewerMain = '/reviewer-main';
+  static const String collectionManagement = '/collection-management';
 }

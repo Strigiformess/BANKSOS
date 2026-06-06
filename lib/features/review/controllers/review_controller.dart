@@ -16,6 +16,7 @@
 // State management menggunakan ChangeNotifier (konsisten dengan QuestionController).
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mongo_dart/mongo_dart.dart' show ObjectId, where, modify;
 
 import '../../../core/services/connectivity_service.dart';
@@ -40,6 +41,10 @@ class ReviewActionResult {
   final bool success;
   final String? errorMessage;
 }
+
+final reviewControllerProvider = ChangeNotifierProvider<ReviewController>((ref) {
+  return ReviewController();
+});
 
 // ─── Controller ───────────────────────────────────────────────────────────────
 

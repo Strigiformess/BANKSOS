@@ -36,7 +36,7 @@ import 'features/riwayat/screens/riwayat_screen.dart';
 import 'features/kontribusi/screens/kontribusi_screen.dart';
 import 'features/kontribusi/screens/submit_soal_screen.dart';
 import 'features/review/screens/review_queue_screen.dart';
-
+import 'features/collection/screens/collection_management_screen.dart';
 
 // Tambahkan import di bagian atas
 import 'features/bookmarks/screens/bookmarks_screen.dart';
@@ -87,7 +87,7 @@ Future<void> main() async {
   }
 
   // 6. Pengganti SyncManager (Otomatis Sync saat internet menyala)
-  SyncService.instance.flushQueue(); 
+  SyncService.instance.flushQueue();
   ConnectivityService.instance.onConnectivityChanged.listen((status) {
     if (!status.toString().contains('none')) {
       SyncService.instance.flushQueue();
@@ -109,7 +109,7 @@ Future<void> _preCleanCorruptedBoxes() async {
   try {
     await Hive.initFlutter();
     HiveService.registerAdapters();
-    
+
     try {
       final box = await Hive.openBox<QuestionModel>('questions_box');
       await box.close();
@@ -125,10 +125,10 @@ Future<void> _preCleanCorruptedBoxes() async {
 /// Download semua soal jika local masih kosong
 Future<void> _downloadAllQuestionsIfNeeded() async {
   if (!Hive.isBoxOpen('questions_box')) return;
-  
+
   final hive = HiveService.instance.questionsBox;
   final isOnline = await ConnectivityService.instance.isOnline;
-  
+
   // Lewati jika tidak ada internet atau sudah ada datanya
   if (!isOnline || hive.isNotEmpty) return;
 
@@ -143,7 +143,8 @@ Future<void> _downloadAllQuestionsIfNeeded() async {
     }
 
     await hive.putAll(questions);
-    debugPrint('✅ Auto-download complete: saved ${questions.length} questions to Hive');
+    debugPrint(
+        '✅ Auto-download complete: saved ${questions.length} questions to Hive');
   } catch (e) {
     debugPrint('⚠️ Auto-download failed: $e');
   }
@@ -162,25 +163,25 @@ class BanksosApp extends StatelessWidget {
       themeMode: ThemeMode.system,
       initialRoute: AppRoutes.splash,
       routes: {
-        AppRoutes.login:              (_) => const LoginScreen(),
-        AppRoutes.register:           (_) => const RegisterScreen(),
-        AppRoutes.splash:             (_) => const SplashScreen(),
+        AppRoutes.login: (_) => const LoginScreen(),
+        AppRoutes.register: (_) => const RegisterScreen(),
+        AppRoutes.splash: (_) => const SplashScreen(),
         AppRoutes.dashboardMahasiswa: (_) => const DashboardMahasiswaScreen(),
-        AppRoutes.dashboardReviewer:  (_) => const DashboardReviewerScreen(),
-        AppRoutes.dashboardAdmin:     (_) => const DashboardAdminScreen(),
-        AppRoutes.shell:              (_) => const MainShell(),
-        AppRoutes.bankSoal:           (_) => const BankSoalScreen(),
-        AppRoutes.profile:            (_) => const ProfileScreen(),
-        AppRoutes.statistik:          (_) => const StatisticsScreen(),
-        
-        AppRoutes.offlineSoal:        (_) => const OfflineQuestionsScreen(),
-        AppRoutes.bookmarks:          (_) => const BookmarksScreen(),
-        AppRoutes.riwayat:            (_) => const RiwayatScreen(),
-        AppRoutes.kontribusi:         (_) => const KontribusiScreen(),
-        AppRoutes.reviewQueue:        (_) => const ReviewQueueScreen(),
-        AppRoutes.submitSoal:         (_) => const SubmitSoalScreen(),
-        AppRoutes.adminKelolaUser:    (_) => const AdminKelolaUserScreen(),
-        AppRoutes.adminKelolasoal:    (_) => const AdminKelolasoalScreen(),
+        AppRoutes.dashboardReviewer: (_) => const DashboardReviewerScreen(),
+        AppRoutes.dashboardAdmin: (_) => const DashboardAdminScreen(),
+        AppRoutes.shell: (_) => const MainShell(),
+        AppRoutes.bankSoal: (_) => const BankSoalScreen(),
+        AppRoutes.profile: (_) => const ProfileScreen(),
+        AppRoutes.statistik: (_) => const StatisticsScreen(),
+        AppRoutes.offlineSoal: (_) => const OfflineQuestionsScreen(),
+        AppRoutes.bookmarks: (_) => const BookmarksScreen(),
+        AppRoutes.riwayat: (_) => const RiwayatScreen(),
+        AppRoutes.kontribusi: (_) => const KontribusiScreen(),
+        AppRoutes.reviewQueue: (_) => const ReviewQueueScreen(),
+        AppRoutes.submitSoal: (_) => const SubmitSoalScreen(),
+        AppRoutes.adminKelolaUser: (_) => const AdminKelolaUserScreen(),
+        AppRoutes.adminKelolasoal: (_) => const AdminKelolasoalScreen(),
+        AppRoutes.collectionManagement: (_) => const CollectionManagementScreen(),
       },
     );
   }
