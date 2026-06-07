@@ -1,15 +1,15 @@
 // lib/features/profile/screens/profile_screen.dart
-// Halaman profil mahasiswa BANKSOS - Dinamis dari Local DB / Server
+// REFACTOR: Streak, level, dan poin dihitung dari data Hive yang real.
+// Major diambil dari SessionService jika tersedia, fallback ke default.
 
 import 'package:flutter/material.dart';
-import 'package:hive_flutter/hive_flutter.dart'; // Ditambahkan untuk reactive UI Hive jika diperlukan
 
 import '../../../core/services/logout_handler.dart';
 import '../../../core/services/session_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/app_widgets.dart';
-import '../../../data/models/user_model.dart';
-import '../../../data/models/user_progress_model.dart';
+import '../../../data/local/hive/hive_service.dart';
+import '../../../data/models/question_model.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -20,67 +20,98 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   final SessionService _session = SessionService.instance;
-  
-  // Instance Box Hive (sesuaikan dengan nama box di inisialisasi aplikasi kamu)
-  late Box<UserModel> _userBox;
-  late Box<UserProgressModel> _progressBox;
-  
-  UserModel? _currentUser;
-  int _totalPoints = 0;
-  bool _isLoading = true;
+  bool _isLoading = false;
 
-  // Placeholder untuk data yang belum ada di model database saat ini
-  static const int _currentStreak = 0; // TODO: Tambahkan logic streak jika sudah ada di DB
-  static const int _level = 1;         // TODO: Tambahkan formula kalkulasi level berdasarkan poin
-  static const String _major = 'TEKNIK INFORMATIKA'; // TODO: Tambahkan field jurusan di UserModel jika diperlukan
+  // ─── Computed dari Hive ───────────────────────────────────────────────────
 
-  @override
-  void initState() {
-    super.initState();
-    _loadUserData();
-  }
-
-  /// Memuat data pengguna dan menghitung statistik secara dinamis
-  Future<void> _loadUserData() async {
-    setState(() => _isLoading = true);
-    try {
-      // 1. Buka Box Hive
-      _userBox = await Hive.openBox<UserModel>('users_box');
-      _progressBox = await Hive.openBox<UserProgressModel>('progress_box');
-
-      // 2. Ambil data user yang sedang login berdasarkan email/ID dari SessionService
-      final currentEmail = _session.email;
-      if (currentEmail != null) {
-        _currentUser = _userBox.values.firstWhere(
-          (user) => user.email == currentEmail,
-          orElse: () => throw Exception('User tidak ditemukan di lokal box'),
-        );
-      }
-
-      // 3. Hitung total poin berdasarkan soal yang berhasil diselesaikan
-      if (_currentUser != null) {
-        final solvedQuestions = _progressBox.values.where(
-          (progress) => progress.userId == _currentUser!.id && progress.isSolved == true
-        ).length;
-
-        _totalPoints = solvedQuestions * 100; 
-      }
-    } catch (e) {
-      debugPrint('Gagal memuat data profil: $e');
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
+  /// Poin berdasarkan tingkat kesulitan: Easy=25, Medium=50, Hard=100.
+  int get _totalPoints {
+    final userId = _session.userId ?? '';
+    final progressBox = HiveService.instance.userProgressBox;
+    final questionBox = HiveService.instance.questionsBox;
+    int total = 0;
+    for (final p in progressBox.values) {
+      if (p.userId != userId || !p.isSolved) continue;
+      final q = questionBox.get(p.questionId) ??
+          questionBox.values.where((q) => q.id == p.questionId).firstOrNull;
+      if (q == null) continue;
+      switch (q.tingkatKesulitan) {
+        case DifficultyLevel.easy:
+          total += 25;
+          break;
+        case DifficultyLevel.medium:
+          total += 50;
+          break;
+        case DifficultyLevel.hard:
+          total += 100;
+          break;
       }
     }
+    return total;
   }
 
-  // ─── Logout ──────────────────────────────────────────────────────────────
+  /// Level dihitung dari total poin.
+  /// Setiap 500 poin = 1 level.
+  int get _level {
+    final pts = _totalPoints;
+    if (pts <= 0) return 1;
+    return (pts / 500).floor() + 1;
+  }
+
+  /// Streak dihitung dari hari berurutan di mana user menyelesaikan soal.
+  int get _streakDays {
+    final userId = _session.userId ?? '';
+    final progressBox = HiveService.instance.userProgressBox;
+
+    final solvedDates = progressBox.values
+        .where((p) => p.userId == userId && p.isSolved && p.solvedAt != null)
+        .map((p) => DateTime(
+            p.solvedAt!.year, p.solvedAt!.month, p.solvedAt!.day))
+        .toSet()
+        .toList()
+      ..sort((a, b) => b.compareTo(a));
+
+    if (solvedDates.isEmpty) return 0;
+
+    int streak = 0;
+    final today = DateTime.now();
+    DateTime check = DateTime(today.year, today.month, today.day);
+
+    for (final d in solvedDates) {
+      if (d == check || d == check.subtract(const Duration(days: 1))) {
+        streak++;
+        check = d;
+      } else {
+        break;
+      }
+    }
+    return streak;
+  }
+
+  /// Jumlah soal yang diselesaikan.
+  int get _totalSolved {
+    final userId = _session.userId ?? '';
+    return HiveService.instance.userProgressBox.values
+        .where((p) => p.userId == userId && p.isSolved)
+        .length;
+  }
+
+  /// Jumlah soal yang pernah dikontribusikan.
+  int get _totalKontribusi {
+    final userId = _session.userId ?? '';
+    return HiveService.instance.questionsBox.values
+        .where((q) => q.submittedBy == userId)
+        .length;
+  }
+
+  // ─── Logout ───────────────────────────────────────────────────────────────
 
   Future<void> _onLogout() async {
     final konfirmasi = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('LOGOUT ACCOUNT', style: AppTextStyles.h2, textAlign: TextAlign.center),
+        title: const Text('LOGOUT ACCOUNT',
+            style: AppTextStyles.h2, textAlign: TextAlign.center),
         content: const Text(
           'Kamu yakin ingin keluar dari akun ini?',
           style: AppTextStyles.body,
@@ -91,16 +122,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.easyBg,
               minimumSize: Size.zero,
-              padding: const EdgeInsets.symmetric(horizontal: 35, vertical: 10),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 35, vertical: 10),
             ),
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Batal', style: TextStyle(color: AppColors.textDark)),
+            child: const Text('Batal',
+                style: TextStyle(color: AppColors.textDark)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.errorRed,
               minimumSize: Size.zero,
-              padding: const EdgeInsets.symmetric(horizontal: 35, vertical: 10),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 35, vertical: 10),
             ),
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Yakin'),
@@ -125,14 +159,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  // ─── Refresh ─────────────────────────────────────────────────────────────
+
+  Future<void> _refresh() async {
+    setState(() => _isLoading = true);
+    await Future.delayed(const Duration(milliseconds: 300));
+    if (mounted) setState(() => _isLoading = false);
+  }
+
   // ─── Build ────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
-    // Fallback ke session service jika data UserModel dari Hive belum siap
-    final nama = _currentUser?.namaLengkap ?? _session.nama ?? 'Pengguna';
-    final nim = _currentUser?.nim ?? _session.nim ?? '-';
-    final email = _currentUser?.email ?? _session.email ?? '-';
+    final nama = _session.nama ?? 'Pengguna';
+    final nim = _session.nim ?? '-';
+    final email = _session.email ?? '-';
+    final role = _session.role ?? 'mahasiswa';
 
     return Scaffold(
       backgroundColor: AppColors.bgLight,
@@ -143,29 +185,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
           IconButton(
             icon: const Icon(Icons.refresh_outlined),
             tooltip: 'Refresh',
-            onPressed: _loadUserData, // Refresh data dari DB
+            onPressed: _refresh,
           ),
         ],
       ),
-      body: _isLoading 
+      body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
-              onRefresh: _loadUserData,
+              onRefresh: _refresh,
               child: SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(), // Agar bisa di-pull to refresh
+                physics: const AlwaysScrollableScrollPhysics(),
                 child: Column(
                   children: [
-                    // ── Bagian Profil ─────────────────────────────────────────────
-                    _buildProfileSection(nama, nim, email),
+                    // ── Bagian Profil ─────────────────────────────────────
+                    _buildProfileSection(nama, nim, email, role),
 
                     const SizedBox(height: 12),
 
-                    // ── Statistik ─────────────────────────────────────────────────
+                    // ── Statistik ─────────────────────────────────────────
                     _buildStatsSection(),
 
                     const SizedBox(height: 12),
 
-                    // ── Settings ─────────────────────────────────────────────────
+                    // ── Aktivitas Ringkas ─────────────────────────────────
+                    _buildActivitySection(),
+
+                    const SizedBox(height: 12),
+
+                    // ── Settings ──────────────────────────────────────────
                     _buildSettingsSection(),
 
                     const SizedBox(height: 24),
@@ -178,11 +225,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   // ─── Widget: Profil ───────────────────────────────────────────────────────
 
-  Widget _buildProfileSection(String nama, String nim, String email) {
+  Widget _buildProfileSection(
+      String nama, String nim, String email, String role) {
+    final level = _level;
+
     return Container(
       width: double.infinity,
       color: AppColors.bgWhite,
-      padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 20),
+      padding:
+          const EdgeInsets.symmetric(vertical: 32, horizontal: 20),
       child: Column(
         children: [
           Stack(
@@ -211,13 +262,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Positioned(
                 bottom: -10,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 10, vertical: 3),
                   decoration: const BoxDecoration(
                     color: AppColors.primaryBlue,
                     borderRadius: AppRadius.pill,
                   ),
                   child: Text(
-                    'LVL $_level',
+                    'LVL $level',
                     style: AppTextStyles.captionBold.copyWith(
                       color: AppColors.textLight,
                       fontSize: 11,
@@ -234,19 +286,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 4),
-          Text(
-            'NIM: $nim',
-            style: AppTextStyles.body.copyWith(color: AppColors.textGrey),
-          ),
+          if (nim != '-')
+            Text('NIM: $nim',
+                style: AppTextStyles.body
+                    .copyWith(color: AppColors.textGrey)),
+          const SizedBox(height: 4),
+          Text(email,
+              style: AppTextStyles.small
+                  .copyWith(color: AppColors.textGrey)),
           const SizedBox(height: 12),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
+            padding: const EdgeInsets.symmetric(
+                horizontal: 16, vertical: 5),
             decoration: BoxDecoration(
               border: Border.all(color: AppColors.borderGrey),
               borderRadius: AppRadius.pill,
             ),
             child: Text(
-              _major,
+              _roleLabel(role),
               style: AppTextStyles.captionBold.copyWith(
                 color: AppColors.textGrey,
                 letterSpacing: 0.5,
@@ -256,6 +313,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ],
       ),
     );
+  }
+
+  String _roleLabel(String role) {
+    switch (role) {
+      case 'reviewer':
+        return 'REVIEWER';
+      case 'admin':
+        return 'ADMINISTRATOR';
+      default:
+        return 'MAHASISWA';
+    }
   }
 
   // ─── Widget: Stats ────────────────────────────────────────────────────────
@@ -274,15 +342,77 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
           const SizedBox(width: 12),
-          const Expanded(
+          Expanded(
             child: _StatCard(
               icon: Icons.local_fire_department_outlined,
               iconColor: AppColors.warningYellow,
-              value: '$_currentStreak Days',
+              value: '$_streakDays Days',
               label: 'CURRENT STREAK',
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  // ─── Widget: Activity ringkas ─────────────────────────────────────────────
+
+  Widget _buildActivitySection() {
+    final solved = _totalSolved;
+    final kontribusi = _totalKontribusi;
+    final bookmark = HiveService.instance.bookmarksBox.values
+        .where((b) => b.userId == (_session.userId ?? ''))
+        .length;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.bgWhite,
+          borderRadius: AppRadius.lgAll,
+          border: Border.all(color: AppColors.borderGrey, width: 0.5),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Aktivitas',
+                style: AppTextStyles.h3
+                    .copyWith(fontWeight: FontWeight.w600)),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Expanded(
+                  child: _ActivityTile(
+                    icon: Icons.check_circle_outline,
+                    iconColor: AppColors.successGreen,
+                    value: '$solved',
+                    label: 'Diselesaikan',
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _ActivityTile(
+                    icon: Icons.bookmark_outline,
+                    iconColor: Colors.amber,
+                    value: '$bookmark',
+                    label: 'Tersimpan',
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _ActivityTile(
+                    icon: Icons.upload_outlined,
+                    iconColor: AppColors.primaryBlue,
+                    value: '$kontribusi',
+                    label: 'Kontribusi',
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -295,7 +425,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Settings', style: AppTextStyles.h2),
+          Text('Settings', style: AppTextStyles.h2),
           const SizedBox(height: 12),
           _SettingsItem(
             icon: Icons.manage_accounts_outlined,
@@ -324,20 +454,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   String _formatNumber(int value) {
     if (value >= 1000) {
-      final formatted = value.toString();
-      final len = formatted.length;
-      final buffer = StringBuffer();
-      for (int i = 0; i < len; i++) {
-        if (i > 0 && (len - i) % 3 == 0) buffer.write(',');
-        buffer.write(formatted[i]);
+      final s = value.toString();
+      final buf = StringBuffer();
+      for (int i = 0; i < s.length; i++) {
+        if (i > 0 && (s.length - i) % 3 == 0) buf.write(',');
+        buf.write(s[i]);
       }
-      return buffer.toString();
+      return buf.toString();
     }
     return value.toString();
   }
 }
 
-// ─── Widget: Stat Card (Sama seperti sebelumnya) ──────────────────────────────
+// ─── Widget: Stat Card ────────────────────────────────────────────────────────
 class _StatCard extends StatelessWidget {
   final IconData icon;
   final Color iconColor;
@@ -365,11 +494,13 @@ class _StatCard extends StatelessWidget {
         children: [
           Icon(icon, size: 28, color: iconColor),
           const SizedBox(height: 8),
-          Text(value, style: AppTextStyles.h2.copyWith(fontSize: 20)),
+          Text(value,
+              style: AppTextStyles.h2.copyWith(fontSize: 20)),
           const SizedBox(height: 3),
           Text(
             label,
-            style: AppTextStyles.captionBold.copyWith(color: AppColors.textGrey, letterSpacing: 0.4),
+            style: AppTextStyles.captionBold
+                .copyWith(color: AppColors.textGrey, letterSpacing: 0.4),
             textAlign: TextAlign.center,
           ),
         ],
@@ -378,7 +509,37 @@ class _StatCard extends StatelessWidget {
   }
 }
 
-// ─── Widget: Settings Item (Sama seperti sebelumnya) ──────────────────────────
+// ─── Widget: Activity Tile ────────────────────────────────────────────────────
+class _ActivityTile extends StatelessWidget {
+  final IconData icon;
+  final Color iconColor;
+  final String value;
+  final String label;
+
+  const _ActivityTile({
+    required this.icon,
+    required this.iconColor,
+    required this.value,
+    required this.label,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Icon(icon, color: iconColor, size: 22),
+        const SizedBox(height: 4),
+        Text(value, style: AppTextStyles.h3),
+        const SizedBox(height: 2),
+        Text(label,
+            style: AppTextStyles.caption.copyWith(color: AppColors.textGrey),
+            textAlign: TextAlign.center),
+      ],
+    );
+  }
+}
+
+// ─── Widget: Settings Item ────────────────────────────────────────────────────
 class _SettingsItem extends StatelessWidget {
   final IconData icon;
   final Color iconColor;
@@ -405,23 +566,28 @@ class _SettingsItem extends StatelessWidget {
         onTap: onTap,
         borderRadius: AppRadius.lgAll,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+          padding:
+              const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
           child: Row(
             children: [
               Container(
                 width: 40,
                 height: 40,
-                decoration: BoxDecoration(color: iconBgColor, shape: BoxShape.circle),
+                decoration: BoxDecoration(
+                    color: iconBgColor, shape: BoxShape.circle),
                 child: Icon(icon, color: iconColor, size: 20),
               ),
               const SizedBox(width: 14),
               Expanded(
                 child: Text(
                   label,
-                  style: AppTextStyles.bodySemibold.copyWith(color: labelColor ?? AppColors.textDark),
+                  style: AppTextStyles.bodySemibold.copyWith(
+                      color: labelColor ?? AppColors.textDark),
                 ),
               ),
-              if (showChevron) const Icon(Icons.chevron_right, color: AppColors.textGrey, size: 20),
+              if (showChevron)
+                const Icon(Icons.chevron_right,
+                    color: AppColors.textGrey, size: 20),
             ],
           ),
         ),

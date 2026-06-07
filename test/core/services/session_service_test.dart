@@ -3,7 +3,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
-// TODO: ganti 'banksos' dengan nama package kamu di pubspec.yaml
 import 'package:banksos/core/constants/hive_boxes.dart';
 import 'package:banksos/core/services/session_service.dart';
 

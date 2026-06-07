@@ -1,11 +1,13 @@
 // lib/features/dashboard/screens/dashboard_reviewer_screen.dart
+// REFACTOR: Weekly chart menggunakan data submission real dari Hive/MongoDB
 
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart'; // Ganti ke Riverpod
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/services/session_service.dart';
+import '../../../data/local/hive/hive_service.dart';
+import '../../../data/models/question_model.dart';
 import '../../../routes/app_routes.dart';
 
-// Contoh jika belum ada: final reviewControllerProvider = ChangeNotifierProvider((ref) => ReviewController());
 import '../../review/controllers/review_controller.dart';
 
 // ─── Model chart ─────────────────────────────────────────────────────────────
@@ -17,7 +19,6 @@ class _ChartBar {
 }
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
-// Menggunakan ConsumerStatefulWidget milik Riverpod
 class DashboardReviewerScreen extends ConsumerStatefulWidget {
   const DashboardReviewerScreen({super.key});
 
@@ -28,20 +29,49 @@ class DashboardReviewerScreen extends ConsumerStatefulWidget {
 
 class _DashboardReviewerScreenState
     extends ConsumerState<DashboardReviewerScreen> {
-  final _chartData = const [
-    _ChartBar('Sen', 12),
-    _ChartBar('Sel', 8),
-    _ChartBar('Rab', 18),
-    _ChartBar('Kam', 24, isToday: true),
-    _ChartBar('Jum', 15),
-    _ChartBar('Sab', 6),
-    _ChartBar('Min', 9),
-  ];
+  /// Hitung jumlah soal yang di-submit per hari dalam 7 hari terakhir
+  /// menggunakan data yang tersimpan di Hive (questionsBox).
+  List<_ChartBar> _buildChartData() {
+    final questionBox = HiveService.instance.questionsBox;
+    final now = DateTime.now();
+
+    // Label hari dalam bahasa Indonesia
+    const hariLabels = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+
+    // Buat map: tanggal → jumlah soal yang disubmit
+    final Map<String, int> countPerDay = {};
+    for (int i = 6; i >= 0; i--) {
+      final day = now.subtract(Duration(days: i));
+      final key = '${day.year}-${day.month}-${day.day}';
+      countPerDay[key] = 0;
+    }
+
+    for (final q in questionBox.values) {
+      final d = q.createdAt;
+      final key = '${d.year}-${d.month}-${d.day}';
+      if (countPerDay.containsKey(key)) {
+        countPerDay[key] = countPerDay[key]! + 1;
+      }
+    }
+
+    // Konversi ke list _ChartBar
+    final List<_ChartBar> bars = [];
+    for (int i = 6; i >= 0; i--) {
+      final day = now.subtract(Duration(days: i));
+      final key = '${day.year}-${day.month}-${day.day}';
+      final isToday = i == 0;
+      bars.add(_ChartBar(
+        hariLabels[day.weekday % 7],
+        countPerDay[key] ?? 0,
+        isToday: isToday,
+      ));
+    }
+    return bars;
+  }
 
   @override
   void initState() {
     super.initState();
-    // Load data real dari database saat first time
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       ref.read(reviewControllerProvider).loadSoalPending();
@@ -50,14 +80,25 @@ class _DashboardReviewerScreenState
 
   @override
   Widget build(BuildContext context) {
-    // Membaca state menggunakan Riverpod ref.watch
     final reviewController = ref.watch(reviewControllerProvider);
     final session = SessionService.instance;
     final nama = session.nama ?? 'Reviewer';
     final pendingCount = reviewController.jumlahPending;
 
+    // Hitung statistik dari Hive
+    final questionBox = HiveService.instance.questionsBox;
+    final totalSoal = questionBox.length;
+    final totalPublished = questionBox.values
+        .where((q) => q.status == QuestionStatus.published)
+        .length;
+    final totalArsip = questionBox.values
+        .where((q) => q.status == QuestionStatus.archived)
+        .length;
+
+    final chartData = _buildChartData();
+
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: const Color.fromARGB(255, 107, 124, 141),
       appBar: _buildAppBar(nama),
       body: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
@@ -73,12 +114,12 @@ class _DashboardReviewerScreenState
               mainAxisSpacing: 10,
               childAspectRatio: 1.55,
               children: [
-                const _StatBox(
+                _StatBox(
                   label: 'Total Soal',
-                  value: '1.284',
-                  badge: '+12%',
-                  badgeColor: Color(0xFF16A34A),
-                  badgeIcon: Icons.trending_up,
+                  value: '$totalSoal',
+                  badge: '$totalPublished Aktif',
+                  badgeColor: const Color(0xFF16A34A),
+                  badgeIcon: Icons.check_circle_outline,
                 ),
                 _StatBox(
                   label: 'Review',
@@ -92,32 +133,31 @@ class _DashboardReviewerScreenState
                       ? Icons.access_time
                       : Icons.check_circle_outline,
                 ),
-                const _StatBox(
-                  label: 'Aktif',
-                  value: '892',
+                _StatBox(
+                  label: 'Dipublish',
+                  value: '$totalPublished',
                   badge: 'Live',
-                  badgeColor: Color(0xFF16A34A),
+                  badgeColor: const Color(0xFF16A34A),
                   badgeIcon: Icons.people_outline,
                 ),
-                const _StatBox(
-                  label: 'Sistem',
-                  value: '99.9%',
-                  valueColor: Color(0xFF16A34A),
-                  badge: 'Optimal',
-                  badgeColor: Color(0xFF16A34A),
-                  badgeIcon: Icons.check_circle_outline,
+                _StatBox(
+                  label: 'Diarsip',
+                  value: '$totalArsip',
+                  valueColor: const Color(0xFF9CA3AF),
+                  badge: 'Arsip',
+                  badgeColor: const Color(0xFF9CA3AF),
+                  badgeIcon: Icons.archive_outlined,
                 ),
               ],
             ),
 
             const SizedBox(height: 14),
 
-            // ── Bar chart ─────────────────────────────────────────────────
-            _buildBarChartCard(),
+            // ── Bar chart dari data real ───────────────────────────────────
+            _buildBarChartCard(chartData),
 
             const SizedBox(height: 14),
 
-            // ── Section label ─────────────────────────────────────────────
             const Text('Aksi Cepat',
                 style: TextStyle(
                     fontSize: 11,
@@ -127,7 +167,6 @@ class _DashboardReviewerScreenState
 
             const SizedBox(height: 8),
 
-            // ── Quick action cards ────────────────────────────────────────
             _QuickCard(
               icon: Icons.checklist_outlined,
               iconBg: const Color(0xFFE8F0FD),
@@ -146,8 +185,8 @@ class _DashboardReviewerScreenState
               iconColor: const Color(0xFF16A34A),
               title: 'Manajemen Koleksi',
               subtitle: 'Kelola kategori dan koleksi soal aktif',
-              onTap: () =>
-                  Navigator.pushNamed(context, AppRoutes.collectionManagement),
+              onTap: () => Navigator.pushNamed(
+                  context, AppRoutes.collectionManagement),
             ),
 
             const SizedBox(height: 8),
@@ -158,7 +197,8 @@ class _DashboardReviewerScreenState
               iconColor: const Color(0xFFD97706),
               title: 'Buat Soal Baru',
               subtitle: 'Tambahkan soal langsung ke bank soal',
-              onTap: () => Navigator.pushNamed(context, AppRoutes.submitSoal),
+              onTap: () =>
+                  Navigator.pushNamed(context, AppRoutes.submitSoal),
             ),
           ],
         ),
@@ -175,43 +215,25 @@ class _DashboardReviewerScreenState
         title: Row(
           children: [
             const SizedBox(width: 16),
-            // Membungkus Avatar dan Nama dengan InkWell agar bisa ditekan
-            InkWell(
-              onTap: () {
-                // Berpindah ke Halaman Reviewer Profile
-                Navigator.pushNamed(context, AppRoutes.reviewerProfile); 
-                // Catatan: Sesuaikan 'AppRoutes.reviewerProfile' dengan nama rute 
-                // yang Anda daftarkan di berkas routes/app_routes.dart Anda.
-              },
-              borderRadius: BorderRadius.circular(8),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 34,
-                      height: 34,
-                      decoration: const BoxDecoration(
-                          color: Color(0xFF1A6FDF), shape: BoxShape.circle),
-                      child: const Center(
-                        child: Text('R',
-                            style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700)),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Text(nama,
-                        style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF111827))),
-                  ],
-                ),
+            Container(
+              width: 34,
+              height: 34,
+              decoration: const BoxDecoration(
+                  color: Color(0xFF1A6FDF), shape: BoxShape.circle),
+              child: const Center(
+                child: Text('R',
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700)),
               ),
             ),
+            const SizedBox(width: 10),
+            Text(nama,
+                style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF111827))),
           ],
         ),
         actions: [
@@ -228,10 +250,13 @@ class _DashboardReviewerScreenState
         ),
       );
 
-  // ─── Bar chart card ───────────────────────────────────────────────────────
-  Widget _buildBarChartCard() {
-    final maxVal =
-        _chartData.map((c) => c.value).reduce((a, b) => a > b ? a : b);
+  // ─── Bar chart card dari data real ────────────────────────────────────────
+  Widget _buildBarChartCard(List<_ChartBar> chartData) {
+    final maxVal = chartData.isEmpty
+        ? 1
+        : chartData.map((c) => c.value).reduce((a, b) => a > b ? a : b);
+    final effectiveMax = maxVal == 0 ? 1 : maxVal;
+
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -252,17 +277,27 @@ class _DashboardReviewerScreenState
             height: 80,
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.end,
-              children: _chartData.map((bar) {
-                final frac = bar.value / maxVal;
+              children: chartData.map((bar) {
+                final frac = bar.value / effectiveMax;
                 return Expanded(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 3),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
+                        if (bar.value > 0)
+                          Text('${bar.value}',
+                              style: TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.w600,
+                                color: bar.isToday
+                                    ? const Color(0xFF1A6FDF)
+                                    : const Color(0xFF9CA3AF),
+                              )),
+                        const SizedBox(height: 2),
                         AnimatedContainer(
                           duration: const Duration(milliseconds: 500),
-                          height: (frac * 60).clamp(8.0, 60.0),
+                          height: (frac * 55).clamp(4.0, 55.0),
                           decoration: BoxDecoration(
                             color: bar.isToday
                                 ? const Color(0xFF1A6FDF)
@@ -276,8 +311,9 @@ class _DashboardReviewerScreenState
                           bar.label,
                           style: TextStyle(
                             fontSize: 9,
-                            fontWeight:
-                                bar.isToday ? FontWeight.w700 : FontWeight.w400,
+                            fontWeight: bar.isToday
+                                ? FontWeight.w700
+                                : FontWeight.w400,
                             color: bar.isToday
                                 ? const Color(0xFF1A6FDF)
                                 : const Color(0xFF9CA3AF),
