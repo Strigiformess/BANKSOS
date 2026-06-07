@@ -77,39 +77,50 @@ meskipun tidak memiliki koneksi internet.
 ```plaintext
 lib/
 │
-├── core/
-│   ├── constants/
-│   ├── theme/
-│   ├── utils/
-│   └── services/
+├── core/                    
+│   ├── config/            
+│   ├── constants/          
+│   ├── guard/              
+│   ├── services/            
+│   ├── theme/              
+│   └── utils/             
 │
-├── data/
-│   ├── models/
+├── data/                  
 │   ├── local/
-│   ├── remote/
-│   └── repositories/
+│   │   ├── boxes/          
+│   │   └── hive/           
+│   ├── models/                                 
+│   └── remote/
+│       ├── mongodb/        
+│       ├── auth_remote.dart
+│       ├── question_remote.dart
+│       ├── review_remote.dart
+│       ├── bookmark_remote.dart
+│       ├── progress_remote.dart
+│       └── category_remote.dart
 │
-├── features/
-│   ├── auth/
-│   ├── dashboard/
-│   ├── questions/
-│   ├── bookmarks/
-│   ├── progress/
-│   ├── submit_question/
-│   ├── review_queue/
-│   └── admin/
+├── features/             
+│   ├── admin/                                   
+│   ├── auth/                               
+│   ├── bookmarks/        
+│   ├── collection/         
+│   ├── dashboard/                          
+│   ├── kontribusi/                       
+│   ├── profile/             
+│   ├── question/          
+│   ├── review/            
+│   ├── reviewer/         
+│   ├── riwayat/            
+│   └── statistics/         
 │
+├── routes/                 
 ├── shared/
-│   ├── widgets/
-│   ├── components/
-│   └── layouts/
-│
-├── routes/
-│
-└── main.dart
-````
+│   ├── layouts/            
+│   └── widgets/             
+│                            
+│                           
+└── main.dart                
 
----
 
 # 🗂 Database Entities
 
@@ -282,7 +293,7 @@ flutter run
 
 | Nama                    | Role                          |
 | ----------------------- | ----------------------------- |
-| Seruni Libertina Islami | Project Manager / Flutter Dev |
+| Seruni Libertina Islami | Flutter Dev                   |
 | Mohammad Jibril Fathi   | Flutter Dev / Offline-First   |
 | Revaldi Prasetyo        | Feature Dev                   |
 | Adjie Ali Nurfizal      | Backend Dev                   |
