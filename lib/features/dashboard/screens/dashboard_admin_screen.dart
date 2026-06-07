@@ -144,9 +144,7 @@ class _DashboardAdminScreenState extends State<DashboardAdminScreen> {
               icon: Icons.settings_outlined,
               label: 'Pengaturan Sistem',
               subtitle: 'Kontrol penuh konfigurasi aplikasi',
-              onTap: () {
-                // TODO Sprint 6
-                ScaffoldMessenger.of(context).showSnackBar(
+              onTap: () {                ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
                     content: Text('Fitur ini akan tersedia di Sprint 6'),
                     behavior: SnackBarBehavior.floating,

@@ -1,6 +1,7 @@
 // lib/features/statistics/screens/statistics_screen.dart
-// PIC: Seruni 
-// Sprint 5: Buat halaman Kelola Soal beserta statistik di header
+// REFACTOR: Weekly activity chart menggunakan data real dari Hive.
+// Streak dihitung dari tanggal solvedAt yang berurutan.
+
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
@@ -18,7 +19,7 @@ class StatisticsScreen extends StatefulWidget {
 }
 
 class _StatisticsScreenState extends State<StatisticsScreen> {
-  // ─── Computed Stats ───────────────────────────────────────────────────────
+  // ─── Computed Stats dari Hive ─────────────────────────────────────────────
 
   int get _totalSolved {
     final userId = SessionService.instance.userId ?? '';
@@ -27,13 +28,96 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
         .length;
   }
 
-  int get _totalPoints => _totalSolved * 10;
+  /// Poin dihitung berdasarkan tingkat kesulitan soal.
+  int get _totalPoints {
+    final userId = SessionService.instance.userId ?? '';
+    final progressBox = HiveService.instance.userProgressBox;
+    final questionBox = HiveService.instance.questionsBox;
+    int total = 0;
+    for (final p in progressBox.values) {
+      if (p.userId != userId || !p.isSolved) continue;
+      final q = questionBox.get(p.questionId) ??
+          questionBox.values.where((q) => q.id == p.questionId).firstOrNull;
+      if (q == null) continue;
+      switch (q.tingkatKesulitan) {
+        case DifficultyLevel.easy:
+          total += 25;
+          break;
+        case DifficultyLevel.medium:
+          total += 50;
+          break;
+        case DifficultyLevel.hard:
+          total += 100;
+          break;
+      }
+    }
+    return total;
+  }
 
-  int get _globalRank => _totalSolved > 0 ? 42 : 0;
+  /// Hitung streak dari tanggal-tanggal penyelesaian soal yang berurutan.
+  int get _streakDays {
+    final userId = SessionService.instance.userId ?? '';
+    final progressBox = HiveService.instance.userProgressBox;
 
-  int get _streakDays => 5;
+    final solvedDates = progressBox.values
+        .where((p) => p.userId == userId && p.isSolved && p.solvedAt != null)
+        .map((p) => DateTime(
+            p.solvedAt!.year, p.solvedAt!.month, p.solvedAt!.day))
+        .toSet()
+        .toList()
+      ..sort((a, b) => b.compareTo(a));
 
-  /// Distribusi kesulitan soal yang sudah diselesaikan
+    if (solvedDates.isEmpty) return 0;
+
+    int streak = 0;
+    final today = DateTime.now();
+    DateTime check = DateTime(today.year, today.month, today.day);
+
+    for (final d in solvedDates) {
+      if (d == check || d == check.subtract(const Duration(days: 1))) {
+        streak++;
+        check = d;
+      } else {
+        break;
+      }
+    }
+    return streak;
+  }
+
+  /// Rank global: posisi user berdasarkan total poin di antara semua user Hive.
+  int get _globalRank {
+    final userId = SessionService.instance.userId ?? '';
+    final progressBox = HiveService.instance.userProgressBox;
+    final questionBox = HiveService.instance.questionsBox;
+
+    if (progressBox.isEmpty) return 0;
+
+    // Hitung poin per user
+    final Map<String, int> poinPerUser = {};
+    for (final p in progressBox.values) {
+      if (!p.isSolved) continue;
+      final q = questionBox.get(p.questionId) ??
+          questionBox.values.where((q) => q.id == p.questionId).firstOrNull;
+      if (q == null) continue;
+      int poin = 0;
+      switch (q.tingkatKesulitan) {
+        case DifficultyLevel.easy: poin = 25; break;
+        case DifficultyLevel.medium: poin = 50; break;
+        case DifficultyLevel.hard: poin = 100; break;
+      }
+      poinPerUser[p.userId] = (poinPerUser[p.userId] ?? 0) + poin;
+    }
+
+    if (poinPerUser.isEmpty) return 0;
+
+    final sorted = poinPerUser.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+
+    final rank = sorted.indexWhere((e) => e.key == userId);
+    return rank == -1 ? 0 : rank + 1;
+  }
+
+  /// Distribusi kesulitan soal yang sudah diselesaikan.
   Map<DifficultyLevel, int> get _difficultyDistribution {
     final userId = SessionService.instance.userId ?? '';
     final progressBox = HiveService.instance.userProgressBox;
@@ -68,6 +152,41 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
     return (dist[level] ?? 0) / total;
   }
 
+  /// Hitung jumlah soal yang diselesaikan per hari dalam 7 hari terakhir.
+  List<_ActivityDay> get _weeklyActivity {
+    final userId = SessionService.instance.userId ?? '';
+    final progressBox = HiveService.instance.userProgressBox;
+    final now = DateTime.now();
+    const hariLabels = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+
+    final Map<String, int> countPerDay = {};
+    for (int i = 6; i >= 0; i--) {
+      final d = now.subtract(Duration(days: i));
+      countPerDay['${d.year}-${d.month}-${d.day}'] = 0;
+    }
+
+    for (final p in progressBox.values) {
+      if (p.userId != userId || !p.isSolved || p.solvedAt == null) continue;
+      final d = p.solvedAt!;
+      final key = '${d.year}-${d.month}-${d.day}';
+      if (countPerDay.containsKey(key)) {
+        countPerDay[key] = countPerDay[key]! + 1;
+      }
+    }
+
+    final result = <_ActivityDay>[];
+    for (int i = 6; i >= 0; i--) {
+      final d = now.subtract(Duration(days: i));
+      final key = '${d.year}-${d.month}-${d.day}';
+      result.add(_ActivityDay(
+        label: hariLabels[d.weekday % 7],
+        count: countPerDay[key] ?? 0,
+        isToday: i == 0,
+      ));
+    }
+    return result;
+  }
+
   // ─── Build ────────────────────────────────────────────────────────────────
 
   @override
@@ -88,6 +207,12 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
         valueListenable:
             HiveService.instance.userProgressBox.listenable(),
         builder: (context, _, __) {
+          final totalSolved = _totalSolved;
+          final totalPoints = _totalPoints;
+          final streak = _streakDays;
+          final rank = _globalRank;
+          final weekly = _weeklyActivity;
+
           return SingleChildScrollView(
             physics: const BouncingScrollPhysics(),
             padding: const EdgeInsets.all(16),
@@ -126,21 +251,21 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'Streak',
-                            style: AppTextStyles.small.copyWith(
-                              color: AppColors.textGrey,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          Text(
-                            '$_streakDays Days',
-                            style: AppTextStyles.h2.copyWith(
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
+                          Text('Streak',
+                              style: AppTextStyles.small.copyWith(
+                                color: AppColors.textGrey,
+                                fontWeight: FontWeight.w500,
+                              )),
+                          Text('$streak Days',
+                              style: AppTextStyles.h2.copyWith(
+                                  fontWeight: FontWeight.w700)),
                         ],
                       ),
+                      const Spacer(),
+                      if (streak == 0)
+                        Text('Mulai hari ini!',
+                            style: AppTextStyles.small
+                                .copyWith(color: AppColors.textGrey)),
                     ],
                   ),
                 ),
@@ -155,34 +280,25 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            'TOTAL SOLVED',
-                            style: AppTextStyles.captionBold.copyWith(
-                              color: AppColors.textGrey,
-                              letterSpacing: 0.8,
-                            ),
-                          ),
+                          Text('TOTAL SOLVED',
+                              style: AppTextStyles.captionBold.copyWith(
+                                  color: AppColors.textGrey, letterSpacing: 0.8)),
                           Container(
                             width: 30,
                             height: 30,
                             decoration: BoxDecoration(
                               border: Border.all(
-                                color: AppColors.successGreen,
-                                width: 2,
-                              ),
+                                  color: AppColors.successGreen, width: 2),
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(
-                              Icons.check,
-                              color: AppColors.successGreen,
-                              size: 16,
-                            ),
+                            child: const Icon(Icons.check,
+                                color: AppColors.successGreen, size: 16),
                           ),
                         ],
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        _formatNumber(_totalSolved),
+                        _formatNumber(totalSolved),
                         style: AppTextStyles.h1.copyWith(
                           fontSize: 32,
                           fontWeight: FontWeight.w700,
@@ -190,23 +306,9 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                         ),
                       ),
                       const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.trending_up,
-                            size: 14,
-                            color: AppColors.successGreen,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            '+12% from last week',
-                            style: AppTextStyles.small.copyWith(
-                              color: AppColors.successGreen,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
+                      Text('soal berhasil diselesaikan',
+                          style: AppTextStyles.small
+                              .copyWith(color: AppColors.textGrey)),
                     ],
                   ),
                 ),
@@ -221,34 +323,25 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            'TOTAL POINTS',
-                            style: AppTextStyles.captionBold.copyWith(
-                              color: AppColors.textGrey,
-                              letterSpacing: 0.8,
-                            ),
-                          ),
+                          Text('TOTAL POINTS',
+                              style: AppTextStyles.captionBold.copyWith(
+                                  color: AppColors.textGrey, letterSpacing: 0.8)),
                           Container(
                             width: 30,
                             height: 30,
                             decoration: BoxDecoration(
                               border: Border.all(
-                                color: AppColors.primaryBlue,
-                                width: 2,
-                              ),
+                                  color: AppColors.primaryBlue, width: 2),
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(
-                              Icons.emoji_events_outlined,
-                              color: AppColors.primaryBlue,
-                              size: 16,
-                            ),
+                            child: const Icon(Icons.emoji_events_outlined,
+                                color: AppColors.primaryBlue, size: 16),
                           ),
                         ],
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        _formatNumber(_totalPoints),
+                        _formatNumber(totalPoints),
                         style: AppTextStyles.h1.copyWith(
                           fontSize: 32,
                           fontWeight: FontWeight.w700,
@@ -257,13 +350,12 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        _globalRank > 0
-                            ? 'Rank #$_globalRank Global'
+                        rank > 0
+                            ? 'Rank #$rank di antara pengguna aktif'
                             : 'Mulai selesaikan soal!',
                         style: AppTextStyles.small.copyWith(
-                          color: AppColors.primaryBlue,
-                          fontWeight: FontWeight.w600,
-                        ),
+                            color: AppColors.primaryBlue,
+                            fontWeight: FontWeight.w600),
                       ),
                     ],
                   ),
@@ -276,35 +368,30 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Difficulty Dist.',
-                        style: AppTextStyles.h3.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
+                      Text('Difficulty Dist.',
+                          style: AppTextStyles.h3
+                              .copyWith(fontWeight: FontWeight.w700)),
                       const SizedBox(height: 16),
                       _DifficultyBar(
                         label: 'Easy',
-                        percent: _totalSolved == 0
-                            ? 0.45
-                            : _difficultyPercent(DifficultyLevel.easy),
+                        percent: _difficultyPercent(DifficultyLevel.easy),
                         color: AppColors.easyGreen,
+                        count: _difficultyDistribution[DifficultyLevel.easy] ?? 0,
                       ),
                       const SizedBox(height: 12),
                       _DifficultyBar(
                         label: 'Medium',
-                        percent: _totalSolved == 0
-                            ? 0.35
-                            : _difficultyPercent(DifficultyLevel.medium),
+                        percent: _difficultyPercent(DifficultyLevel.medium),
                         color: AppColors.primaryBlue,
+                        count:
+                            _difficultyDistribution[DifficultyLevel.medium] ?? 0,
                       ),
                       const SizedBox(height: 12),
                       _DifficultyBar(
                         label: 'Hard',
-                        percent: _totalSolved == 0
-                            ? 0.20
-                            : _difficultyPercent(DifficultyLevel.hard),
+                        percent: _difficultyPercent(DifficultyLevel.hard),
                         color: AppColors.hardRed,
+                        count: _difficultyDistribution[DifficultyLevel.hard] ?? 0,
                       ),
                     ],
                   ),
@@ -312,19 +399,16 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
 
                 const SizedBox(height: 12),
 
-                // ── Weekly Activity ───────────────────────────────────────
+                // ── Weekly Activity (dari data real) ──────────────────────
                 _StatCard(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Weekly Activity',
-                        style: AppTextStyles.h3.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
+                      Text('Weekly Activity',
+                          style: AppTextStyles.h3
+                              .copyWith(fontWeight: FontWeight.w700)),
                       const SizedBox(height: 16),
-                      _WeeklyActivityChart(),
+                      _WeeklyActivityChart(data: weekly),
                     ],
                   ),
                 ),
@@ -352,8 +436,16 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
   }
 }
 
-// ─── Reusable Card ────────────────────────────────────────────────────────────
+// ─── Data model weekly ────────────────────────────────────────────────────────
+class _ActivityDay {
+  final String label;
+  final int count;
+  final bool isToday;
+  const _ActivityDay(
+      {required this.label, required this.count, required this.isToday});
+}
 
+// ─── Reusable Card ────────────────────────────────────────────────────────────
 class _StatCard extends StatelessWidget {
   final Widget child;
   const _StatCard({required this.child});
@@ -374,16 +466,17 @@ class _StatCard extends StatelessWidget {
 }
 
 // ─── Difficulty Bar ───────────────────────────────────────────────────────────
-
 class _DifficultyBar extends StatelessWidget {
   final String label;
   final double percent;
   final Color color;
+  final int count;
 
   const _DifficultyBar({
     required this.label,
     required this.percent,
     required this.color,
+    required this.count,
   });
 
   @override
@@ -393,13 +486,9 @@ class _DifficultyBar extends StatelessWidget {
       children: [
         SizedBox(
           width: 52,
-          child: Text(
-            label,
-            style: AppTextStyles.small.copyWith(
-              color: color,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
+          child: Text(label,
+              style: AppTextStyles.small.copyWith(
+                  color: color, fontWeight: FontWeight.w600)),
         ),
         Expanded(
           child: ClipRRect(
@@ -412,43 +501,43 @@ class _DifficultyBar extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: 6),
         SizedBox(
           width: 32,
-          child: Text(
-            pctStr,
-            style: AppTextStyles.smallSemibold.copyWith(
-              color: AppColors.textGrey,
-            ),
-            textAlign: TextAlign.right,
-          ),
+          child: Text('$count',
+              style: AppTextStyles.smallSemibold
+                  .copyWith(color: AppColors.textGrey),
+              textAlign: TextAlign.right),
+        ),
+        SizedBox(
+          width: 32,
+          child: Text(pctStr,
+              style: AppTextStyles.caption.copyWith(color: AppColors.textGrey),
+              textAlign: TextAlign.right),
         ),
       ],
     );
   }
 }
 
-// ─── Weekly Activity Bar Chart ────────────────────────────────────────────────
-
+// ─── Weekly Activity Bar Chart (data dari Hive) ───────────────────────────────
 class _WeeklyActivityChart extends StatelessWidget {
-  // Demo data — in production, compute from progressBox
-  final List<int> _data = const [3, 7, 5, 9, 4, 6, 2];
-  final List<String> _days = const [
-    'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'
-  ];
-
-  _WeeklyActivityChart();
+  final List<_ActivityDay> data;
+  const _WeeklyActivityChart({required this.data});
 
   @override
   Widget build(BuildContext context) {
-    final maxVal = _data.reduce((a, b) => a > b ? a : b);
+    final maxVal = data.isEmpty
+        ? 1
+        : data.map((d) => d.count).reduce((a, b) => a > b ? a : b);
+    final effectiveMax = maxVal == 0 ? 1 : maxVal;
+
     return SizedBox(
       height: 80,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
-        children: List.generate(_data.length, (i) {
-          final frac = maxVal > 0 ? _data[i] / maxVal : 0.0;
-          final isToday = i == DateTime.now().weekday - 1;
+        children: data.map((day) {
+          final frac = day.count / effectiveMax;
           return Expanded(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 3),
@@ -462,7 +551,7 @@ class _WeeklyActivityChart extends StatelessWidget {
                         heightFactor: frac < 0.05 ? 0.05 : frac,
                         child: Container(
                           decoration: BoxDecoration(
-                            color: isToday
+                            color: day.isToday
                                 ? AppColors.primaryBlue
                                 : AppColors.primaryBlue.withOpacity(0.25),
                             borderRadius: const BorderRadius.only(
@@ -474,23 +563,33 @@ class _WeeklyActivityChart extends StatelessWidget {
                       ),
                     ),
                   ),
+                  if (day.count > 0) ...[
+                    const SizedBox(height: 2),
+                    Text('${day.count}',
+                        style: TextStyle(
+                          fontSize: 9,
+                          color: day.isToday
+                              ? AppColors.primaryBlue
+                              : AppColors.textGrey,
+                          fontWeight: FontWeight.w600,
+                        )),
+                  ] else
+                    const SizedBox(height: 14),
                   const SizedBox(height: 4),
                   Text(
-                    _days[i],
+                    day.label,
                     style: AppTextStyles.caption.copyWith(
-                      color: isToday
+                      color: day.isToday
                           ? AppColors.primaryBlue
                           : AppColors.textGrey,
-                      fontWeight: isToday
-                          ? FontWeight.w600
-                          : FontWeight.w400,
+                      fontWeight: day.isToday ? FontWeight.w600 : FontWeight.w400,
                     ),
                   ),
                 ],
               ),
             ),
           );
-        }),
+        }).toList(),
       ),
     );
   }
