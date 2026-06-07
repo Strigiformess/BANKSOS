@@ -1,7 +1,7 @@
 import 'package:banksos/data/local/hive/hive_service.dart';
 import 'package:banksos/data/models/question_model.dart';
 import 'package:banksos/data/remote/mongodb/mongodb_service.dart';
-
+import 'package:mongo_dart/mongo_dart.dart' show ObjectId;
 
 abstract class IQuestionRepository {
   Future<List<QuestionModel>> getQuestionsByCategory({
@@ -22,6 +22,19 @@ class QuestionRepository implements IQuestionRepository {
   })  : _db = db ?? MongoDBService.instance,
         _hive = hive ?? HiveService.instance;
 
+  /// Strip wrapper ObjectId("...") jadi 24-hex murni
+  static String _toHex(String raw) {
+    final match = RegExp(
+      r'''ObjectId\(["']?([0-9a-fA-F]{24})["']?\)''',
+      caseSensitive: false,
+    ).firstMatch(raw);
+    if (match != null) return match.group(1)!;
+    if (RegExp(r'^[0-9a-fA-F]{24}$').hasMatch(raw)) return raw;
+    final anyHex = RegExp(r'([0-9a-fA-F]{24})').firstMatch(raw);
+    if (anyHex != null) return anyHex.group(1)!;
+    return raw;
+  }
+
   @override
   Future<List<QuestionModel>> getQuestionsByCategory({
     required String kategoriId,
@@ -32,22 +45,19 @@ class QuestionRepository implements IQuestionRepository {
         return _getFromHive(kategoriId, filterKesulitan);
       }
 
-      final selector = {
-        'kategori_id': kategoriId,
+      // Selalu query dengan ObjectId, bukan string mentah
+      final kategoriOid = ObjectId.parse(_toHex(kategoriId));
+
+      final selector = <String, dynamic>{
+        'kategori_id': kategoriOid,
         'status': 'published',
         if (filterKesulitan != null && filterKesulitan != 'semua')
           'tingkat_kesulitan': filterKesulitan,
       };
 
-      final results = await _db.questions
-          .find(selector)
-          .toList();
+      final results = await _db.questions.find(selector).toList();
 
-      final questions = results
-          .map((map) => QuestionModel.fromMap(map))
-          .toList();
-
-      return questions;
+      return results.map((map) => QuestionModel.fromMap(map)).toList();
     } catch (e) {
       return _getFromHive(kategoriId, filterKesulitan);
     }
@@ -58,27 +68,26 @@ class QuestionRepository implements IQuestionRepository {
     String? filterKesulitan,
   ) {
     final box = _hive.questionsBox;
-    final all = box.values.where((q) {
-      final matchKategori = q.kategoriId == kategoriId;
+    return box.values.where((q) {
+      final matchKategori = q.kategoriId == _toHex(kategoriId);
       final matchKesulitan = filterKesulitan == null ||
           filterKesulitan == 'semua' ||
           q.tingkatKesulitan.name == filterKesulitan;
       return matchKategori && matchKesulitan;
     }).toList();
-
-    return all;
   }
 
   @override
   Future<QuestionModel?> getQuestionById(String questionId) async {
     try {
-      final fromHive = _hive.questionsBox.get(questionId);
+      final hexId = _toHex(questionId);
+      final fromHive = _hive.questionsBox.get(hexId);
       if (fromHive != null) return fromHive;
 
       if (!_db.isConnected) return null;
 
       final result = await _db.questions
-          .findOne({'_id': questionId});
+          .findOne({'_id': ObjectId.parse(hexId)});
 
       if (result == null) return null;
       return QuestionModel.fromMap(result);

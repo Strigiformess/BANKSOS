@@ -58,7 +58,7 @@ class UserModel extends HiveObject {
 
   factory UserModel.fromMap(Map<String, dynamic> map) {
     return UserModel(
-      id: map['_id']?.toString() ?? '',
+      id: _parseObjectId(map['_id']),
       namaLengkap: map['nama_lengkap'] ?? '',
       nim: map['nim'],
       email: map['email'] ?? '',
@@ -102,6 +102,22 @@ class UserModel extends HiveObject {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
+  }
+
+  static String _parseObjectId(dynamic value) {
+    if (value == null) return '';
+    if (value is Map && value.containsKey('\$oid')) {
+      final o = value['\$oid'];
+      if (o is String && RegExp(r'^[0-9a-fA-F]{24}$').hasMatch(o)) return o;
+    }
+    final raw = value.toString();
+    final m = RegExp(r'''ObjectId\(["\']?([0-9a-fA-F]{24})["\']?\)''',
+            caseSensitive: false)
+        .firstMatch(raw);
+    if (m != null) return m.group(1)!;
+    if (RegExp(r'^[0-9a-fA-F]{24}$').hasMatch(raw)) return raw;
+    final any = RegExp(r'([0-9a-fA-F]{24})').firstMatch(raw);
+    return any != null ? any.group(1)! : raw;
   }
 
   static UserRole _roleFromString(String? value) {

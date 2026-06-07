@@ -11,13 +11,17 @@ class ConnectivityService {
   static final ConnectivityService instance = ConnectivityService._();
 
   final Connectivity _connectivity = Connectivity();
+  ConnectivityResult _lastResult = ConnectivityResult.none;
 
   /// Inisialisasi singkat — gunakan di `main()` untuk mengecek status awal.
   Future<void> init() async {
     final r = await _connectivity.checkConnectivity();
     // logging ringan untuk debugging
     // ignore: avoid_print
-    print('ConnectivityService.init() -> status: $r');
+    final mapped = _toConnectivityResult(r);
+    _lastResult = mapped;
+    // ignore: avoid_print
+    print('ConnectivityService.init() -> status: $mapped');
   }
 
   /// Mengecek apakah perangkat saat ini terhubung ke internet.
@@ -72,9 +76,12 @@ class ConnectivityService {
 
     /// Stream perubahan status koneksi.
       Stream<ConnectivityResult> get onConnectivityChanged =>
-        (_connectivity.onConnectivityChanged as Stream<dynamic>).map((event) {
+            (_connectivity.onConnectivityChanged as Stream<dynamic>).map((event) {
       // event can be ConnectivityResult, or in tests a List like ['none']
-      if (event is ConnectivityResult) return event;
+          if (event is ConnectivityResult) {
+            _lastResult = event;
+            return event;
+          }
       if (event is List && event.isNotEmpty) {
         final first = event.first;
         if (first is ConnectivityResult) return first;
@@ -110,6 +117,11 @@ class ConnectivityService {
             return ConnectivityResult.none;
         }
       }
-      return ConnectivityResult.none;
+        final res = ConnectivityResult.none;
+        _lastResult = res;
+        return res;
     });
+
+      /// Synchronously return the last known connectivity result.
+      ConnectivityResult get currentResult => _lastResult;
 }

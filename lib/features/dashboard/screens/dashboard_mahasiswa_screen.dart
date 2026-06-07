@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/services/session_service.dart';
@@ -12,6 +13,7 @@ import '../../../shared/widgets/app_widgets.dart';
 import '../../../routes/app_routes.dart';
 import '../../../data/local/hive/hive_service.dart';
 import '../../../data/models/question_model.dart';
+import '../../../data/models/user_progress_model.dart';
 import '../../../data/models/category_model.dart';
 import '../../../shared/layouts/main_shell.dart';
 
@@ -91,43 +93,48 @@ class _DashboardMahasiswaScreenState
   Widget build(BuildContext context) {
     final nama = SessionService.instance.nama?.split(' ').first ?? 'Pengguna';
 
-    return Scaffold(
-      backgroundColor: AppColors.bgLight,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildTopBar(nama),
-              _buildSyncStatusBanner(),
-              const SizedBox(height: AppSpacings.lg),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacings.lg),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildRankCard(),
-                    const SizedBox(height: AppSpacings.md),
-                    _buildProgressSummary(),
-                    const SizedBox(height: AppSpacings.md),
-                    _buildStreakStatusRow(),
-                    const SizedBox(height: AppSpacings.xxl),
-                    _buildMenuUtama(),
-                    const SizedBox(height: AppSpacings.xxl),
-                    _buildRekomendasi(),
-                    const SizedBox(height: AppSpacings.xxl),
-                    _buildSoalTerbaru(),
-                    const SizedBox(height: AppSpacings.xxl),
-                    _buildTopStudents(),
-                    const SizedBox(height: 100),
-                  ],
-                ),
+    return ValueListenableBuilder<Box<UserProgressModel>>(
+      valueListenable: HiveService.instance.userProgressBox.listenable(),
+      builder: (context, _, __) {
+        return Scaffold(
+          backgroundColor: AppColors.bgLight,
+          body: SafeArea(
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildTopBar(nama),
+                  _buildSyncStatusBanner(),
+                  const SizedBox(height: AppSpacings.lg),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: AppSpacings.lg),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildRankCard(),
+                        const SizedBox(height: AppSpacings.md),
+                        _buildProgressSummary(),
+                        const SizedBox(height: AppSpacings.md),
+                        _buildStreakStatusRow(),
+                        const SizedBox(height: AppSpacings.xxl),
+                        _buildMenuUtama(),
+                        const SizedBox(height: AppSpacings.xxl),
+                        _buildRekomendasi(),
+                        const SizedBox(height: AppSpacings.xxl),
+                        _buildSoalTerbaru(),
+                        const SizedBox(height: AppSpacings.xxl),
+                        _buildTopStudents(),
+                        const SizedBox(height: 100),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
@@ -172,7 +179,7 @@ class _DashboardMahasiswaScreenState
   Widget _buildSyncStatusBanner() {
     return StreamBuilder<ConnectivityResult>(
       stream: ConnectivityService.instance.onConnectivityChanged,
-      initialData: ConnectivityResult.none,
+      initialData: ConnectivityService.instance.currentResult,
       builder: (context, snapshot) {
         final isOnline = snapshot.data != ConnectivityResult.none;
         return Container(
@@ -520,7 +527,7 @@ class _DashboardMahasiswaScreenState
   Widget _buildDynamicStatusCard() {
     return StreamBuilder<ConnectivityResult>(
       stream: ConnectivityService.instance.onConnectivityChanged,
-      initialData: ConnectivityResult.none,
+      initialData: ConnectivityService.instance.currentResult,
       builder: (context, snapshot) {
         final isOnline = snapshot.data != ConnectivityResult.none;
         return Container(
