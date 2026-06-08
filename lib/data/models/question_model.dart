@@ -226,10 +226,29 @@ class QuestionModel extends HiveObject {
 
   static String _parseObjectId(dynamic value) {
     if (value == null) return '';
+
+    // Jika Map dengan key '$oid' (Extended JSON MongoDB)
+    if (value is Map && value.containsKey('\$oid')) {
+      final o = value['\$oid'];
+      if (o is String && RegExp(r'^[0-9a-fA-F]{24}$').hasMatch(o)) return o;
+    }
+
     final raw = value.toString();
-    // Kalau formatnya ObjectId("abc123..."), ambil isinya saja
-    final match = RegExp(r'ObjectId\("([a-f0-9]{24})"\)').firstMatch(raw);
-    if (match != null) return match.group(1)!;
-    return raw; // sudah string biasa, langsung pakai
+
+    // Format ObjectId("...") atau ObjectId('...') — case-insensitive
+    final matchObj = RegExp(
+      r'''ObjectId\(["']?([0-9a-fA-F]{24})["']?\)''',
+      caseSensitive: false,
+    ).firstMatch(raw);
+    if (matchObj != null) return matchObj.group(1)!;
+
+    // Sudah 24-hex murni
+    if (RegExp(r'^[0-9a-fA-F]{24}$').hasMatch(raw)) return raw;
+
+    // Fallback: ambil substring 24-hex pertama
+    final anyHex = RegExp(r'([0-9a-fA-F]{24})').firstMatch(raw);
+    if (anyHex != null) return anyHex.group(1)!;
+
+    return raw;
   }
 }

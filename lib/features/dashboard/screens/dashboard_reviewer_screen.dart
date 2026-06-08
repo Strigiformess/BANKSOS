@@ -242,6 +242,36 @@ class _DashboardReviewerScreenState
                 color: Color(0xFF374151)),
             onPressed: () {},
           ),
+          IconButton(
+            icon: const Icon(Icons.logout, color: Color(0xFF374151)),
+            tooltip: 'Logout',
+            onPressed: () async {
+              final confirm = await showDialog<bool>(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  title: const Text('Logout'),
+                  content: const Text('Yakin ingin keluar dari akun ini?'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx, false),
+                      child: const Text('Batal'),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx, true),
+                      child: const Text('Logout',
+                          style: TextStyle(color: Color(0xFFDC2626))),
+                    ),
+                  ],
+                ),
+              );
+              if (confirm == true) {
+                await SessionService.instance.clearSession();
+                if (context.mounted) {
+                  Navigator.pushReplacementNamed(context, AppRoutes.login);
+                }
+              }
+            },
+          ),
           const SizedBox(width: 4),
         ],
         bottom: PreferredSize(

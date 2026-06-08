@@ -64,11 +64,33 @@ class CategoryModel extends HiveObject {
   }
 
   static String _parseObjectId(dynamic value) {
-  if (value == null) return '';
-  final raw = value.toString();
-  // Kalau formatnya ObjectId("abc123..."), ambil isinya saja
-  final match = RegExp(r'ObjectId\("([a-f0-9]{24})"\)').firstMatch(raw);
-  if (match != null) return match.group(1)!;
-  return raw; // sudah string biasa, langsung pakai
-}
+    if (value == null) return '';
+    final raw = value.toString();
+
+    // Jika value adalah Map dengan key '$oid' (format Extended JSON MongoDB)
+    try {
+      if (value is Map && value.containsKey('\$oid')) {
+        final o = value['\$oid'];
+        if (o is String && RegExp(r'^[0-9a-fA-F]{24}$').hasMatch(o)) {
+          return o;
+        }
+      }
+    } catch (_) {}
+
+    // Kalau formatnya ObjectId("...") atau ObjectId('...'), ambil isinya
+    final matchObjId = RegExp(
+      r'''ObjectId\(["']?([0-9a-fA-F]{24})["']?\)''',
+      caseSensitive: false,
+    ).firstMatch(raw);
+    if (matchObjId != null) return matchObjId.group(1)!;
+
+    // Jika raw sendiri sudah 24 hex, kembalikan langsung
+    if (RegExp(r'^[0-9a-fA-F]{24}$').hasMatch(raw)) return raw;
+
+    // Fallback: cari substring 24 hex paling awal
+    final anyHex = RegExp(r'([0-9a-fA-F]{24})').firstMatch(raw);
+    if (anyHex != null) return anyHex.group(1)!;
+
+    return raw;
+  }
 }

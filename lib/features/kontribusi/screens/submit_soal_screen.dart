@@ -178,16 +178,27 @@ class _SubmitSoalScreenState extends ConsumerState<SubmitSoalScreen> {
 
       final now = DateTime.now().toIso8601String();
 
+      // Strip format ObjectId("...") sebelum parse
+      String toHex(String raw) {
+        final m = RegExp(r'''ObjectId\(["\']?([0-9a-fA-F]{24})["\']?\)''',
+                caseSensitive: false)
+            .firstMatch(raw);
+        if (m != null) return m.group(1)!;
+        if (RegExp(r'^[0-9a-fA-F]{24}$').hasMatch(raw)) return raw;
+        final any = RegExp(r'([0-9a-fA-F]{24})').firstMatch(raw);
+        return any != null ? any.group(1)! : raw;
+      }
+
       final doc = {
         '_id': ObjectId(),
         'pertanyaan': _pertanyaanCtrl.text.trim(),
         'jawaban': _jawabanCtrl.text.trim().toLowerCase(),
-        'kategori_id': ObjectId.parse(_selectedKategori!.id),
+        'kategori_id': ObjectId.parse(toHex(_selectedKategori!.id)),
         'kategori_nama': _selectedKategori!.nama,
         'tingkat_kesulitan': 'easy', // akan diset reviewer saat approve
         'status': 'pending',
         'hints': hints,
-        'submitted_by': ObjectId.parse(userId),
+        'submitted_by': ObjectId.parse(toHex(userId)),
         'reviewed_by': null,
         'rejection_reason': null,
         'solve_count': 0,

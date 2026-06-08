@@ -1,8 +1,5 @@
 // lib/features/auth/controllers/auth_controller.dart
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:bcrypt/bcrypt.dart';
-import 'package:uuid/uuid.dart';
-
 import '../../../core/services/session_service.dart';
 import '../../../core/services/connectivity_service.dart';
 import '../repositories/auth_repository.dart';
@@ -33,33 +30,23 @@ class AuthController extends StateNotifier<AuthState> {
     try {
       final isOnline = await ConnectivityService.instance.isOnline;
 
-      // Jika offline, gunakan token offline + password hash lokal
+      // Jika offline dan sudah ada sesi tersimpan, coba login lokal
       if (!isOnline && SessionService.instance.isLoggedIn) {
+        // Pastikan email yang diminta sama dengan sesi yang tersimpan
         final cachedEmail = SessionService.instance.email?.toLowerCase().trim();
-        if (cachedEmail != email.toLowerCase().trim()) {
+        if (cachedEmail == email.toLowerCase().trim()) {
+          final role = SessionService.instance.role;
+          state = state.copyWith(isLoading: false, isSuccess: true, errorMessage: null);
+          return role;
+        } else {
           throw Exception('Offline dan tidak ada sesi yang cocok untuk akun ini.');
         }
-
-        if (!SessionService.instance.isOfflineTokenValid) {
-          throw Exception('Offline token sudah kadaluwarsa. Silakan login lagi saat online.');
-        }
-
-        if (!SessionService.instance.verifyOfflinePassword(password)) {
-          throw Exception('Email atau kata sandi salah.');
-        }
-
-        final role = SessionService.instance.role;
-        state = state.copyWith(isLoading: false, isSuccess: true, errorMessage: null);
-        return role;
       }
 
       // Normal online flow
       final user = await _repository.login(email, password);
 
       // Buat token offline panjang agar dapat login kembali tanpa internet
-      final offlineToken = const Uuid().v4();
-      final offlineTokenExpiry = DateTime.now().add(const Duration(days: 30));
-      final hashedPassword = BCrypt.hashpw(password, BCrypt.gensalt());
       final cleanUserId = _cleanId(user.id);
 
       // Simpan sesi ke Hive
@@ -67,12 +54,8 @@ class AuthController extends StateNotifier<AuthState> {
         userId: cleanUserId,
         email: user.email,
         nama: user.namaLengkap,
-        nim: user.nim,
         role: user.role.name,
         status: user.status.name,
-        offlineToken: offlineToken,
-        offlineTokenExpiry: offlineTokenExpiry,
-        passwordHash: hashedPassword,
       );
 
       state = state.copyWith(isLoading: false, isSuccess: true, errorMessage: null);

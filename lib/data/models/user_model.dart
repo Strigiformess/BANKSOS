@@ -91,6 +91,22 @@ class UserModel extends HiveObject {
     );
   }
 
+  static String _parseObjectId(dynamic value) {
+    if (value == null) return '';
+    if (value is Map && value.containsKey('\$oid')) {
+      final o = value['\$oid'];
+      if (o is String && RegExp(r'^[0-9a-fA-F]{24}$').hasMatch(o)) return o;
+    }
+    final raw = value.toString();
+    final m = RegExp(r'''ObjectId\(["\']?([0-9a-fA-F]{24})["\']?\)''',
+            caseSensitive: false)
+        .firstMatch(raw);
+    if (m != null) return m.group(1)!;
+    if (RegExp(r'^[0-9a-fA-F]{24}$').hasMatch(raw)) return raw;
+    final any = RegExp(r'([0-9a-fA-F]{24})').firstMatch(raw);
+    return any != null ? any.group(1)! : raw;
+  }
+
   static UserRole _roleFromString(String? value) {
     switch (value) {
       case 'reviewer':
@@ -102,11 +118,4 @@ class UserModel extends HiveObject {
     }
   }
 
-  static String _parseObjectId(dynamic value) {
-    if (value == null) return '';
-    final raw = value.toString();
-    final match = RegExp(r'ObjectId\("([a-f0-9]{24})"\)').firstMatch(raw);
-    if (match != null) return match.group(1)!;
-    return raw;
-  }
 }

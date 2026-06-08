@@ -1,22 +1,4 @@
 // lib/features/question/repositories/question_submit_repository.dart
-// Sprint 4 — Revaldi (RP): Submit Soal Repository
-//
-// Tanggung jawab:
-//   - ajukanSoal     : POST soal baru ke MongoDB dengan status 'pending'
-//   - getSoalSaya    : ambil daftar soal yang pernah diajukan user dari server
-//   - getSoalSayaLokal : fallback dari Hive jika offline (soal pending lokal)
-//
-// Aturan bisnis:
-//   - Submit soal WAJIB online — tidak ada mekanisme queue offline untuk pengajuan soal
-//   - Status default selalu 'pending' saat pertama diajukan
-//   - Jawaban otomatis di-lowercase sebelum dikirim ke server
-//   - Validasi field wajib dilakukan di layer repository (bukan hanya UI)
-//
-// Alur:
-//   1. Validasi input (pertanyaan, jawaban, kategoriId tidak boleh kosong)
-//   2. Cek koneksi — jika offline, throw exception dengan pesan yang jelas
-//   3. POST ke MongoDB via MongoDBService
-//   4. Return QuestionSubmitResult dengan data soal yang baru dibuat
 
 import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:mongo_dart/mongo_dart.dart' show ObjectId;
@@ -27,7 +9,6 @@ import '../../../data/remote/mongodb/mongodb_service.dart';
 
 // ─── Result wrapper ───────────────────────────────────────────────────────────
 
-/// Hasil operasi pengajuan soal.
 class QuestionSubmitResult {
   const QuestionSubmitResult({
     required this.success,
@@ -36,11 +17,7 @@ class QuestionSubmitResult {
   });
 
   final bool success;
-
-  /// ID soal yang baru dibuat di MongoDB (jika berhasil).
   final String? questionId;
-
-  /// Pesan error yang bisa langsung ditampilkan ke user.
   final String? errorMessage;
 
   bool get hasError => errorMessage != null;
@@ -48,8 +25,6 @@ class QuestionSubmitResult {
 
 // ─── Data class untuk payload pengajuan soal ─────────────────────────────────
 
-/// Data yang dibutuhkan untuk mengajukan soal baru.
-/// Dipisah dari model agar tidak tergantung pada semua field QuestionModel.
 class SoalBaru {
   const SoalBaru({
     required this.pertanyaan,
@@ -88,18 +63,28 @@ class QuestionSubmitRepository implements IQuestionSubmitRepository {
         _session = session ?? SessionService.instance,
         _connectivity = connectivity ?? ConnectivityService.instance;
 
+  // ─── Helper: strip ObjectId wrapper jadi 24-hex string ───────────────────
+
+  static String _toHex(String raw) {
+    // Tangani format ObjectId("abc..."), ObjectId('abc...'), atau string biasa
+    final match = RegExp(
+      r'''ObjectId\(["']?([0-9a-fA-F]{24})["']?\)''',
+      caseSensitive: false,
+    ).firstMatch(raw);
+    if (match != null) return match.group(1)!;
+
+    // Sudah 24-hex murni
+    if (RegExp(r'^[0-9a-fA-F]{24}$').hasMatch(raw)) return raw;
+
+    // Coba ambil substring 24-hex pertama
+    final anyHex = RegExp(r'([0-9a-fA-F]{24})').firstMatch(raw);
+    if (anyHex != null) return anyHex.group(1)!;
+
+    return raw;
+  }
+
   // ─── Ajukan Soal ─────────────────────────────────────────────────────────
 
-  /// POST soal baru ke MongoDB dengan status default 'pending'.
-  ///
-  /// Soal yang diajukan tidak langsung muncul di bank soal —
-  /// harus melewati review oleh reviewer terlebih dahulu.
-  ///
-  /// Melempar exception jika:
-  ///   - user tidak login
-  ///   - koneksi tidak tersedia
-  ///   - field wajib kosong
-  ///   - gagal insert ke MongoDB
   @override
   Future<QuestionSubmitResult> ajukanSoal(SoalBaru soal) async {
     // 1. Pastikan user sudah login
@@ -143,22 +128,23 @@ class QuestionSubmitRepository implements IQuestionSubmitRepository {
       final now = DateTime.now().toIso8601String();
       final newId = ObjectId();
 
-      // Hints — filter yang kosong
+      // Bersihkan ID sebelum parse — cegah "Invalid argument(s)" error
+      final kategoriOid = ObjectId.parse(_toHex(soal.kategoriId));
+      final userOid = ObjectId.parse(_toHex(userId));
+
       final hints =
           soal.hints.map((h) => h.trim()).where((h) => h.isNotEmpty).toList();
 
       final doc = {
         '_id': newId,
         'pertanyaan': soal.pertanyaan.trim(),
-        // Jawaban selalu disimpan lowercase (case-insensitive matching)
         'jawaban': soal.jawaban.trim().toLowerCase(),
-        'kategori_id': ObjectId.parse(soal.kategoriId),
+        'kategori_id': kategoriOid,
         'kategori_nama': soal.kategoriNama.trim(),
-        // Tingkat kesulitan akan diset reviewer saat approve
         'tingkat_kesulitan': 'easy',
         'status': 'pending',
         'hints': hints,
-        'submitted_by': ObjectId.parse(userId),
+        'submitted_by': userOid,
         'reviewed_by': null,
         'rejection_reason': null,
         'solve_count': 0,
@@ -190,11 +176,6 @@ class QuestionSubmitRepository implements IQuestionSubmitRepository {
 
   // ─── Ambil Soal Milik User ────────────────────────────────────────────────
 
-  /// Ambil semua soal yang pernah diajukan oleh user yang sedang login.
-  /// Digunakan di halaman 'Kontribusiku'.
-  ///
-  /// Mengembalikan raw Map agar UI bisa handle field yang mungkin berubah
-  /// tanpa harus regenerate model.
   @override
   Future<List<Map<String, dynamic>>> getSoalSaya() async {
     final userId = _session.userId;
@@ -204,11 +185,11 @@ class QuestionSubmitRepository implements IQuestionSubmitRepository {
     if (!isOnline || !_db.isConnected) return [];
 
     try {
+      final userOid = ObjectId.parse(_toHex(userId));
       final results = await _db.questions.find({
-        'submitted_by': ObjectId.parse(userId),
+        'submitted_by': userOid,
       }).toList();
 
-      // Urutkan: terbaru dulu
       results.sort((a, b) {
         final aDate =
             DateTime.tryParse(a['created_at']?.toString() ?? '') ?? DateTime(0);
@@ -225,9 +206,6 @@ class QuestionSubmitRepository implements IQuestionSubmitRepository {
 
   // ─── Validasi Internal ────────────────────────────────────────────────────
 
-  /// Validasi field wajib. Mengembalikan pesan error atau null jika valid.
-  /// Dipublikasikan agar bisa diuji secara langsung di unit test.
-  // ignore: invalid_use_of_visible_for_testing_member
   @visibleForTesting
   String? validasi(SoalBaru soal) {
     if (soal.pertanyaan.trim().isEmpty) {

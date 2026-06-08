@@ -11,6 +11,7 @@ import '../../../shared/widgets/app_widgets.dart';
 import '../../../routes/app_routes.dart';
 import '../../../data/local/hive/hive_service.dart';
 import '../../../data/models/question_model.dart';
+import '../../../data/models/user_progress_model.dart';
 import '../../../data/models/category_model.dart';
 import '../../../shared/layouts/main_shell.dart';
 
@@ -90,43 +91,48 @@ class _DashboardMahasiswaScreenState
   Widget build(BuildContext context) {
     final nama = SessionService.instance.nama?.split(' ').first ?? 'Pengguna';
 
-    return Scaffold(
-      backgroundColor: AppColors.bgLight,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildTopBar(nama),
-              _buildSyncStatusBanner(),
-              const SizedBox(height: AppSpacings.lg),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacings.lg),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildRankCard(),
-                    const SizedBox(height: AppSpacings.md),
-                    _buildProgressSummary(),
-                    const SizedBox(height: AppSpacings.md),
-                    _buildStreakStatusRow(),
-                    const SizedBox(height: AppSpacings.xxl),
-                    _buildMenuUtama(),
-                    const SizedBox(height: AppSpacings.xxl),
-                    _buildRekomendasi(),
-                    const SizedBox(height: AppSpacings.xxl),
-                    _buildSoalTerbaru(),
-                    const SizedBox(height: AppSpacings.xxl),
-                    _buildTopStudents(),
-                    const SizedBox(height: 100), 
-                  ],
-                ),
+    return ValueListenableBuilder<Box<UserProgressModel>>(
+      valueListenable: HiveService.instance.userProgressBox.listenable(),
+      builder: (context, _, __) {
+        return Scaffold(
+          backgroundColor: AppColors.bgLight,
+          body: SafeArea(
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildTopBar(nama),
+                  _buildSyncStatusBanner(),
+                  const SizedBox(height: AppSpacings.lg),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: AppSpacings.lg),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildRankCard(),
+                        const SizedBox(height: AppSpacings.md),
+                        _buildProgressSummary(),
+                        const SizedBox(height: AppSpacings.md),
+                        _buildStreakStatusRow(),
+                        const SizedBox(height: AppSpacings.xxl),
+                        _buildMenuUtama(),
+                        const SizedBox(height: AppSpacings.xxl),
+                        _buildRekomendasi(),
+                        const SizedBox(height: AppSpacings.xxl),
+                        _buildSoalTerbaru(),
+                        const SizedBox(height: AppSpacings.xxl),
+                        _buildTopStudents(),
+                        const SizedBox(height: 100),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
