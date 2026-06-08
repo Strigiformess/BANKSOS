@@ -124,7 +124,7 @@ class _ReviewerBottomNav extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(
-                        active ? item.activeIcon ?? item.icon : item.icon,
+                        item.icon,
                         size: 22,
                         color: active
                             ? const Color(0xFF1A6FDF)
@@ -155,7 +155,6 @@ class _ReviewerBottomNav extends StatelessWidget {
 
 class _NavItem {
   final IconData icon;
-  final IconData? activeIcon;
   final String label;
-  const _NavItem({required this.icon, required this.label, this.activeIcon});
+  const _NavItem({required this.icon, required this.label});
 }

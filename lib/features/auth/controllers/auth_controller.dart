@@ -1,9 +1,5 @@
 // lib/features/auth/controllers/auth_controller.dart
-// PIC: Revaldi (RP) — Auth Feature
-// State management login/register: loading state, success state, error state.
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import 'package:bcrypt/bcrypt.dart';
 import 'package:uuid/uuid.dart';
 
@@ -23,6 +19,12 @@ class AuthController extends StateNotifier<AuthState> {
   AuthController(this._repository) : super(AuthState.initial);
 
   final AuthRepository _repository;
+
+  // Helper pembersih ID
+  String _cleanId(String id) {
+    final match = RegExp(r'ObjectId\("([a-f0-9]{24})"\)').firstMatch(id);
+    return match != null ? match.group(1)! : id;
+  }
 
   /// Login — mengembalikan role user jika berhasil, null jika gagal.
   Future<String?> login(String email, String password) async {
@@ -58,10 +60,11 @@ class AuthController extends StateNotifier<AuthState> {
       final offlineToken = const Uuid().v4();
       final offlineTokenExpiry = DateTime.now().add(const Duration(days: 30));
       final hashedPassword = BCrypt.hashpw(password, BCrypt.gensalt());
+      final cleanUserId = _cleanId(user.id);
 
       // Simpan sesi ke Hive
       await SessionService.instance.saveSession(
-        userId: user.id,
+        userId: cleanUserId,
         email: user.email,
         nama: user.namaLengkap,
         nim: user.nim,

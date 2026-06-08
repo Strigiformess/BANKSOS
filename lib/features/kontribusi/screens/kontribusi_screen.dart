@@ -1,7 +1,4 @@
 // lib/features/kontribusi/screens/kontribusi_screen.dart
-// REFACTOR: Menampilkan statistik detail (published/pending/rejected)
-// menggunakan kontribusiStatsProvider yang baru.
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_theme.dart';
@@ -51,16 +48,39 @@ class KontribusiScreen extends ConsumerWidget {
               style: AppTextStyles.small,
             ),
             const SizedBox(height: AppSpacings.lg),
-
-            // ─── Stat Cards ──────────────────────────────────────────────
+            
+            // ─── Stat Cards Sesuai Desain Figma (ANTI OVERFLOW) ───────────────
             Row(
               children: [
                 Expanded(
-                  child: AppStatCard(
-                    icon: Icons.assignment_turned_in_outlined,
-                    iconColor: AppColors.primaryBlue,
-                    label: 'TOTAL SUBMITTED',
-                    value: stats.total.toString(),
+                  child: Container(
+                    padding: AppSpacings.cardPadding,
+                    decoration: BoxDecoration(
+                      color: AppColors.bgWhite,
+                      borderRadius: AppRadius.lgAll,
+                      border: Border.all(color: AppColors.borderGrey.withValues(alpha: 0.4)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.assignment_turned_in_outlined, color: AppColors.primaryBlue, size: 20),
+                            const SizedBox(width: 8),
+                            // FIX: FittedBox agar teks "TOTAL SUBMITTED" bisa mengecil di layar sempit
+                            Expanded(
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.centerLeft,
+                                child: Text('TOTAL SUBMITTED', style: AppTextStyles.smallSemibold.copyWith(color: AppColors.textGrey)),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: AppSpacings.sm),
+                        Text(stats.total.toString(), style: AppTextStyles.h2.copyWith(color: AppColors.textDark)),
+                      ],
+                    ),
                   ),
                 ),
                 const SizedBox(width: AppSpacings.md),
@@ -74,19 +94,24 @@ class KontribusiScreen extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('REWARD POINTS',
-                            style: AppTextStyles.smallSemibold
-                                .copyWith(color: AppColors.lightBlue)),
+                        // FIX: FittedBox untuk judul poin reward
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text('REWARD POINTS', style: AppTextStyles.smallSemibold.copyWith(color: AppColors.lightBlue)),
+                        ),
                         const SizedBox(height: AppSpacings.sm),
                         Row(
                           children: [
                             const Icon(Icons.stars,
                                 color: AppColors.warningYellow, size: 24),
                             const SizedBox(width: 4),
-                            Text(
-                              rewardPoints.toString(),
-                              style: AppTextStyles.h2
-                                  .copyWith(color: AppColors.textLight),
+                            Expanded(
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.centerLeft,
+                                child: Text(rewardPoints.toString(), style: AppTextStyles.h2.copyWith(color: AppColors.textLight)),
+                              ),
                             ),
                           ],
                         ),
@@ -213,7 +238,7 @@ class KontribusiScreen extends ConsumerWidget {
       color: AppColors.bgWhite,
       shape: RoundedRectangleBorder(
         borderRadius: AppRadius.lgAll,
-        side: BorderSide(color: AppColors.borderGrey.withValues(alpha: 0.4)),
+        side: BorderSide(color: AppColors.borderGrey.withValues(alpha: 0.4)), 
       ),
       child: Padding(
         padding: AppSpacings.cardPadding,

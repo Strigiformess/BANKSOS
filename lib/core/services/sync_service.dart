@@ -1,5 +1,3 @@
-// lib/core/services/sync_service.dart
-
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 
@@ -7,7 +5,7 @@ import 'connectivity_service.dart';
 import '../../data/local/hive/hive_service.dart';
 import '../../data/models/bookmark_model.dart';
 import '../../data/models/sync_queue_model.dart';
-import '../../../data/remote/bookmark_remote.dart';
+import '../../data/remote/bookmark_remote.dart';
 
 class SyncService {
   SyncService._();
@@ -15,15 +13,11 @@ class SyncService {
 
   final _uuid = const Uuid();
 
-  // Fungsi Pembersih ID
   String _cleanId(String id) {
     final match = RegExp(r'ObjectId\("([a-f0-9]{24})"\)').firstMatch(id);
     return match != null ? match.group(1)! : id;
   }
 
-  // ─── 1. FASE UI KE LOKAL (TOMBOL DITEKAN) ──────────────────────────────────
-
-  /// Mengembalikan TRUE jika sekarang di-bookmark, FALSE jika dihapus
   Future<bool> toggleBookmark({
     required String userId,
     required String questionId,
@@ -34,52 +28,48 @@ class SyncService {
     final cleanUserId = _cleanId(userId);
     final cleanQuestionId = _cleanId(questionId);
 
-    // 1. Ambil data bookmark yang cocok di database lokal Hive
-    final existingItems = hive.values.where((b) => 
-        _cleanId(b.questionId) == cleanQuestionId && 
-        _cleanId(b.userId) == cleanUserId).toList();
-        
+    final existingItems = hive.values
+        .where((b) =>
+            _cleanId(b.questionId) == cleanQuestionId &&
+            _cleanId(b.userId) == cleanUserId)
+        .toList();
+
     final isAlreadyBookmarked = existingItems.isNotEmpty;
     final isOnline = await ConnectivityService.instance.isOnline;
 
     if (isAlreadyBookmarked) {
-      // ─── LOGIKA HAPUS BOOKMARK ───────────────────────────────────────────
       final bookmark = existingItems.first;
-      
-      // Hapus data dari Hive lokal terlebih dahulu
       await bookmark.delete();
-      
-      // Buat item antrean untuk aksi hapus (remove)
+
       final queueItem = SyncQueueModel(
         id: _uuid.v4(),
         type: SyncType.bookmark,
         payload: {
           'user_id': cleanUserId,
           'question_id': cleanQuestionId,
-          'action': 'remove', 
+          'action': 'remove',
         },
-        action: SyncAction.bookmarkRemove.name, 
+        action: SyncAction.bookmarkRemove.name,
         createdAt: DateTime.now(),
       );
 
       if (isOnline) {
         try {
-          await BookmarkRemote().removeBookmark(userId: cleanUserId, questionId: cleanQuestionId);
-          debugPrint("✅ Bookmark dihapus dari Cloud");
+          await BookmarkRemote()
+              .removeBookmark(userId: cleanUserId, questionId: cleanQuestionId);
+          debugPrint('✅ Bookmark dihapus dari Cloud');
         } catch (e) {
-          debugPrint("⚠️ Gagal hapus langsung di Cloud, masuk antrean: $e");
+          debugPrint('⚠️ Gagal hapus langsung di Cloud, masuk antrean: $e');
           await queueBox.put(queueItem.id, queueItem);
         }
       } else {
-        debugPrint("📴 Offline: Antrean hapus bookmark disimpan lokal");
+        debugPrint('📴 Offline: Antrean hapus bookmark disimpan lokal');
         await queueBox.put(queueItem.id, queueItem);
       }
-      
-      return false; // Status saat ini: Sudah Dihapus (ikon kosong)
 
+      return false;
     } else {
-      // ─── LOGIKA TAMBAH BOOKMARK ──────────────────────────────────────────
-      final newId = _uuid.v4().replaceAll('-', '').substring(0, 24); 
+      final newId = _uuid.v4().replaceAll('-', '').substring(0, 24);
       final bookmark = BookmarkModel(
         id: newId,
         userId: cleanUserId,
@@ -88,40 +78,37 @@ class SyncService {
         isSynced: isOnline,
       );
 
-      // Simpan data baru ke Hive lokal
       await hive.put(newId, bookmark);
 
-      // Buat item antrean untuk aksi tambah (add)
       final queueItem = SyncQueueModel(
         id: _uuid.v4(),
         type: SyncType.bookmark,
         payload: {
           'user_id': cleanUserId,
           'question_id': cleanQuestionId,
-          'action': 'add', 
+          'action': 'add',
         },
-        action: SyncAction.bookmarkAdd.name, 
+        action: SyncAction.bookmarkAdd.name,
         createdAt: DateTime.now(),
       );
 
       if (isOnline) {
         try {
-          await BookmarkRemote().addBookmark(userId: cleanUserId, questionId: cleanQuestionId);
-          debugPrint("✅ Bookmark sukses dikirim ke Cloud");
+          await BookmarkRemote()
+              .addBookmark(userId: cleanUserId, questionId: cleanQuestionId);
+          debugPrint('✅ Bookmark sukses dikirim ke Cloud');
         } catch (e) {
-          debugPrint("⚠️ Gagal kirim langsung ke Cloud, masuk antrean: $e");
+          debugPrint('⚠️ Gagal kirim langsung ke Cloud, masuk antrean: $e');
           await queueBox.put(queueItem.id, queueItem);
         }
       } else {
-        debugPrint("📴 Offline: Antrean tambah bookmark disimpan lokal");
+        debugPrint('📴 Offline: Antrean tambah bookmark disimpan lokal');
         await queueBox.put(queueItem.id, queueItem);
       }
-      
-      return true; // Status saat ini: Sukses Disimpan (ikon penuh)
+
+      return true;
     }
   }
-
-  // ─── 2. FASE LOKAL KE CLOUD (BACKGROUND WORKER) ────────────────────────────
 
   Future<void> flushQueue() async {
     final isOnline = await ConnectivityService.instance.isOnline;
@@ -133,7 +120,7 @@ class SyncService {
     final pendingItems = queueBox.values.toList()
       ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
 
-    debugPrint("🔄 Memulai sinkronisasi ${pendingItems.length} antrean data...");
+    debugPrint('🔄 Memulai sinkronisasi ${pendingItems.length} antrean data...');
 
     for (final item in pendingItems) {
       bool success = false;
@@ -145,23 +132,30 @@ class SyncService {
           final action = item.payload['action'];
 
           if (action == 'add') {
-            await BookmarkRemote().addBookmark(userId: userId, questionId: questionId);
-            
-            // Cari data lokal dan tandai isSynced = true
-            final localBookmark = HiveService.instance.bookmarksBox.values.where((b) => 
-                _cleanId(b.questionId) == questionId && _cleanId(b.userId) == userId).firstOrNull;
+            await BookmarkRemote()
+                .addBookmark(userId: userId, questionId: questionId);
+
+            final bookmarksBox = HiveService.instance.bookmarksBox;
+            final localBookmark = bookmarksBox.values
+                .where((b) =>
+                    _cleanId(b.questionId) == questionId &&
+                    _cleanId(b.userId) == userId)
+                .firstOrNull;
+
             if (localBookmark != null) {
-              await localBookmark.copyWith(isSynced: true).save();
+              final synced = localBookmark.copyWith(isSynced: true);
+              await bookmarksBox.put(localBookmark.key, synced);
             }
           } else if (action == 'remove') {
-            await BookmarkRemote().removeBookmark(userId: userId, questionId: questionId);
+            await BookmarkRemote()
+                .removeBookmark(userId: userId, questionId: questionId);
           }
 
-          debugPrint("✅ Sync sukses: Bookmark $action (Queue ID: ${item.id})");
+          debugPrint('✅ Sync sukses: Bookmark $action (Queue ID: ${item.id})');
           success = true;
         }
       } catch (e) {
-        debugPrint("❌ Sync gagal untuk item ${item.id}: $e");
+        debugPrint('❌ Sync gagal untuk item ${item.id}: $e');
         final updatedItem = item.copyWith(retryCount: item.retryCount + 1);
         await queueBox.put(item.id, updatedItem);
       }

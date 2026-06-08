@@ -1,11 +1,10 @@
 // lib/features/dashboard/screens/dashboard_mahasiswa_screen.dart
-// REFACTOR: Semua data dummy diganti dengan data real dari Hive / MongoDB
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/theme/app_theme_extensions.dart';
 import '../../../core/services/session_service.dart';
 import '../../../core/services/connectivity_service.dart';
 import '../../../shared/widgets/app_widgets.dart';
@@ -120,7 +119,7 @@ class _DashboardMahasiswaScreenState
                     _buildSoalTerbaru(),
                     const SizedBox(height: AppSpacings.xxl),
                     _buildTopStudents(),
-                    const SizedBox(height: 100),
+                    const SizedBox(height: 100), 
                   ],
                 ),
               ),
@@ -131,7 +130,6 @@ class _DashboardMahasiswaScreenState
     );
   }
 
-  // ─── Top Bar ──────────────────────────────────────────────────────────────
   Widget _buildTopBar(String nama) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(
@@ -170,11 +168,12 @@ class _DashboardMahasiswaScreenState
   }
 
   Widget _buildSyncStatusBanner() {
-    return StreamBuilder<ConnectivityResult>(
+    return StreamBuilder(
       stream: ConnectivityService.instance.onConnectivityChanged,
-      initialData: ConnectivityResult.none,
       builder: (context, snapshot) {
-        final isOnline = snapshot.data != ConnectivityResult.none;
+        final isOnline = snapshot.connectionState == ConnectionState.waiting || 
+                         (snapshot.hasData && !snapshot.data.toString().contains('none'));
+        
         return Container(
           width: double.infinity,
           margin: const EdgeInsets.fromLTRB(
@@ -216,7 +215,6 @@ class _DashboardMahasiswaScreenState
     );
   }
 
-  // ─── Rank Card (data real dari Hive) ─────────────────────────────────────
   Widget _buildRankCard() {
     final totalPoints = ref.watch(_totalPointsProvider);
     final rank = _rankLabel(totalPoints);
@@ -326,123 +324,140 @@ class _DashboardMahasiswaScreenState
     );
   }
 
-  // ─── Progress Summary (data real dari Hive) ───────────────────────────────
   Widget _buildProgressSummary() {
     final userId = SessionService.instance.userId ?? '';
-    final progressBox = HiveService.instance.userProgressBox;
+    final colors = context.colors;
     final questionBox = HiveService.instance.questionsBox;
 
-    final totalSelesai = progressBox.values
-        .where((p) => p.userId == userId && p.isSolved)
-        .length;
-    final totalSoal = questionBox.values
-        .where((q) => q.status == QuestionStatus.published)
-        .length;
-    final totalBookmark = HiveService.instance.bookmarksBox.values
-        .where((b) => b.userId == userId)
-        .length;
-    final persen =
-        totalSoal > 0 ? (totalSelesai / totalSoal).clamp(0.0, 1.0) : 0.0;
+    return ListenableBuilder(
+      listenable: Listenable.merge([
+        HiveService.instance.userProgressBox.listenable(),
+        HiveService.instance.bookmarksBox.listenable(),
+      ]),
+      builder: (context, _) {
+        final progressBox = HiveService.instance.userProgressBox;
+        final bookmarkBox = HiveService.instance.bookmarksBox;
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(AppSpacings.lg),
-      decoration: BoxDecoration(
-        color: AppColors.bgWhite,
-        borderRadius: AppRadius.lgAll,
-        border: Border.all(color: AppColors.borderGrey.withOpacity(0.4)),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withOpacity(0.02),
-              blurRadius: 8,
-              offset: const Offset(0, 4)),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('Progres Belajar', style: AppTextStyles.h3),
-              GestureDetector(
-                onTap: () => Navigator.pushNamed(context, AppRoutes.riwayat),
-                child: Text('Lihat Riwayat',
-                    style: AppTextStyles.smallSemibold
-                        .copyWith(color: AppColors.primaryBlue)),
+        final totalSelesai = progressBox.values
+            .where((p) => p.userId == userId && p.isSolved)
+            .length;
+        final totalSoal = questionBox.values
+            .where((q) => q.status == QuestionStatus.published)
+            .length;
+        final totalBookmark = bookmarkBox.values
+            .where((b) => b.userId == userId)
+            .length;
+        final persen =
+            totalSoal > 0 ? (totalSelesai / totalSoal).clamp(0.0, 1.0) : 0.0;
+
+        return Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(AppSpacings.lg),
+          decoration: BoxDecoration(
+            color: colors.cardBg,
+            borderRadius: AppRadius.lgAll,
+            border: Border.all(color: colors.borderColor),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.02),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
               ),
             ],
           ),
-          const SizedBox(height: AppSpacings.md),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                totalSoal > 0
-                    ? '$totalSelesai dari $totalSoal soal'
-                    : '$totalSelesai soal diselesaikan',
-                style: AppTextStyles.body.copyWith(
-                    color: AppColors.textGrey, fontWeight: FontWeight.w500),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Progres Belajar', style: AppTextStyles.h3),
+                  GestureDetector(
+                    onTap: () => Navigator.pushNamed(context, AppRoutes.riwayat),
+                    child: Text(
+                      'Lihat Riwayat',
+                      style: AppTextStyles.smallSemibold.copyWith(
+                        color: AppColors.primaryBlue,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              Text('${(persen * 100).toStringAsFixed(0)}%',
-                  style: AppTextStyles.bodySemibold
-                      .copyWith(color: AppColors.primaryBlue)),
-            ],
-          ),
-          const SizedBox(height: AppSpacings.sm),
-          ClipRRect(
-            borderRadius: AppRadius.smAll,
-            child: LinearProgressIndicator(
-              value: persen,
-              minHeight: 8,
-              backgroundColor: AppColors.lightBlue,
-              valueColor: const AlwaysStoppedAnimation<Color>(
-                  AppColors.primaryBlue),
-            ),
-          ),
-          const SizedBox(height: AppSpacings.md),
-          Row(
-            children: [
-              _MiniStat(
-                icon: Icons.check_circle_outline,
-                iconColor: AppColors.successGreen,
-                label: 'Selesai',
-                value: '$totalSelesai',
+              const SizedBox(height: AppSpacings.md),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    totalSoal > 0
+                        ? '$totalSelesai dari $totalSoal soal'
+                        : '$totalSelesai soal diselesaikan',
+                    style: AppTextStyles.body.copyWith(
+                      color: AppColors.textGrey,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  Text(
+                    '${(persen * 100).toStringAsFixed(0)}%',
+                    style: AppTextStyles.bodySemibold.copyWith(
+                      color: AppColors.primaryBlue,
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: AppSpacings.xl),
-              GestureDetector(
-                onTap: () =>
-                    Navigator.pushNamed(context, AppRoutes.bookmarks),
-                child: _MiniStat(
-                  icon: Icons.bookmark_outline,
-                  iconColor: Colors.amber,
-                  label: 'Tersimpan',
-                  value: '$totalBookmark',
+              const SizedBox(height: AppSpacings.sm),
+              ClipRRect(
+                borderRadius: AppRadius.smAll,
+                child: LinearProgressIndicator(
+                  value: persen,
+                  minHeight: 8,
+                  backgroundColor: AppColors.lightBlue,
+                  valueColor:
+                      const AlwaysStoppedAnimation<Color>(AppColors.primaryBlue),
                 ),
               ),
-              const Spacer(),
-              TextButton.icon(
-                onPressed: () =>
-                    Navigator.pushNamed(context, AppRoutes.kontribusi),
-                icon: const Icon(Icons.add_circle_outline, size: 16),
-                label: const Text('Kontribusi'),
-                style: TextButton.styleFrom(
-                  foregroundColor: AppColors.primaryBlue,
-                  textStyle:
-                      AppTextStyles.small.copyWith(fontWeight: FontWeight.w600),
-                  padding: EdgeInsets.zero,
-                  minimumSize: Size.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
+              const SizedBox(height: AppSpacings.md),
+              Row(
+                children: [
+                  _MiniStat(
+                    icon: Icons.check_circle_outline,
+                    iconColor: AppColors.successGreen,
+                    label: 'Selesai',
+                    value: '$totalSelesai',
+                  ),
+                  const SizedBox(width: AppSpacings.xl),
+                  GestureDetector(
+                    onTap: () => Navigator.pushNamed(context, AppRoutes.bookmarks),
+                    child: _MiniStat(
+                      icon: Icons.bookmark_outline,
+                      iconColor: Colors.amber,
+                      label: 'Tersimpan',
+                      value: '$totalBookmark',
+                    ),
+                  ),
+                  const Spacer(),
+                  TextButton.icon(
+                    onPressed: () =>
+                        Navigator.pushNamed(context, AppRoutes.kontribusi),
+                    icon: const Icon(Icons.add_circle_outline, size: 16),
+                    label: const Text('Kontribusi'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.primaryBlue,
+                      textStyle:
+                          AppTextStyles.small.copyWith(fontWeight: FontWeight.w600),
+                      padding: EdgeInsets.zero,
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
-  // ─── Streak & Status Row ──────────────────────────────────────────────────
   Widget _buildStreakStatusRow() {
     return Row(
       children: [
@@ -453,12 +468,10 @@ class _DashboardMahasiswaScreenState
     );
   }
 
-  /// Hitung streak dari data progress Hive berdasarkan hari berurutan.
   Widget _buildStreakCard() {
     final userId = SessionService.instance.userId ?? '';
     final progressBox = HiveService.instance.userProgressBox;
 
-    // Kumpulkan tanggal unik (per hari) di mana user menyelesaikan soal
     final solvedDates = progressBox.values
         .where((p) => p.userId == userId && p.isSolved && p.solvedAt != null)
         .map((p) => DateTime(
@@ -510,26 +523,29 @@ class _DashboardMahasiswaScreenState
             ],
           ),
           const SizedBox(height: AppSpacings.sm),
-          Text('$streak Days',
-              style: AppTextStyles.h2.copyWith(color: AppColors.textDark)),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text('$streak Days',
+                style: AppTextStyles.h2.copyWith(color: AppColors.textDark)),
+          ),
         ],
       ),
     );
   }
 
   Widget _buildDynamicStatusCard() {
-    return StreamBuilder<ConnectivityResult>(
+    return StreamBuilder(
       stream: ConnectivityService.instance.onConnectivityChanged,
-      initialData: ConnectivityResult.none,
       builder: (context, snapshot) {
-        final isOnline = snapshot.data != ConnectivityResult.none;
+        final isOnline = snapshot.connectionState == ConnectionState.waiting || 
+                         (snapshot.hasData && !snapshot.data.toString().contains('none'));
+
         return Container(
           padding: AppSpacings.cardPadding,
           decoration: BoxDecoration(
             color: AppColors.bgWhite,
             borderRadius: AppRadius.lgAll,
-            border:
-                Border.all(color: AppColors.borderGrey.withOpacity(0.4)),
+            border: Border.all(color: AppColors.borderGrey.withOpacity(0.4)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -561,12 +577,14 @@ class _DashboardMahasiswaScreenState
                 ],
               ),
               const SizedBox(height: AppSpacings.sm),
-              Text(
-                isOnline ? 'Synced' : 'Offline',
-                style: AppTextStyles.h2.copyWith(
-                  color: isOnline
-                      ? AppColors.primaryBlue
-                      : AppColors.errorRed,
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  isOnline ? 'Synced' : 'Offline',
+                  style: AppTextStyles.h2.copyWith(
+                    color: isOnline ? AppColors.primaryBlue : AppColors.errorRed,
+                  ),
                 ),
               ),
             ],
@@ -576,29 +594,13 @@ class _DashboardMahasiswaScreenState
     );
   }
 
-  // ─── Menu Utama ───────────────────────────────────────────────────────────
   Widget _buildMenuUtama() {
+    // FIX: Menggunakan Dart Records untuk menghindari TypeError casting
     final menus = [
-      {
-        'icon': Icons.menu_book_rounded,
-        'label': 'Bank Soal',
-        'onTap': () => MainShell.of(context)?.jumpTo(1),
-      },
-      {
-        'icon': Icons.bookmark_rounded,
-        'label': 'Bookmark',
-        'onTap': () => Navigator.pushNamed(context, AppRoutes.bookmarks),
-      },
-      {
-        'icon': Icons.bar_chart_rounded,
-        'label': 'Statistik',
-        'onTap': () => MainShell.of(context)?.jumpTo(3),
-      },
-      {
-        'icon': Icons.wifi_off_rounded,
-        'label': 'Offline',
-        'onTap': () => Navigator.pushNamed(context, AppRoutes.offlineSoal),
-      },
+      (icon: Icons.menu_book_rounded, label: 'Bank Soal', onTap: () => MainShell.of(context)?.jumpTo(1)),
+      (icon: Icons.bookmark_rounded, label: 'Bookmark', onTap: () => Navigator.pushNamed(context, AppRoutes.bookmarks)),
+      (icon: Icons.bar_chart_rounded, label: 'Statistik', onTap: () => MainShell.of(context)?.jumpTo(3)),
+      (icon: Icons.wifi_off_rounded, label: 'Offline', onTap: () => Navigator.pushNamed(context, AppRoutes.offlineSoal)),
     ];
 
     return Column(
@@ -613,7 +615,7 @@ class _DashboardMahasiswaScreenState
             final m = entry.value;
             final isFirst = i == 0;
             return GestureDetector(
-              onTap: m['onTap'] as VoidCallback?,
+              onTap: m.onTap,
               child: Column(
                 children: [
                   Container(
@@ -625,12 +627,12 @@ class _DashboardMahasiswaScreenState
                           : AppColors.bgWhite,
                       borderRadius: AppRadius.lgAll,
                     ),
-                    child: Icon(m['icon'] as IconData,
+                    child: Icon(m.icon,
                         color: isFirst ? Colors.white : AppColors.primaryBlue,
                         size: 26),
                   ),
                   const SizedBox(height: AppSpacings.sm),
-                  Text(m['label'] as String,
+                  Text(m.label,
                       style: AppTextStyles.smallSemibold
                           .copyWith(color: AppColors.textDark)),
                 ],
@@ -642,18 +644,18 @@ class _DashboardMahasiswaScreenState
     );
   }
 
-  // ─── Rekomendasi (data real dari Hive categories) ─────────────────────────
+  // FIX: Menggunakan List of Records sebagai pengganti Map yang rawan Error
   Widget _buildRekomendasi() {
     final categoryBox = HiveService.instance.categoriesBox;
     final progressBox = HiveService.instance.userProgressBox;
     final questionBox = HiveService.instance.questionsBox;
     final userId = SessionService.instance.userId ?? '';
 
-    // Ambil kategori aktif, prioritaskan yang belum diselesaikan semua soalnya
     final categories = categoryBox.values.where((c) => c.isActive).toList();
 
-    // Hitung soal tersedia dan selesai per kategori
-    List<Map<String, dynamic>> rekomendasi = [];
+    // Gunakan Typed Record (Bukan Map dynamic)
+    List<({CategoryModel category, int soalCount, int selesai, double progress})> rekomendasi = [];
+    
     for (final cat in categories) {
       final soalKategori = questionBox.values
           .where((q) =>
@@ -669,17 +671,15 @@ class _DashboardMahasiswaScreenState
                   (q) => q.id == p.questionId && q.kategoriId == cat.id))
           .length;
 
-      rekomendasi.add({
-        'category': cat,
-        'soalCount': soalKategori,
-        'selesai': selesai,
-        'progress': soalKategori > 0 ? selesai / soalKategori : 0.0,
-      });
+      rekomendasi.add((
+        category: cat,
+        soalCount: soalKategori,
+        selesai: selesai,
+        progress: soalKategori > 0 ? selesai / soalKategori : 0.0,
+      ));
     }
 
-    // Urutkan: yang paling belum selesai di atas, ambil 2 teratas
-    rekomendasi.sort(
-        (a, b) => (a['progress'] as double).compareTo(b['progress'] as double));
+    rekomendasi.sort((a, b) => a.progress.compareTo(b.progress));
     final tampil = rekomendasi.take(2).toList();
 
     if (tampil.isEmpty) {
@@ -728,10 +728,7 @@ class _DashboardMahasiswaScreenState
         Row(
           children: tampil.asMap().entries.map((entry) {
             final i = entry.key;
-            final data = entry.value;
-            final cat = data['category'] as CategoryModel;
-            final soalCount = data['soalCount'] as int;
-            final selesai = data['selesai'] as int;
+            final data = entry.value; // Typed Record!
             final isLast = i == tampil.length - 1;
 
             return Expanded(
@@ -783,23 +780,26 @@ class _DashboardMahasiswaScreenState
                               borderRadius: AppRadius.pill,
                             ),
                             child: Text(
-                              '$selesai/$soalCount',
+                              '${data.selesai}/${data.soalCount}',
                               style: AppTextStyles.captionBold
                                   .copyWith(color: AppColors.primaryBlue),
                             ),
                           ),
                           const SizedBox(height: AppSpacings.xs),
                           Text(
-                            cat.nama,
+                            data.category.nama,
                             style: AppTextStyles.bodySemibold,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                           const SizedBox(height: 2),
-                          Text(
-                            '$soalCount Soal Tersedia',
-                            style: AppTextStyles.caption
-                                .copyWith(color: AppColors.textGrey),
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              '${data.soalCount} Soal Tersedia', // FIX: Tidak ada lagi List Casting
+                              style: AppTextStyles.caption
+                                  .copyWith(color: AppColors.textGrey),
+                            ),
                           ),
                         ],
                       ),
@@ -814,11 +814,9 @@ class _DashboardMahasiswaScreenState
     );
   }
 
-  // ─── Soal Terbaru (data real dari Hive) ──────────────────────────────────
   Widget _buildSoalTerbaru() {
     final questionBox = HiveService.instance.questionsBox;
 
-    // Ambil 5 soal published terbaru berdasarkan updatedAt
     final soalTerbaru = questionBox.values
         .where((q) => q.status == QuestionStatus.published)
         .toList()
@@ -902,6 +900,8 @@ class _DashboardMahasiswaScreenState
                         '${q.kategoriNama} • $waktuLabel',
                         style: AppTextStyles.caption
                             .copyWith(color: AppColors.textGrey),
+                        maxLines: 1, 
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),
@@ -916,12 +916,10 @@ class _DashboardMahasiswaScreenState
     );
   }
 
-  // ─── Top Students (data real dari Hive) ──────────────────────────────────
   Widget _buildTopStudents() {
     final progressBox = HiveService.instance.userProgressBox;
     final questionBox = HiveService.instance.questionsBox;
 
-    // Hitung poin per userId
     final Map<String, int> poinPerUser = {};
     for (final p in progressBox.values) {
       if (!p.isSolved) continue;
@@ -945,7 +943,6 @@ class _DashboardMahasiswaScreenState
       poinPerUser[p.userId] = (poinPerUser[p.userId] ?? 0) + poin;
     }
 
-    // Urutkan dan ambil top 3
     final sorted = poinPerUser.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
     final top3 = sorted.take(3).toList();
@@ -1000,8 +997,6 @@ class _DashboardMahasiswaScreenState
               final isLast = i == top3.length - 1;
               final isCurrentUser = e.key == currentUserId;
 
-              // Tampilkan nama dari session jika current user,
-              // atau gunakan ID singkat untuk user lain
               final namaDisplay = isCurrentUser
                   ? (SessionService.instance.nama ?? 'Kamu')
                   : 'Pengguna #${e.key.substring(0, 8)}';
@@ -1035,6 +1030,7 @@ class _DashboardMahasiswaScreenState
                                   ? AppColors.primaryBlue
                                   : AppColors.textDark,
                             ),
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         Text(
@@ -1060,13 +1056,12 @@ class _DashboardMahasiswaScreenState
     );
   }
 
-  // ─── Connectivity Badge ───────────────────────────────────────────────────
   Widget _buildConnectivityBadge() {
-    return StreamBuilder<ConnectivityResult>(
+    return StreamBuilder(
       stream: ConnectivityService.instance.onConnectivityChanged,
-      initialData: ConnectivityResult.none,
       builder: (context, snapshot) {
-        final isOnline = snapshot.data != ConnectivityResult.none;
+        final isOnline = snapshot.connectionState == ConnectionState.waiting || 
+                         (snapshot.hasData && !snapshot.data.toString().contains('none'));
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
@@ -1111,8 +1106,6 @@ class _DashboardMahasiswaScreenState
   }
 }
 
-// ─── Helper widget ────────────────────────────────────────────────────────────
-
 class _MiniStat extends StatelessWidget {
   final IconData icon;
   final Color iconColor;
@@ -1135,9 +1128,12 @@ class _MiniStat extends StatelessWidget {
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(value,
-                style: AppTextStyles.bodySemibold
-                    .copyWith(color: AppColors.textDark)),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(value,
+                  style: AppTextStyles.bodySemibold
+                      .copyWith(color: AppColors.textDark)),
+            ),
             Text(label, style: AppTextStyles.caption),
           ],
         ),
