@@ -1,10 +1,9 @@
 // lib/features/dashboard/screens/dashboard_mahasiswa_screen.dart
-// VERSI REFACTOR: Scaffold tidak lagi punya bottomNavigationBar.
-// Navigasi antar tab dilakukan via MainShell.of(context)?.jumpTo(index).
+// VERSI REFACTOR: Optimistic UI agar tidak ada kilatan merah "Offline" saat loading Stream.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_theme_extensions.dart';
@@ -34,8 +33,6 @@ class _DashboardMahasiswaScreenState
   Widget build(BuildContext context) {
     final nama = SessionService.instance.nama?.split(' ').first ?? 'Ahmad';
 
-    // ── PERUBAHAN UTAMA: tidak ada bottomNavigationBar di sini ──
-    // Navbar sudah dihandle oleh MainShell.
     return Scaffold(
       backgroundColor: AppColors.bgLight,
       body: SafeArea(
@@ -65,7 +62,7 @@ class _DashboardMahasiswaScreenState
                     _buildSoalTerbaru(),
                     const SizedBox(height: AppSpacings.xxl),
                     _buildTopStudents(),
-                    const SizedBox(height: 100), // padding bawah untuk navbar
+                    const SizedBox(height: 100), 
                   ],
                 ),
               ),
@@ -76,7 +73,6 @@ class _DashboardMahasiswaScreenState
     );
   }
 
-  // ─── Top Bar ──────────────────────────────────────────────────────────────
   Widget _buildTopBar(String nama) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(
@@ -117,12 +113,14 @@ class _DashboardMahasiswaScreenState
     );
   }
 
+  // FIX: Optimistic UI - Jika masih waiting, asumsikan Online
   Widget _buildSyncStatusBanner() {
-    return StreamBuilder<ConnectivityResult>(
+    return StreamBuilder(
       stream: ConnectivityService.instance.onConnectivityChanged,
-      initialData: ConnectivityResult.none,
       builder: (context, snapshot) {
-        final isOnline = snapshot.data != ConnectivityResult.none;
+        final isOnline = snapshot.connectionState == ConnectionState.waiting || 
+                         (snapshot.hasData && !snapshot.data.toString().contains('none'));
+        
         return Container(
           width: double.infinity,
           margin: const EdgeInsets.fromLTRB(
@@ -165,7 +163,6 @@ class _DashboardMahasiswaScreenState
     );
   }
 
-  // ─── Rank Card ────────────────────────────────────────────────────────────
   Widget _buildRankCard() {
     return Container(
       width: double.infinity,
@@ -276,133 +273,140 @@ class _DashboardMahasiswaScreenState
     );
   }
 
-  // ─── Progress Summary ─────────────────────────────────────────────────────
   Widget _buildProgressSummary() {
     final userId = SessionService.instance.userId ?? '';
-    final progressBox = HiveService.instance.userProgressBox;
-    final questionBox = HiveService.instance.questionsBox;
     final colors = context.colors;
+    final questionBox = HiveService.instance.questionsBox;
 
-    final totalSelesai = progressBox.values
-        .where((p) => p.userId == userId && p.isSolved)
-        .length;
-    final totalSoal = questionBox.values
-        .where((q) => q.status == QuestionStatus.published)
-        .length;
-    final totalBookmark = HiveService.instance.bookmarksBox.values
-        .where((b) => b.userId == userId)
-        .length;
-    final persen =
-        totalSoal > 0 ? (totalSelesai / totalSoal).clamp(0.0, 1.0) : 0.0;
+    return ListenableBuilder(
+      listenable: Listenable.merge([
+        HiveService.instance.userProgressBox.listenable(),
+        HiveService.instance.bookmarksBox.listenable(),
+      ]),
+      builder: (context, _) {
+        final progressBox = HiveService.instance.userProgressBox;
+        final bookmarkBox = HiveService.instance.bookmarksBox;
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(AppSpacings.lg),
-      decoration: BoxDecoration(
-        color: colors.cardBg,
-        borderRadius: AppRadius.lgAll,
-        border: Border.all(color: colors.borderColor),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
+        final totalSelesai = progressBox.values
+            .where((p) => p.userId == userId && p.isSolved)
+            .length;
+        final totalSoal = questionBox.values
+            .where((q) => q.status == QuestionStatus.published)
+            .length;
+        final totalBookmark = bookmarkBox.values
+            .where((b) => b.userId == userId)
+            .length;
+        final persen =
+            totalSoal > 0 ? (totalSelesai / totalSoal).clamp(0.0, 1.0) : 0.0;
+
+        return Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(AppSpacings.lg),
+          decoration: BoxDecoration(
+            color: colors.cardBg,
+            borderRadius: AppRadius.lgAll,
+            border: Border.all(color: colors.borderColor),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.02),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Progres Belajar', style: AppTextStyles.h3),
-              // ── PERUBAHAN: gunakan MainShell.jumpTo ──
-              GestureDetector(
-                onTap: () => Navigator.pushNamed(context, AppRoutes.riwayat),
-                child: Text(
-                  'Lihat Riwayat',
-                  style: AppTextStyles.smallSemibold.copyWith(
-                    color: AppColors.primaryBlue,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Progres Belajar', style: AppTextStyles.h3),
+                  GestureDetector(
+                    onTap: () => Navigator.pushNamed(context, AppRoutes.riwayat),
+                    child: Text(
+                      'Lihat Riwayat',
+                      style: AppTextStyles.smallSemibold.copyWith(
+                        color: AppColors.primaryBlue,
+                      ),
+                    ),
                   ),
+                ],
+              ),
+              const SizedBox(height: AppSpacings.md),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    totalSoal > 0
+                        ? '$totalSelesai dari $totalSoal soal'
+                        : '$totalSelesai soal diselesaikan',
+                    style: AppTextStyles.body.copyWith(
+                      color: AppColors.textGrey,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  Text(
+                    '${(persen * 100).toStringAsFixed(0)}%',
+                    style: AppTextStyles.bodySemibold.copyWith(
+                      color: AppColors.primaryBlue,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacings.sm),
+              ClipRRect(
+                borderRadius: AppRadius.smAll,
+                child: LinearProgressIndicator(
+                  value: persen,
+                  minHeight: 8,
+                  backgroundColor: AppColors.lightBlue,
+                  valueColor:
+                      const AlwaysStoppedAnimation<Color>(AppColors.primaryBlue),
                 ),
+              ),
+              const SizedBox(height: AppSpacings.md),
+              Row(
+                children: [
+                  _MiniStat(
+                    icon: Icons.check_circle_outline,
+                    iconColor: AppColors.successGreen,
+                    label: 'Selesai',
+                    value: '$totalSelesai',
+                  ),
+                  const SizedBox(width: AppSpacings.xl),
+                  GestureDetector(
+                    onTap: () => Navigator.pushNamed(context, AppRoutes.bookmarks),
+                    child: _MiniStat(
+                      icon: Icons.bookmark_outline,
+                      iconColor: Colors.amber,
+                      label: 'Tersimpan',
+                      value: '$totalBookmark',
+                    ),
+                  ),
+                  const Spacer(),
+                  TextButton.icon(
+                    onPressed: () =>
+                        Navigator.pushNamed(context, AppRoutes.kontribusi),
+                    icon: const Icon(Icons.add_circle_outline, size: 16),
+                    label: const Text('Kontribusi'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.primaryBlue,
+                      textStyle:
+                          AppTextStyles.small.copyWith(fontWeight: FontWeight.w600),
+                      padding: EdgeInsets.zero,
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
-          const SizedBox(height: AppSpacings.md),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                totalSoal > 0
-                    ? '$totalSelesai dari $totalSoal soal'
-                    : '$totalSelesai soal diselesaikan',
-                style: AppTextStyles.body.copyWith(
-                  color: AppColors.textGrey,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              Text(
-                '${(persen * 100).toStringAsFixed(0)}%',
-                style: AppTextStyles.bodySemibold.copyWith(
-                  color: AppColors.primaryBlue,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacings.sm),
-          ClipRRect(
-            borderRadius: AppRadius.smAll,
-            child: LinearProgressIndicator(
-              value: persen,
-              minHeight: 8,
-              backgroundColor: AppColors.lightBlue,
-              valueColor:
-                  const AlwaysStoppedAnimation<Color>(AppColors.primaryBlue),
-            ),
-          ),
-          const SizedBox(height: AppSpacings.md),
-          Row(
-            children: [
-              _MiniStat(
-                icon: Icons.check_circle_outline,
-                iconColor: AppColors.successGreen,
-                label: 'Selesai',
-                value: '$totalSelesai',
-              ),
-              const SizedBox(width: AppSpacings.xl),
-              GestureDetector(
-                onTap: () => Navigator.pushNamed(context, AppRoutes.bookmarks),
-                child: _MiniStat(
-                  icon: Icons.bookmark_outline,
-                  iconColor: Colors.amber,
-                  label: 'Tersimpan',
-                  value: '$totalBookmark',
-                ),
-              ),
-              const Spacer(),
-              TextButton.icon(
-                onPressed: () =>
-                    Navigator.pushNamed(context, AppRoutes.kontribusi),
-                icon: const Icon(Icons.add_circle_outline, size: 16),
-                label: const Text('Kontribusi'),
-                style: TextButton.styleFrom(
-                  foregroundColor: AppColors.primaryBlue,
-                  textStyle:
-                      AppTextStyles.small.copyWith(fontWeight: FontWeight.w600),
-                  padding: EdgeInsets.zero,
-                  minimumSize: Size.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
-  // ─── Streak & Status Row ──────────────────────────────────────────────────
   Widget _buildStreakStatusRow() {
     return Row(
       children: [
@@ -421,7 +425,6 @@ class _DashboardMahasiswaScreenState
 
   Widget _buildStatCard({
     String? emoji,
-    Widget? iconWidget,
     required String label,
     required String value,
   }) {
@@ -462,12 +465,14 @@ class _DashboardMahasiswaScreenState
     );
   }
 
+  // FIX: Optimistic UI
   Widget _buildDynamicStatusCard() {
-    return StreamBuilder<ConnectivityResult>(
+    return StreamBuilder(
       stream: ConnectivityService.instance.onConnectivityChanged,
-      initialData: ConnectivityResult.none,
       builder: (context, snapshot) {
-        final isOnline = snapshot.data != ConnectivityResult.none;
+        final isOnline = snapshot.connectionState == ConnectionState.waiting || 
+                         (snapshot.hasData && !snapshot.data.toString().contains('none'));
+
         return Container(
           padding: AppSpacings.cardPadding,
           decoration: BoxDecoration(
@@ -507,10 +512,14 @@ class _DashboardMahasiswaScreenState
                 ],
               ),
               const SizedBox(height: AppSpacings.sm),
-              Text(
-                isOnline ? 'Synced' : 'Offline',
-                style: AppTextStyles.h2.copyWith(
-                  color: isOnline ? AppColors.primaryBlue : AppColors.errorRed,
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  isOnline ? 'Synced' : 'Offline',
+                  style: AppTextStyles.h2.copyWith(
+                    color: isOnline ? AppColors.primaryBlue : AppColors.errorRed,
+                  ),
                 ),
               ),
             ],
@@ -520,13 +529,11 @@ class _DashboardMahasiswaScreenState
     );
   }
 
-  // ─── Menu Utama ───────────────────────────────────────────────────────────
   Widget _buildMenuUtama() {
     final menus = [
       {
         'icon': Icons.menu_book_rounded,
         'label': 'Bank Soal',
-        // ── PERUBAHAN: switch tab via MainShell ──
         'onTap': () => MainShell.of(context)?.jumpTo(1),
       },
       {
@@ -537,7 +544,6 @@ class _DashboardMahasiswaScreenState
       {
         'icon': Icons.bar_chart_rounded,
         'label': 'Statistik',
-        // ── PERUBAHAN: switch tab Stats ──
         'onTap': () => MainShell.of(context)?.jumpTo(3),
       },
       {
@@ -591,20 +597,19 @@ class _DashboardMahasiswaScreenState
     );
   }
 
-  // ─── Rekomendasi ─────────────────────────────────────────────────────────
   Widget _buildRekomendasi() {
     final matkuls = [
       {
         'kode': 'CS101',
         'nama': 'Basis Data',
-        'soal': '450 Soal Tersedia',
+        'soal': '450 Soal',
         'gradientStart': const Color(0xFF0D2B55),
         'gradientEnd': const Color(0xFF1A4A8A),
       },
       {
         'kode': 'CS102',
         'nama': 'Sistem Operasi',
-        'soal': '320 Soal Tersedia',
+        'soal': '320 Soal',
         'gradientStart': const Color(0xFF0A3040),
         'gradientEnd': const Color(0xFF155570),
       },
@@ -698,10 +703,13 @@ class _DashboardMahasiswaScreenState
                             overflow: TextOverflow.ellipsis,
                           ),
                           const SizedBox(height: 2),
-                          Text(
-                            m['soal'] as String,
-                            style: AppTextStyles.caption
-                                .copyWith(color: AppColors.textGrey),
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              m['soal'] as String,
+                              style: AppTextStyles.caption
+                                  .copyWith(color: AppColors.textGrey),
+                            ),
                           ),
                         ],
                       ),
@@ -716,7 +724,6 @@ class _DashboardMahasiswaScreenState
     );
   }
 
-  // ─── Soal Terbaru ─────────────────────────────────────────────────────────
   Widget _buildSoalTerbaru() {
     final soals = [
       {
@@ -765,14 +772,15 @@ class _DashboardMahasiswaScreenState
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(s['judul'] as String,
-                            style: AppTextStyles.bodySemibold),
+                            style: AppTextStyles.bodySemibold, maxLines: 1, overflow: TextOverflow.ellipsis),
                         const SizedBox(height: 2),
                         Text(s['sub'] as String,
                             style: AppTextStyles.caption
-                                .copyWith(color: AppColors.textGrey)),
+                                .copyWith(color: AppColors.textGrey), maxLines: 1, overflow: TextOverflow.ellipsis),
                       ],
                     ),
                   ),
+                  const SizedBox(width: 8),
                   AppBadge.difficulty(s['difficulty'] as String),
                 ],
               ),
@@ -781,7 +789,6 @@ class _DashboardMahasiswaScreenState
     );
   }
 
-  // ─── Top Students ─────────────────────────────────────────────────────────
   Widget _buildTopStudents() {
     final students = [
       {'nama': 'Sarah Wijaya', 'pts': '2,450 pts', 'rank': 1},
@@ -862,13 +869,13 @@ class _DashboardMahasiswaScreenState
     );
   }
 
-  // ─── Connectivity Badge ───────────────────────────────────────────────────
+  // FIX: Optimistic UI
   Widget _buildConnectivityBadge() {
-    return StreamBuilder<ConnectivityResult>(
+    return StreamBuilder(
       stream: ConnectivityService.instance.onConnectivityChanged,
-      initialData: ConnectivityResult.none,
       builder: (context, snapshot) {
-        final isOnline = snapshot.data != ConnectivityResult.none;
+        final isOnline = snapshot.connectionState == ConnectionState.waiting || 
+                         (snapshot.hasData && !snapshot.data.toString().contains('none'));
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
@@ -899,8 +906,6 @@ class _DashboardMahasiswaScreenState
     );
   }
 }
-
-// ─── Helper widget ────────────────────────────────────────────────────────────
 
 class _MiniStat extends StatelessWidget {
   final IconData icon;

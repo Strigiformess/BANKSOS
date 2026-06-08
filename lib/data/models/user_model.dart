@@ -2,46 +2,33 @@ import 'package:hive/hive.dart';
 
 part 'user_model.g.dart';
 
-/// Role pengguna sesuai RBAC BANKSOS.
 enum UserRole { mahasiswa, reviewer, admin }
 
-/// Status akun pengguna.
 enum UserStatus { active, inactive }
 
-/// Model pengguna BANKSOS.
-/// Berkorespondensi dengan collection "users" di MongoDB
-/// dan HiveBox "users_box" untuk menyimpan sesi login lokal.
 @HiveType(typeId: 0)
 class UserModel extends HiveObject {
-  /// ID unik dari MongoDB (_id).
   @HiveField(0)
   final String id;
 
-  /// Nama lengkap pengguna.
   @HiveField(1)
   final String namaLengkap;
 
-  /// Nomor Induk Mahasiswa. Hanya diisi untuk role mahasiswa.
   @HiveField(2)
   final String? nim;
 
-  /// Email institusi pengguna. Bersifat unik di seluruh sistem.
   @HiveField(3)
   final String email;
 
-  /// Role pengguna: mahasiswa | reviewer | admin.
   @HiveField(4)
   final UserRole role;
 
-  /// Status akun: active | inactive.
   @HiveField(5)
   final UserStatus status;
 
-  /// Tanggal dan waktu akun dibuat.
   @HiveField(6)
   final DateTime createdAt;
 
-  /// Tanggal dan waktu data terakhir diperbarui.
   @HiveField(7)
   final DateTime updatedAt;
 
@@ -58,7 +45,7 @@ class UserModel extends HiveObject {
 
   factory UserModel.fromMap(Map<String, dynamic> map) {
     return UserModel(
-      id: map['_id']?.toString() ?? '',
+      id: _parseObjectId(map['_id']),
       namaLengkap: map['nama_lengkap'] ?? '',
       nim: map['nim'],
       email: map['email'] ?? '',
@@ -113,5 +100,13 @@ class UserModel extends HiveObject {
       default:
         return UserRole.mahasiswa;
     }
+  }
+
+  static String _parseObjectId(dynamic value) {
+    if (value == null) return '';
+    final raw = value.toString();
+    final match = RegExp(r'ObjectId\("([a-f0-9]{24})"\)').firstMatch(raw);
+    if (match != null) return match.group(1)!;
+    return raw;
   }
 }

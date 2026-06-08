@@ -8,7 +8,6 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/services/session_service.dart';
 import '../../../data/local/hive/hive_service.dart';
 import '../../../data/models/question_model.dart';
-import '../../../shared/widgets/app_widgets.dart';
 
 class StatisticsScreen extends StatefulWidget {
   const StatisticsScreen({super.key});

@@ -8,7 +8,7 @@ part of 'sync_queue_model.dart';
 
 class SyncQueueModelAdapter extends TypeAdapter<SyncQueueModel> {
   @override
-  final int typeId = 8;
+  final int typeId = 9;
 
   @override
   SyncQueueModel read(BinaryReader reader) {

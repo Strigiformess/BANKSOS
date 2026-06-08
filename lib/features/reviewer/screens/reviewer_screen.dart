@@ -10,7 +10,6 @@
 import 'package:flutter/material.dart';
 
 import '../../collection/screens/collection_management_screen.dart';
-import '../../question/screens/add_question_screen.dart';
 import '../../review/screens/review_queue_screen.dart';
 import '../../dashboard/screens/dashboard_reviewer_screen.dart';
 
@@ -125,7 +124,7 @@ class _ReviewerBottomNav extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(
-                        active ? item.activeIcon ?? item.icon : item.icon,
+                        item.icon,
                         size: 22,
                         color: active
                             ? const Color(0xFF1A6FDF)
@@ -156,7 +155,6 @@ class _ReviewerBottomNav extends StatelessWidget {
 
 class _NavItem {
   final IconData icon;
-  final IconData? activeIcon;
   final String label;
-  const _NavItem({required this.icon, required this.label, this.activeIcon});
+  const _NavItem({required this.icon, required this.label});
 }

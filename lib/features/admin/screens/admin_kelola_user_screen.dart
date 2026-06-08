@@ -1,10 +1,4 @@
 // lib/features/admin/screens/admin_kelola_user_screen.dart
-// Sprint 5 — Seruni + Revaldi guard integration
-//
-// RBAC Guard dipanggil di initState menggunakan RbacGuard.redirectIfUnauthorized
-// Guard CONTROLLER LEVEL ada di AdminController (Revaldi).
-
-// ignore_for_file: deprecated_member_use
 import 'package:flutter/material.dart';
 
 import '../../../core/guard/rbac_guard.dart';
@@ -23,22 +17,22 @@ class AdminKelolaUserScreen extends StatefulWidget {
 class _AdminKelolaUserScreenState extends State<AdminKelolaUserScreen> {
   late final AdminController _controller;
 
-  String? _filterRole;    // null = Semua
-  String? _filterStatus;  // null = Semua
+  String? _filterRole;
+  String? _filterStatus;
+
+  String _cleanId(String id) {
+    final match = RegExp(r'ObjectId\("([a-f0-9]{24})"\)').firstMatch(id);
+    return match != null ? match.group(1)! : id;
+  }
 
   @override
   void initState() {
     super.initState();
     _controller = AdminController();
 
-    // ── GUARD RBAC UI LEVEL ─────────────────────────────────────────────────
-    // Guard tambahan di UI — redirect jika bukan admin sebelum render.
-    // Guard utama ada di AdminController._guardAdmin() (controller level).
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       RbacGuard.redirectIfUnauthorized(context, requiredRole: 'admin');
-
-      // Load data setelah guard lolos
       _controller.loadUsers();
     });
   }
@@ -49,8 +43,6 @@ class _AdminKelolaUserScreenState extends State<AdminKelolaUserScreen> {
     super.dispose();
   }
 
-  // ─── Filter helper ────────────────────────────────────────────────────────
-
   List<UserModel> get _filteredUsers {
     return _controller.users.where((u) {
       final roleMatch = _filterRole == null || u.role.name == _filterRole;
@@ -59,8 +51,6 @@ class _AdminKelolaUserScreenState extends State<AdminKelolaUserScreen> {
       return roleMatch && statusMatch;
     }).toList();
   }
-
-  // ─── Aksi: Ubah Status ────────────────────────────────────────────────────
 
   Future<void> _onUbahStatus(UserModel user) async {
     final newStatus =
@@ -101,16 +91,15 @@ class _AdminKelolaUserScreenState extends State<AdminKelolaUserScreen> {
 
     if (konfirmasi != true || !mounted) return;
 
+    // FIX: Gunakan ID yang sudah disanitasi
     final result = await _controller.updateUserStatus(
-      userId: user.id,
+      userId: _cleanId(user.id),
       newStatus: newStatus,
     );
 
     if (!mounted) return;
     _showSnackBar(result.success, result.errorMessage);
   }
-
-  // ─── Aksi: Ubah Role ─────────────────────────────────────────────────────
 
   Future<void> _onUbahRole(UserModel user) async {
     String selectedRole = user.role.name;
@@ -161,10 +150,11 @@ class _AdminKelolaUserScreenState extends State<AdminKelolaUserScreen> {
     );
 
     if (confirmed == null || !mounted) return;
-    if (confirmed == user.role.name) return; // tidak ada perubahan
+    if (confirmed == user.role.name) return;
 
+    // FIX: Gunakan ID yang sudah disanitasi
     final result = await _controller.updateUserStatus(
-      userId: user.id,
+      userId: _cleanId(user.id),
       newRole: confirmed,
     );
 
@@ -184,8 +174,6 @@ class _AdminKelolaUserScreenState extends State<AdminKelolaUserScreen> {
       ),
     );
   }
-
-  // ─── Build ────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -226,15 +214,9 @@ class _AdminKelolaUserScreenState extends State<AdminKelolaUserScreen> {
 
           return Column(
             children: [
-              // ── Stats Bar ──────────────────────────────────────────────
               _buildStatsBar(),
-
-              // ── Filter ─────────────────────────────────────────────────
               _buildFilterBar(),
-
               const Divider(height: 1),
-
-              // ── Tabel / List User ──────────────────────────────────────
               Expanded(
                 child: filtered.isEmpty
                     ? const AppEmptyState(
@@ -257,6 +239,8 @@ class _AdminKelolaUserScreenState extends State<AdminKelolaUserScreen> {
                                   _onUbahStatus(filtered[i]),
                               onUbahRole: () =>
                                   _onUbahRole(filtered[i]),
+                              // Pass the clean ID function to the card
+                              cleanIdHelper: _cleanId,
                             ),
                       ),
               ),
@@ -301,7 +285,6 @@ class _AdminKelolaUserScreenState extends State<AdminKelolaUserScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       child: Row(
         children: [
-          // Filter Role
           ...[
             (null, 'Semua Role'),
             ('mahasiswa', 'Mahasiswa'),
@@ -318,12 +301,9 @@ class _AdminKelolaUserScreenState extends State<AdminKelolaUserScreen> {
               ),
             ),
           ),
-
           const SizedBox(width: 8),
           Container(width: 1, height: 20, color: AppColors.borderGrey),
           const SizedBox(width: 8),
-
-          // Filter Status
           ...[
             (null, 'Semua Status'),
             ('active', 'Aktif'),
@@ -345,14 +325,13 @@ class _AdminKelolaUserScreenState extends State<AdminKelolaUserScreen> {
   }
 }
 
-// ─── Widget: User Card ────────────────────────────────────────────────────────
-
 class _UserCard extends StatelessWidget {
   final UserModel user;
   final bool isProcessing;
   final String currentAdminId;
   final VoidCallback onUbahStatus;
   final VoidCallback onUbahRole;
+  final String Function(String) cleanIdHelper; // Helper untuk sanitasi
 
   const _UserCard({
     required this.user,
@@ -360,6 +339,7 @@ class _UserCard extends StatelessWidget {
     required this.currentAdminId,
     required this.onUbahStatus,
     required this.onUbahRole,
+    required this.cleanIdHelper,
   });
 
   Color get _roleColor {
@@ -387,7 +367,8 @@ class _UserCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isActive = user.status == UserStatus.active;
-    final isSelf = user.id == currentAdminId;
+    // FIX: Pastikan membandingkan ID yang sudah dibersihkan
+    final isSelf = currentAdminId.isNotEmpty && cleanIdHelper(user.id) == cleanIdHelper(currentAdminId);
 
     return Card(
       child: Padding(
@@ -414,7 +395,6 @@ class _UserCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                // Badge status
                 Container(
                   padding: const EdgeInsets.symmetric(
                       horizontal: 8, vertical: 2),
@@ -435,22 +415,19 @@ class _UserCard extends StatelessWidget {
                 ),
               ],
             ),
-
             const SizedBox(height: 10),
             const Divider(height: 1),
             const SizedBox(height: 8),
-
             Row(
               children: [
-                // Badge role
                 Container(
                   padding: const EdgeInsets.symmetric(
                       horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: _roleColor.withValues(alpha:0.1),
+                    color: _roleColor.withValues(alpha: 0.1),
                     borderRadius: AppRadius.pill,
                     border: Border.all(
-                        color: _roleColor.withValues(alpha:0.4)),
+                        color: _roleColor.withValues(alpha: 0.4)),
                   ),
                   child: Text(
                     _roleLabel,
@@ -458,9 +435,7 @@ class _UserCard extends StatelessWidget {
                         .copyWith(color: _roleColor),
                   ),
                 ),
-
                 const Spacer(),
-
                 if (isSelf)
                   const Text('(Akun saya)',
                       style: AppTextStyles.caption)
@@ -473,7 +448,6 @@ class _UserCard extends StatelessWidget {
                         color: AppColors.primaryBlue),
                   )
                 else ...[
-                  // Tombol ubah role
                   OutlinedButton.icon(
                     onPressed: onUbahRole,
                     icon: const Icon(Icons.manage_accounts_outlined,
@@ -487,8 +461,6 @@ class _UserCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 6),
-
-                  // Tombol ubah status
                   ElevatedButton.icon(
                     onPressed: onUbahStatus,
                     icon: Icon(
@@ -519,8 +491,6 @@ class _UserCard extends StatelessWidget {
   }
 }
 
-// ─── Widget helper ────────────────────────────────────────────────────────────
-
 class _StatPill extends StatelessWidget {
   final String label;
   final int value;
@@ -537,9 +507,9 @@ class _StatPill extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withValues(alpha:0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: AppRadius.pill,
-        border: Border.all(color: color.withValues(alpha:0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [

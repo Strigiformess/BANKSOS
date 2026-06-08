@@ -1,5 +1,3 @@
-// lib/main.dart
-
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -14,30 +12,16 @@ import 'core/services/sync_service.dart';
 import 'routes/app_routes.dart';
 import 'shared/layouts/main_shell.dart';
 
-// Auth
 import 'features/auth/screens/login_screen.dart';
 import 'features/auth/screens/register_screen.dart';
 import 'features/auth/screens/splash_screen.dart';
 
-// Dashboard
 import 'features/dashboard/screens/dashboard_mahasiswa_screen.dart';
 import 'features/dashboard/screens/dashboard_reviewer_screen.dart';
 import 'features/dashboard/screens/dashboard_admin_screen.dart';
 
-// Bank Soal
 import 'features/question/screens/bank_soal_screen.dart';
 import 'features/question/screens/offline_questions_screen.dart';
-
-// Bookmarks & Riwayat
-import 'features/bookmarks/screens/bookmarks_screen.dart';
-import 'features/riwayat/screens/riwayat_screen.dart';
-
-// Kontribusi & Review
-import 'features/kontribusi/screens/kontribusi_screen.dart';
-import 'features/kontribusi/screens/submit_soal_screen.dart';
-import 'features/review/screens/review_queue_screen.dart';
-import 'features/collection/screens/collection_management_screen.dart';
-
 
 import 'features/bookmarks/screens/bookmarks_screen.dart';
 import 'features/riwayat/screens/riwayat_screen.dart';
@@ -45,7 +29,11 @@ import 'features/profile/screens/profile_screen.dart';
 import 'features/profile/screens/reviewer_profile.dart';
 import 'features/statistics/screens/statistics_screen.dart';
 
-// Admin
+import 'features/kontribusi/screens/kontribusi_screen.dart';
+import 'features/kontribusi/screens/submit_soal_screen.dart';
+import 'features/review/screens/review_queue_screen.dart';
+import 'features/collection/screens/collection_management_screen.dart';
+
 import 'features/admin/screens/admin_kelola_user_screen.dart';
 import 'features/admin/screens/admin_kelola_soal_screen.dart';
 import 'data/models/question_model.dart';
@@ -53,10 +41,8 @@ import 'data/models/question_model.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 1. Muat Environment
   await dotenv.load(fileName: '.env');
 
-  // 2. Bersihkan Hive Corrupt & Inisialisasi
   await _preCleanCorruptedBoxes();
   try {
     await HiveService.init();
@@ -66,37 +52,30 @@ Future<void> main() async {
     await HiveService.init();
   }
 
-  // 3. Inisialisasi MongoDB
   try {
     await MongoDBService.instance.init();
   } catch (e) {
     debugPrint('⚠️ MongoDB init failed (offline mode): $e');
   }
 
-  // 4. Inisialisasi Koneksi Internet
   try {
     await ConnectivityService.instance.init();
   } catch (e) {
     debugPrint('⚠️ Connectivity service init failed: $e');
   }
 
-  // 5. Auto Download Soal sekali saat buka app
   try {
     await _downloadAllQuestionsIfNeeded();
   } catch (e) {
     debugPrint('⚠️ Auto-download questions failed: $e');
   }
 
-  // 6. Pengganti SyncManager (Otomatis Sync saat internet menyala)
   SyncService.instance.flushQueue();
   ConnectivityService.instance.onConnectivityChanged.listen((status) {
     if (!status.toString().contains('none')) {
       SyncService.instance.flushQueue();
     }
   });
-
-  // (Opsional) Uncomment baris di bawah jika ingin menjalankan test diagnostic
-  // await MasterBackendSuite.runMasterSuite();
 
   runApp(
     const ProviderScope(
@@ -105,7 +84,6 @@ Future<void> main() async {
   );
 }
 
-/// Pre-clean questions_box jika ada error saat baca data (Mencegah Crash Hive)
 Future<void> _preCleanCorruptedBoxes() async {
   try {
     await Hive.initFlutter();
@@ -123,14 +101,12 @@ Future<void> _preCleanCorruptedBoxes() async {
   } catch (_) {}
 }
 
-/// Download semua soal jika local masih kosong
 Future<void> _downloadAllQuestionsIfNeeded() async {
   if (!Hive.isBoxOpen('questions_box')) return;
 
   final hive = HiveService.instance.questionsBox;
   final isOnline = await ConnectivityService.instance.isOnline;
 
-  // Lewati jika tidak ada internet atau sudah ada datanya
   if (!isOnline || hive.isNotEmpty) return;
 
   try {
@@ -144,8 +120,7 @@ Future<void> _downloadAllQuestionsIfNeeded() async {
     }
 
     await hive.putAll(questions);
-    debugPrint(
-        '✅ Auto-download complete: saved ${questions.length} questions to Hive');
+    debugPrint('✅ Auto-download: ${questions.length} soal tersimpan ke Hive');
   } catch (e) {
     debugPrint('⚠️ Auto-download failed: $e');
   }
@@ -173,7 +148,7 @@ class BanksosApp extends StatelessWidget {
         AppRoutes.shell: (_) => const MainShell(),
         AppRoutes.bankSoal: (_) => const BankSoalScreen(),
         AppRoutes.profile: (_) => const ProfileScreen(),
-        AppRoutes.reviewerProfile: (context) => const ReviewerScreen(),
+        AppRoutes.reviewerProfile: (_) => const ReviewerScreen(),
         AppRoutes.statistik: (_) => const StatisticsScreen(),
         AppRoutes.offlineSoal: (_) => const OfflineQuestionsScreen(),
         AppRoutes.bookmarks: (_) => const BookmarksScreen(),
